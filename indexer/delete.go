@@ -19,6 +19,13 @@ func (ns *Indexer) deleteTypeByQuery(typeName string, rangeQuery db.IntegerRange
 
 // DeleteBlocksInRange deletes previously synced blocks and their txs and names in the range of [fromBlockheight, toBlockHeight]
 func (ns *Indexer) DeleteBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64) {
+
+        // node error check
+        if ((toBlockHeight - fromBlockHeight) > 1000) {
+		ns.log.Warn().Msg("Full Node Error!")
+                ns.Stop()
+        }
+
 	ns.log.Info().Msg(fmt.Sprintf("Rolling back %d blocks [%d..%d]", (1 + toBlockHeight - fromBlockHeight), fromBlockHeight, toBlockHeight))
 	ns.deleteTypeByQuery("block", db.IntegerRangeQuery{Field: "no", Min: fromBlockHeight, Max: toBlockHeight})
 	ns.deleteTypeByQuery("tx", db.IntegerRangeQuery{Field: "blockno", Min: fromBlockHeight, Max: toBlockHeight})

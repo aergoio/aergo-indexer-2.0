@@ -153,7 +153,7 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 }
 
 
-func (ns *Indexer) ConvAccountTokens(ttDoc doc.EsTokenTransfer) doc.EsAccountTokens {
+func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer) doc.EsAccountTokens {
 
 	document := doc.EsAccountTokens {
 		Account:      ttDoc.To,
@@ -161,12 +161,27 @@ func (ns *Indexer) ConvAccountTokens(ttDoc doc.EsTokenTransfer) doc.EsAccountTok
 		TokenId:      ttDoc.TokenId,
 	}
 
+
 	if document.TokenId == "" { // ARC1
 		document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.Account, document.TokenAddress)}
 		document.Timestamp = time.Unix(0, 0)
 	} else { // ARC2
 		document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.TokenAddress, document.TokenId)}
 		document.Timestamp = ttDoc.Timestamp
+	}
+
+	Balance, err := ns.queryContract_Bignum(contractAddress, "balanceOf", document.Account)
+
+	if err != nil {
+		document.Balance = 0
+
+		return document
+	}
+
+        if d, err := strconv.Atoi(Balance); err == nil {
+		document.Balance = uint64(d)
+	} else {
+		document.Balance = 0
 	}
 
 	return document
@@ -295,6 +310,50 @@ func (ns *Indexer) ConvTokenCreateTx(txDoc doc.EsTx, ContractAddress []byte) doc
 
 	return document
 }
+
+
+func (ns *Indexer) queryContract_Bignum(address []byte, name string, args string) (string, error) {
+
+	queryinfo := map[string]interface{}{"Name": name, "Args": args}
+
+	queryinfoJson, err := json.Marshal(queryinfo)
+
+	if err != nil { return "", err }
+
+	result, err := ns.grpcClient.QueryContract(context.Background(), &types.Query{
+		ContractAddress: address,
+		Queryinfo:       queryinfoJson,
+	})
+
+	if err != nil { return "", err }
+
+	var ret interface{}
+
+	err = json.Unmarshal([]byte(result.Value), &ret)
+
+	if err != nil {
+		return "", err
+	}
+
+	switch c := ret.(type) {
+
+	case string:
+		return c, nil
+
+	case map[string]interface{}:
+
+		am, ok := convertBignumJson(c)
+		if ok {
+			return am.String(), nil
+		}
+
+	case int:
+		return fmt.Sprint(c), nil
+	}
+
+	return string(result.Value), nil
+}
+
 
 func (ns *Indexer) queryContract(address []byte, name string) (string, error) {
 

@@ -141,7 +141,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						// Add tokenTx doc
 						if info.Type == 1 { ns.BChannel.TokenTx <- ChanInfo{1, tokenTx} } else { ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer") }
 
-						aTokens := ns.ConvAccountTokens(tokenTx)
+						aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx)
 						if info.Type == 1 { ns.BChannel.AccTokens <- ChanInfo{1, aTokens} } else { ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens") }
 
 					}

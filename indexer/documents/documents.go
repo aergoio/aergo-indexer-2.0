@@ -96,6 +96,7 @@ type EsAccountTokens struct {
 	Account     string      `json:"account" db:"account"`
 	TokenAddress string    `json:"address" db:"address"`
 	TokenId     string	`json:"token_id" db:"token_id"`
+	Balance	    uint64      `json:"balance" db:"balance"`
 	Timestamp   time.Time   `json:"ts" db:"ts"`
 }
 
@@ -270,6 +271,9 @@ var EsMappings = map[string]string{
 					},
 					"token_id": {
 						"type": "keyword"
+					},
+					"balance": {
+						"type": "long"
 					},
 					"ts": {
 						"type": "date"
