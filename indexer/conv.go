@@ -153,36 +153,41 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 }
 
 
-func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer) doc.EsAccountTokens {
+func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsAccountTokens {
 
 	document := doc.EsAccountTokens {
-		Account:      ttDoc.To,
-		TokenAddress: ttDoc.TokenAddress,
-		TokenId:      ttDoc.TokenId,
+		Account:	account,
+		TokenAddress:	ttDoc.TokenAddress,
+		TokenId:	ttDoc.TokenId,
+		BlockNo:	ttDoc.BlockNo,
 	}
-
 
 	if document.TokenId == "" { // ARC1
 		document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.Account, document.TokenAddress)}
-		document.Timestamp = time.Unix(0, 0)
 	} else { // ARC2
 		document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.TokenAddress, document.TokenId)}
-		document.Timestamp = ttDoc.Timestamp
+	}
+
+	if document.TokenId != "" {
+		document.Balance = 0
+		return document
 	}
 
 	Balance, err := ns.queryContract_Bignum(contractAddress, "balanceOf", document.Account)
 
 	if err != nil {
 		document.Balance = 0
-
 		return document
 	}
 
-        if d, err := strconv.Atoi(Balance); err == nil {
-		document.Balance = uint64(d)
+	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
+		document.Balance = float32(AmountFloat)
 	} else {
 		document.Balance = 0
 	}
+
+//	fmt.Println("---- Balance :", Balance, document.Balance)
+//	ns.Stop()
 
 	return document
 }
@@ -314,7 +319,7 @@ func (ns *Indexer) ConvTokenCreateTx(txDoc doc.EsTx, ContractAddress []byte) doc
 
 func (ns *Indexer) queryContract_Bignum(address []byte, name string, args string) (string, error) {
 
-	queryinfo := map[string]interface{}{"Name": name, "Args": args}
+	queryinfo := map[string]interface{}{"Name": name, "Args": []string{args}}
 
 	queryinfoJson, err := json.Marshal(queryinfo)
 
@@ -324,6 +329,8 @@ func (ns *Indexer) queryContract_Bignum(address []byte, name string, args string
 		ContractAddress: address,
 		Queryinfo:       queryinfoJson,
 	})
+
+//	fmt.Println("Query :", queryinfo, result)
 
 	if err != nil { return "", err }
 

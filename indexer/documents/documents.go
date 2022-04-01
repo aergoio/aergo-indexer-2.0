@@ -93,11 +93,11 @@ type EsToken struct {
 // EsToken is meta data of a token. The id is the contract address.
 type EsAccountTokens struct {
 	*BaseEsType
-	Account     string      `json:"account" db:"account"`
-	TokenAddress string    `json:"address" db:"address"`
+	Account     string	`json:"account" db:"account"`
+	TokenAddress string	`json:"address" db:"address"`
 	TokenId     string	`json:"token_id" db:"token_id"`
-	Balance	    uint64      `json:"balance" db:"balance"`
-	Timestamp   time.Time   `json:"ts" db:"ts"`
+	BlockNo     uint64	`json:"blockno" db:"blockno"`
+	Balance	    float32	`json:"balance" db:"balance"`
 }
 
 var EsMappings = map[string]string{
@@ -269,14 +269,14 @@ var EsMappings = map[string]string{
 					"address": {
 						"type": "keyword"
 					},
+					"blockno": {
+						"type": "long"
+					},
 					"token_id": {
 						"type": "keyword"
 					},
 					"balance": {
-						"type": "long"
-					},
-					"ts": {
-						"type": "date"
+						"type": "float"
 					}
 				}
 		}

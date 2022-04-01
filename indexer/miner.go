@@ -120,6 +120,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 
+//					fmt.Println("Unmarshal :", args)
+
 					if (args[0] == nil) { continue }
 
 					// Get tokenTx doc
@@ -129,21 +131,43 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						case "transfer" : tokenTx = ns.ConvTokenTx_transfer(event.ContractAddress, txD, idx, args)
 					}
 
-					if tokenTx.Amount != "" {
+					if tokenTx.Amount == "" { continue }
 
-						/*
-						if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
-						else if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
-						*/
+					/*
+					if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
+					else if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
+					*/
 
-						txD.TokenTransfers ++
+					txD.TokenTransfers ++
 
-						// Add tokenTx doc
-						if info.Type == 1 { ns.BChannel.TokenTx <- ChanInfo{1, tokenTx} } else { ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer") }
+					// Add tokenTx doc
+					if info.Type == 1 {
+						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
+					} else {
+						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
+					}
 
-						aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx)
-						if info.Type == 1 { ns.BChannel.AccTokens <- ChanInfo{1, aTokens} } else { ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens") }
+					// only new 
+					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
 
+					if aTokens.TokenId != "" { // ARC2
+						if info.Type == 1 {
+//							 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+						} else {
+//							ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+						}
+					} else { // ARC1
+
+						fmt.Println("<------------- ARC1 ------------->")
+
+						bTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx, tokenTx.From) 
+						if info.Type == 1 {
+							 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+							 ns.BChannel.AccTokens <- ChanInfo{1, bTokens}
+						} else {
+							ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+							ns.db.Insert(bTokens,ns.indexNamePrefix+"account_tokens")
+						}
 					}
 
 				default : continue
