@@ -150,15 +150,13 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					// only new 
 					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
 
-					if aTokens.TokenId != "" { // ARC2
+					if aTokens.TokenId != "" || tokenTx.From == "MINT" { // ARC2 or mint
 						if info.Type == 1 {
-//							 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+							 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
 						} else {
-//							ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+							ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
 						}
-					} else { // ARC1
-
-						fmt.Println("<------------- ARC1 ------------->")
+					} else { // ARC1 transfer
 
 						bTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx, tokenTx.From) 
 						if info.Type == 1 {

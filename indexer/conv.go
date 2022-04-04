@@ -173,7 +173,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		return document
 	}
 
-	Balance, err := ns.queryContract_Bignum(contractAddress, "balanceOf", document.Account)
+	Balance, err := ns.queryContract(contractAddress, "balanceOf", []string{document.Account})
 
 	if err != nil {
 		document.Balance = 0
@@ -295,13 +295,13 @@ func (ns *Indexer) ConvTokenCreateTx(txDoc doc.EsTx, ContractAddress []byte) doc
 
 	var err error
 
-	document.Name, err = ns.queryContract(ContractAddress, "name")
+	document.Name, err = ns.queryContract(ContractAddress, "name", nil)
 	if document.Name == "null" || err != nil {
 		document.Name = ""
 		return document
 	}
 
-	decimals, err := ns.queryContract(ContractAddress, "decimals")
+	decimals, err := ns.queryContract(ContractAddress, "decimals", nil)
         if err == nil {
                 if d, err := strconv.Atoi(decimals); err == nil {
                         document.Decimals = uint8(d)
@@ -311,61 +311,18 @@ func (ns *Indexer) ConvTokenCreateTx(txDoc doc.EsTx, ContractAddress []byte) doc
                 document.Decimals = uint8(1)
 	}
 
-	document.Symbol, err = ns.queryContract(ContractAddress, "symbol")
+	document.Symbol, err = ns.queryContract(ContractAddress, "symbol", nil)
 
 	return document
 }
 
 
-func (ns *Indexer) queryContract_Bignum(address []byte, name string, args string) (string, error) {
-
-	queryinfo := map[string]interface{}{"Name": name, "Args": []string{args}}
-
-	queryinfoJson, err := json.Marshal(queryinfo)
-
-	if err != nil { return "", err }
-
-	result, err := ns.grpcClient.QueryContract(context.Background(), &types.Query{
-		ContractAddress: address,
-		Queryinfo:       queryinfoJson,
-	})
-
-//	fmt.Println("Query :", queryinfo, result)
-
-	if err != nil { return "", err }
-
-	var ret interface{}
-
-	err = json.Unmarshal([]byte(result.Value), &ret)
-
-	if err != nil {
-		return "", err
-	}
-
-	switch c := ret.(type) {
-
-	case string:
-		return c, nil
-
-	case map[string]interface{}:
-
-		am, ok := convertBignumJson(c)
-		if ok {
-			return am.String(), nil
-		}
-
-	case int:
-		return fmt.Sprint(c), nil
-	}
-
-	return string(result.Value), nil
-}
-
-
-func (ns *Indexer) queryContract(address []byte, name string) (string, error) {
+func (ns *Indexer) queryContract(address []byte, name string, args []string) (string, error) {
 
 	queryinfo := map[string]interface{}{"Name": name}
 
+	if (args != nil) { queryinfo["Args"] = args }
+
 	queryinfoJson, err := json.Marshal(queryinfo)
 
 	if err != nil { return "", err }
@@ -374,6 +331,11 @@ func (ns *Indexer) queryContract(address []byte, name string) (string, error) {
 		ContractAddress: address,
 		Queryinfo:       queryinfoJson,
 	})
+
+//	fmt.Println("------> Query :", queryinfo, result)
+//	if (args != nil) {
+//		ns.Stop()
+//	}
 
 	if err != nil { return "", err }
 
@@ -403,6 +365,7 @@ func (ns *Indexer) queryContract(address []byte, name string) (string, error) {
 
 	return string(result.Value), nil
 }
+
 
 func convertBignumJson(in map[string]interface{}) (*big.Int, bool) {
 
