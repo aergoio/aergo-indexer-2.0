@@ -103,28 +103,31 @@ func bigIntToFloat(a *big.Int, exp int64) float32 {
 // ConvTx converts Tx from RPC into Elasticsearch type
 func (ns *Indexer) ConvTx(tx *types.Tx, blockD doc.EsBlock) doc.EsTx {
 
-	account := ns.encodeAndResolveAccount(tx.Body.Account, blockNo)
-	recipient := ns.encodeAndResolveAccount(tx.Body.Recipient, blockNo)
-
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
 	category, method := category.DetectTxCategory(tx)
+
 	if len(method) > 50 {
 		method = method[:50]
 	}
-	doc := doc.EsTx{
+
+	document := doc.EsTx{
 		BaseEsType:     &doc.BaseEsType{base58.Encode(tx.Hash)},
-		Account:        account,
-		Recipient:      recipient,
+		Account:        ns.encodeAndResolveAccount(tx.Body.Account, blockD.BlockNo),
+		Recipient:      ns.encodeAndResolveAccount(tx.Body.Recipient, blockD.BlockNo),
 		Amount:         amount.String(),
 		AmountFloat:    bigIntToFloat(amount, 18),
 		Type:           fmt.Sprintf("%d", tx.Body.Type),
 		Category:       category,
 		Method:         method,
 		Timestamp: 	blockD.Timestamp,
-		txD.BlockNo: 	blockD.BlockNo,
+		BlockNo: 	blockD.BlockNo,
 		TokenTransfers: 0,
 	}
-	return doc
+
+//	fmt.Println("---- TX :", document)
+//	ns.Stop()
+
+	return document
 }
 
 // ConvNameTx parses a name transaction into Elasticsearch type
@@ -146,29 +149,35 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 	}
 
 	hash := base58.Encode(tx.Hash)
-	return doc.EsName{
+
+	document := doc.EsName {
 		BaseEsType: &doc.BaseEsType{fmt.Sprintf("%s-%s", name, hash)},
 		Name:       	name,
 		Address:    	address,
 		UpdateTx:   	hash,
 		BlockNo:	blockNo,
 	}
+
+	/*
+	fmt.Println("---- Name :", document)
+	ns.Stop()
+	*/
+
+	return document
 }
 
 
-func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsAccountTokens {
+func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsNFT {
 
-	document := doc.EsAccountTokens {
+	document := doc.EsNFT {
+		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress:	ttDoc.TokenAddress,
 		TokenId:	ttDoc.TokenId,
-		Account:	account,
 		BlockNo:	ttDoc.BlockNo,
+		Account:	account,
 	}
 
-	document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.TokenAddress, document.TokenId)}
-	}
-
-//	fmt.Println("---- Balance :", Balance, document.Balance)
+//	fmt.Println("---- NFT :", document)
 //	ns.Stop()
 
 	return document
@@ -178,23 +187,9 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsAccountTokens {
 
 	document := doc.EsAccountTokens {
+		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
 		Account:	account,
 		TokenAddress:	ttDoc.TokenAddress,
-		BlockNo:	ttDoc.BlockNo,
-	}
-
-	document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.Account, document.TokenAddress)}
-	Balance, err := ns.queryContract(contractAddress, "balanceOf", []string{document.Account})
-
-	if err != nil {
-		document.Balance = 0
-		return document
-	}
-
-	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
-		document.Balance = float32(AmountFloat)
-	} else {
-		document.Balance = 0
 	}
 
 	if ttDoc.TokenId == "" {
@@ -203,39 +198,32 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		document.Type = category.ARC2
 	}
 
-//	fmt.Println("---- Balance :", Balance, document.Balance)
-//	ns.Stop()
+	Balance, err := ns.queryContract(contractAddress, "balanceOf", []string{document.Account})
 
-	return document
-}
+	if err != nil {
+		document.Balance = "0"
+		document.BalanceFloat = 0
 
-
-func (ns *Indexer) ConvTokenTx_mint(contractAddress []byte, txDoc doc.EsTx, idx int, args []interface{}) doc.EsTokenTransfer {
-
-	document := doc.EsTokenTransfer{
-		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
-		TxId:         txDoc.GetID(),
-		BlockNo:      txDoc.BlockNo,
-		Timestamp:    txDoc.Timestamp,
-		TokenAddress: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
-		From:         "MINT",
-		To:           args[0].(string),
-	}
-
-	switch args[1].(type) {
-	case string :
-		if AmountFloat, err := strconv.ParseFloat(args[1].(string),32); err == nil {
-			document.AmountFloat = float32(AmountFloat)
-			document.Amount  = args[1].(string)
-			document.TokenId = ""
-//			document.TokenId = args[1].(string) // for arc2 token have number id
-		} else {
-			document.TokenId  = args[1].(string)
-			document.Amount = "1"
-			document.AmountFloat = 1.0
+		/*
+		if document.Type == category.ARC1 {
+			fmt.Println("---- Account error :", document)
+			ns.Stop()
 		}
-	default : document.Amount = ""
+		*/
+
+		return document
 	}
+
+	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
+		document.BalanceFloat = float32(AmountFloat)
+		document.Balance = Balance
+	} else {
+		document.BalanceFloat = 0
+		document.Balance = "0"
+	}
+
+	//fmt.Println("---- Account :", document)
+	//ns.Stop()
 
 	return document
 }
@@ -249,89 +237,32 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 		Timestamp:    txDoc.Timestamp,
 		TokenAddress: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
 		From:         from,
-		To:           to
+		To:           to,
 	}
 
 	switch args.(type) {
 	case string :
-		if AmountFloat, err := strconv.ParseFloat(args[1].(string),32); err == nil {
+		if AmountFloat, err := strconv.ParseFloat(args.(string),32); err == nil {
 			document.AmountFloat = float32(AmountFloat)
-			document.Amount  = args[1].(string)
+			document.Amount  = args.(string)
 			document.TokenId = ""
-//			document.TokenId = args[1].(string) // for arc2 token have number id
 		} else {
-			document.TokenId  = args[1].(string)
+			document.TokenId  = args.(string)
 			document.Amount = "1"
 			document.AmountFloat = 1.0
 		}
 	default : document.Amount = ""
 	}
 
-	return document
-}
-
-
-/*
-func (ns *Indexer) ConvTokenTx_burn(contractAddress []byte, txDoc doc.EsTx, idx int, args []interface{}) doc.EsTokenTransfer {
-
-	document := doc.EsTokenTransfer{
-		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
-		TxId:         txDoc.GetID(),
-		BlockNo:      txDoc.BlockNo,
-		Timestamp:    txDoc.Timestamp,
-		TokenAddress: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
-		From:         args[0].(string),
-		To:           "BURN",
+	/*
+	if document.TokenId == "" {
+		fmt.Println("---- Transfer :", document)
+		ns.Stop()
 	}
-
-	switch args[1].(type) {
-	case string :
-		if AmountFloat, err := strconv.ParseFloat(args[1].(string),32); err == nil {
-			document.AmountFloat = float32(AmountFloat)
-			document.Amount  = args[1].(string)
-			document.TokenId = ""
-//			document.TokenId = args[1].(string) // for arc2 token have number id
-		} else {
-			document.TokenId  = args[1].(string)
-			document.Amount = "1"
-			document.AmountFloat = 1.0
-		}
-	default : document.Amount = ""
-	}
+	*/
 
 	return document
 }
-
-func (ns *Indexer) ConvTokenTx_transfer(contractAddress []byte, txDoc doc.EsTx, idx int, args []interface{}) doc.EsTokenTransfer {
-
-	document := doc.EsTokenTransfer{
-		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
-		TxId:         txDoc.GetID(),
-		BlockNo:      txDoc.BlockNo,
-		Timestamp:    txDoc.Timestamp,
-		TokenAddress: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
-		From:         args[0].(string),
-		To:           args[1].(string),
-	}
-
-	switch args[2].(type) {
-	case string :
-		if AmountFloat, err := strconv.ParseFloat(args[2].(string),32); err == nil {
-			document.AmountFloat = float32(AmountFloat)
-			document.Amount  = args[2].(string)
-			document.TokenId = ""
-//			document.TokenId = args[2].(string) // for arc2 token have number id
-		} else {
-			document.TokenId  = args[2].(string)
-			document.Amount = "1"
-			document.AmountFloat = 1.0
-		}
-	default : document.Amount = ""
-	}
-
-	return document
-}
-*/
 
 // ConvContractCreateTx creates document for token creation
 
@@ -341,7 +272,7 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken
 		BaseEsType:  &doc.BaseEsType{ns.encodeAndResolveAccount(ContractAddress, txDoc.BlockNo)},
 		TxId:    txDoc.GetID(),
 		BlockNo: txDoc.BlockNo,
-		TokenTransfers:	uint64(0)
+		TokenTransfers:	uint64(0),
 	}
 
 	var err error
@@ -354,29 +285,42 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken
 
 	document.Symbol, err = ns.queryContract(ContractAddress, "symbol", nil)
 
-	decimals, err := ns.queryContract(ContractAddress, "decimals")
-	        if err == nil {
-                if d, err := strconv.Atoi(decimals); err == nil {
-                        document.Decimals = uint8(d)
-                }
+	decimals, err := ns.queryContract(ContractAddress, "decimals", nil)
+
+	if err == nil {
+		if d, err := strconv.Atoi(decimals); err == nil {
+			document.Decimals = uint8(d)
+		}
 
         } else {
                 document.Decimals = uint8(1)
         }
 
-
-	supply, err := ns.queryContract(contractAddress, "totalSupply", nil)
+	supply, err := ns.queryContract(ContractAddress, "totalSupply", nil)
 	if err != nil {
-		document.Supply = 0
+		document.SupplyFloat = 0
+		document.Supply = "0"
+
+		/*
+		fmt.Println("---- Token error :", document)
+		ns.Stop()
+		*/
+
 		return document
 	}
 
 	if AmountFloat, err := strconv.ParseFloat(supply, 32); err == nil {
-		document.Supply = float32(AmountFloat)
+		document.SupplyFloat = float32(AmountFloat)
+		document.Supply = supply
 	} else {
-		document.Supply = 0
+		document.SupplyFloat = 0
+		document.Supply = "0"
 	}
 
+	/*
+	fmt.Println("---- Token :", document)
+	ns.Stop()
+	*/
 	return document
 }
 

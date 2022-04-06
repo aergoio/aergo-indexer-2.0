@@ -51,8 +51,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 			}
 		}
 
-		Txs_Size := len(block.Body.Txs)
-
 		// Get Block doc
 		blockD := ns.ConvBlock(block)
 
@@ -94,7 +92,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					if err != nil { continue }
 
 					// Get Token doc
-					token := ns.ConvTokenCreateTx(txD, contractAddress)
+					token := ns.ConvToken(txD, contractAddress)
 
 					// Add Token doc
 					if token.Name == "" { continue }

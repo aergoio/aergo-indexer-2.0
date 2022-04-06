@@ -89,16 +89,17 @@ type EsToken struct {
 	TokenTransfers	uint64		`json:"token_transfers" db:"token_transfers"`
 	Decimals	uint8           `json:"decimals" db:"decimals"`
 	Supply		string          `json:"supply" db:"supply"`
+	SupplyFloat	float32         `json:"supply_float" db:"supply_float"`
 }
 
 // EsAccountTokens is meta data of a token of an account. The id is account_token address.
 type EsAccountTokens struct {
 	*BaseEsType
-	Account     string	`json:"account" db:"account"`
-	TokenAddress string	`json:"address" db:"address"`
-	Type        category.TokenType `json:"type" db:"type"`
-	BlockNo     uint64	`json:"blockno" db:"blockno"`
-	Balance	    float32	`json:"balance" db:"balance"`
+	Account		string	`json:"account" db:"account"`
+	TokenAddress	string	`json:"address" db:"address"`
+	Type		category.TokenType `json:"type" db:"type"`
+	Balance		string	`json:"balance" db:"balance"`
+	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
 }
 
 type EsNFT struct {
@@ -256,6 +257,15 @@ var EsMappings = map[string]string{
 					"symbol": {
 						"type": "keyword"
 					},
+					"decimals": {
+						"type": "short"
+					},
+					"supply": {
+						"enabled": false
+					},
+					"supply_float": {
+						"type": "float"
+					},
 					"token_transfers": {
 						"type": "long"
 					},
@@ -278,13 +288,13 @@ var EsMappings = map[string]string{
 					"address": {
 						"type": "keyword"
 					},
-					"blockno": {
-						"type": "long"
-					},
 					"type": {
 						"type": "keyword"
 					},
 					"balance": {
+						"enabled": false
+					}
+					"balance_float": {
 						"type": "float"
 					}
 				}
@@ -311,7 +321,7 @@ var EsMappings = map[string]string{
 					}
 				}
 		}
-	}`
+	}`,
 }
 
 
