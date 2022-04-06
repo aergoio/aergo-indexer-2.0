@@ -58,10 +58,10 @@ type EsTx struct {
 // EsName is a name-address mapping stored in the database
 type EsName struct {
 	*BaseEsType
-	Name        string `json:"name" db:"name"`
-	Address     string `json:"address" db:"address"`
-	UpdateBlock uint64 `json:"blockno" db:"blockno"`
-	UpdateTx    string `json:"tx" db:"tx"`
+	Name		string `json:"name" db:"name"`
+	Address		string `json:"address" db:"address"`
+	BlockNo		uint64 `json:"blockno" db:"blockno"`
+	UpdateTx	string `json:"tx" db:"tx"`
 }
 
 // EsTokenTransfer is a transfer of a token
@@ -81,23 +81,32 @@ type EsTokenTransfer struct {
 // EsToken is meta data of a token. The id is the contract address.
 type EsToken struct {
 	*BaseEsType
-	TxId        string             `json:"tx_id" db:"tx_id"`
-	UpdateBlock uint64             `json:"blockno" db:"blockno"`
-	Type        category.TokenType `json:"type" db:"type"`
-	Name        string             `json:"name" db:"name"`
-	Symbol      string             `json:"symbol" db:"symbol"`
-	Decimals    uint8              `json:"decimals" db:"decimals"`
-	Supply      string             `json:"supply" db:"supply"`
+	TxId		string		`json:"tx_id" db:"tx_id"`
+	BlockNo		uint64		`json:"blockno" db:"blockno"`
+	Type		category.TokenType	`json:"type" db:"type"`
+	Name		string		`json:"name" db:"name"`
+	Symbol		string		`json:"symbol" db:"symbol"`
+	TokenTransfers	uint64		`json:"token_transfers" db:"token_transfers"`
+	Decimals	uint8           `json:"decimals" db:"decimals"`
+	Supply		string          `json:"supply" db:"supply"`
 }
 
-// EsToken is meta data of a token. The id is the contract address.
+// EsAccountTokens is meta data of a token of an account. The id is account_token address.
 type EsAccountTokens struct {
 	*BaseEsType
 	Account     string	`json:"account" db:"account"`
 	TokenAddress string	`json:"address" db:"address"`
-	TokenId     string	`json:"token_id" db:"token_id"`
+	Type        category.TokenType `json:"type" db:"type"`
 	BlockNo     uint64	`json:"blockno" db:"blockno"`
 	Balance	    float32	`json:"balance" db:"balance"`
+}
+
+type EsNFT struct {
+	*BaseEsType
+	TokenAddress string	`json:"address" db:"address"`
+	TokenId     string	`json:"token_id" db:"token_id"`
+	BlockNo     uint64	`json:"blockno" db:"blockno"`
+	Account     string	`json:"account" db:"account"`
 }
 
 var EsMappings = map[string]string{
@@ -247,11 +256,11 @@ var EsMappings = map[string]string{
 					"symbol": {
 						"type": "keyword"
 					},
-					"decimals": {
-						"type": "short"
+					"token_transfers": {
+						"type": "long"
 					},
-					"supply": {
-						"enabled": false
+					"type": {
+						"type": "keyword"
 					}
 				}
 		}
@@ -272,7 +281,7 @@ var EsMappings = map[string]string{
 					"blockno": {
 						"type": "long"
 					},
-					"token_id": {
+					"type": {
 						"type": "keyword"
 					},
 					"balance": {
@@ -281,6 +290,28 @@ var EsMappings = map[string]string{
 				}
 		}
 	}`,
+	"nft": `{
+		"settings" : {
+			"number_of_shards" : 10,
+			"number_of_replicas" : 0
+		},
+		"mappings":{
+				"properties":{
+					"address": {
+						"type": "keyword"
+					},
+					"token_id": {
+						"type": "keyword"
+					},
+					"account": {
+						"type": "keyword"
+					},
+					"blockno": {
+						"type": "long"
+					}
+				}
+		}
+	}`
 }
 
 

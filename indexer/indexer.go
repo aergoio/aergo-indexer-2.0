@@ -25,10 +25,11 @@ type ChanType struct {
         Token   chan ChanInfo
         TokenTx chan ChanInfo
         AccTokens chan ChanInfo
+        NFT 	chan ChanInfo
 }
 
 type BlockInfo struct {
-	Type    uint			// 0:stop_miner, 1:bulk, 2:insert
+	Type    uint			
         Height  uint64
 }
 
@@ -46,11 +47,9 @@ type Indexer struct {
 	RChannel	[]chan BlockInfo
         SynDone		chan bool
 	StartHeight	uint64
-	SkipEmpty       bool
 	BulkSize	int32
 	BatchTime	time.Duration
 	MinerNum	int
-//	Tokens		map[string]bool
 }
 
 // NewIndexer creates new Indexer instance

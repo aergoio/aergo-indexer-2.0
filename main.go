@@ -23,9 +23,8 @@ var (
 		Run:   rootRun,
 	}
 
-	reindexMode  bool
-	checkMode  bool
-	rebuildMode  bool
+	checkMode	bool
+	rebuildMode	bool
 	host            string
 	port            int32
 	dbURL           string
@@ -35,7 +34,6 @@ var (
 	stopAt          uint64
 	batchTime       int32
 	bulkSize        int32
-	skipEmpty       bool
 	minerNum	int
 
 	logger *log.Logger
@@ -53,7 +51,6 @@ func init() {
 	fs.StringVarP(&indexNamePrefix, "prefix", "X", "testnet_", "prefix used for index names")
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&rebuildMode, "rebuild", false, "reindex all with batch job")
-	fs.BoolVar(&skipEmpty, "skip-empty", false, "skip indexing empty blocks")
 	fs.Uint64VarP(&startFrom, "from", "", 0, "start syncing from this block number")
 	fs.Uint64VarP(&stopAt, "to", "", 0, "stop syncing at this block number")
 	fs.Int32VarP(&bulkSize, "bulk", "", 0, "bulk size")
@@ -70,8 +67,7 @@ func main() {
 func rootRun(cmd *cobra.Command, args []string) {
 
 	logger = log.NewLogger("indexer")
-
-	logger.Info().Msg("Starting indexer...")
+	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
 	client = waitForClient(getServerAddress())
 	indexer, err := indx.NewIndexer(client, logger, dbURL, indexNamePrefix)
@@ -83,12 +79,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.BulkSize = bulkSize
 		indexer.BatchTime = time.Duration(batchTime) * time.Second
 		indexer.StartHeight = startFrom
-		indexer.SkipEmpty = skipEmpty
 		indexer.MinerNum = int(minerNum)
-
-	        if skipEmpty {
-			logger.Info().Msg("Going to skip empty blocks")
-		}
 	}
 
 	if (checkMode) {
@@ -115,6 +106,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	}
 }
 
+
 func getServerAddress() string {
 	if len(aergoAddress) > 0 {
 		return aergoAddress
@@ -122,9 +114,11 @@ func getServerAddress() string {
 	return fmt.Sprintf("%s:%d", host, port)
 }
 
+
 func waitForClient(serverAddr string) types.AergoRPCServiceClient {
 	var conn *grpc.ClientConn
 	var err error
+
 	for {
 		ctx := context.Background()
 		maxMsgSize := 1024 * 1024 * 10 // 10mb
@@ -134,15 +128,18 @@ func waitForClient(serverAddr string) types.AergoRPCServiceClient {
 			grpc.WithTimeout(5*time.Second),
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)),
 		)
+
 		if err == nil && conn != nil {
 			break
 		}
+
 		logger.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
 		time.Sleep(time.Second)
 	}
 	logger.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
 	return types.NewAergoRPCServiceClient(conn)
 }
+
 
 func handleKillSig(handler func(), logger *log.Logger) {
 	sigChannel := make(chan os.Signal, 1)
@@ -156,3 +153,4 @@ func handleKillSig(handler func(), logger *log.Logger) {
 		}
 	}()
 }
+

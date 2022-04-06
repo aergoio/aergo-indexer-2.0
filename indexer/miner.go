@@ -53,18 +53,13 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 		Txs_Size := len(block.Body.Txs)
 
-		if (Txs_Size == 0 && ns.SkipEmpty) { continue }
-
 		// Get Block doc
 		blockD := ns.ConvBlock(block)
 
 		for _, tx := range block.Body.Txs {
 
 			// Get Tx doc
-			txD := ns.ConvTx(tx, blockD.BlockNo)
-			txD.Timestamp = blockD.Timestamp
-			txD.BlockNo = blockD.BlockNo
-			txD.TokenTransfers = 0
+			txD := ns.ConvTx(tx, blockD)
 
 			// Process name transactions
 			if ns.rec_Name(tx, txD, info.Type) { goto ADD_TX }
@@ -95,9 +90,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 				case "new_arc1_token", "new_arc2_token" :
 
-					// TODO: Address Type Check
-					// if len(receipt.Ret) < 31 { continue }
-
 					contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
 					if err != nil { continue }
 
@@ -116,27 +108,54 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
 					fmt.Println(">>>>>>>>>>> POLICY 1 :", encodeAccount(contractAddress))
 
-				case "mint", "burn", "transfer" :
+				case "mint" : 
 
 					json.Unmarshal([]byte(event.JsonArgs), &args)
-
-//					fmt.Println("Unmarshal :", args)
-
 					if (args[0] == nil) { continue }
 
-					// Get tokenTx doc
-					switch event.EventName {
-						case "mint" : tokenTx = ns.ConvTokenTx_mint(event.ContractAddress, txD, idx, args)
-						case "burn" : tokenTx = ns.ConvTokenTx_burn(event.ContractAddress, txD, idx, args)
-						case "transfer" : tokenTx = ns.ConvTokenTx_transfer(event.ContractAddress, txD, idx, args)
-					}
-
+					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1])
 					if tokenTx.Amount == "" { continue }
 
-					/*
-					if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
-					else if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
-					*/
+					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
+					txD.TokenTransfers ++
+
+					// TODO:update Token
+
+					// Add tokenTx doc
+					if info.Type == 1 {
+						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
+					} else {
+						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
+					}
+
+					// update TO-Account
+					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
+
+					if info.Type == 1 {
+						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+					} else {
+						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+					}
+
+					// update NFT
+					if (tokenTx.TokenId != "") { // ARC2
+						nft := ns.ConvNFT(event.ContractAddress,tokenTx,tokenTx.To)
+
+						if info.Type == 1 {
+							 ns.BChannel.NFT <- ChanInfo{1, nft}
+						} else {
+							ns.db.Insert(nft,ns.indexNamePrefix+"nft")
+						}
+					}
+
+				case "transfer" : 
+
+					json.Unmarshal([]byte(event.JsonArgs), &args)
+					if (args[0] == nil) { continue }
+
+					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2])
+//					tokenTx = ns.ConvTokenTx_transfer(event.ContractAddress, txD, idx, args)
+					if tokenTx.Amount == "" { continue }
 
 					txD.TokenTransfers ++
 
@@ -147,24 +166,74 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
 					}
 
-					// only new 
+					// update TO-Account
 					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
 
-					if aTokens.TokenId != "" || tokenTx.From == "MINT" { // ARC2 or mint
-						if info.Type == 1 {
-							 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-						} else {
-							ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-						}
-					} else { // ARC1 transfer
+					if info.Type == 1 {
+						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+					} else {
+						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+					}
 
-						bTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx, tokenTx.From) 
+					// update FROM-Account
+					aTokens = ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.From)
+
+					if info.Type == 1 {
+						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+					} else {
+						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+					}
+
+					// update NFT
+					if (tokenTx.TokenId != "") { // ARC2
+						nft := ns.ConvNFT(event.ContractAddress,tokenTx,tokenTx.To)
+
 						if info.Type == 1 {
-							 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-							 ns.BChannel.AccTokens <- ChanInfo{1, bTokens}
+							 ns.BChannel.NFT <- ChanInfo{1, nft}
 						} else {
-							ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-							ns.db.Insert(bTokens,ns.indexNamePrefix+"account_tokens")
+							ns.db.Insert(nft,ns.indexNamePrefix+"nft")
+						}
+					}
+
+				case "burn" : 
+
+					json.Unmarshal([]byte(event.JsonArgs), &args)
+					if (args[0] == nil) { continue }
+
+//					tokenTx = ns.ConvTokenTx_burn(event.ContractAddress, txD, idx, args)
+					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1])
+					if tokenTx.Amount == "" { continue }
+
+					// if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
+					txD.TokenTransfers ++
+
+					// Add tokenTx doc
+					if info.Type == 1 {
+						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
+					} else {
+						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
+					}
+
+					// TODO: Update token's totalSupply
+					// supply, err := ns.queryContract(contractAddress, "totalSupply", nil)
+					// ns.db.Update(event.ContractAddress,ns.indexNamePrefix+"token") 
+
+					// update FROM-Account
+					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.From)
+					if info.Type == 1 {
+						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+					} else {
+						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+					}
+
+					// Delete NFT --> Burn
+					if (tokenTx.TokenId != "") { // ARC2
+						nft := ns.ConvNFT(event.ContractAddress,tokenTx,"BURN")
+
+						if info.Type == 1 {
+							 ns.BChannel.NFT <- ChanInfo{1, nft}
+						} else {
+							ns.db.Insert(nft,ns.indexNamePrefix+"nft")
 						}
 					}
 
@@ -177,7 +246,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 			switch  tType {
 			case 1, 2 :
 				// Get ARC Token doc
-				token := ns.ConvTokenCreateTx(txD, receipt.ContractAddress)
+				token := ns.ConvToken(txD, receipt.ContractAddress)
 
 				if token.Name == "" { goto ADD_TX }
 
@@ -214,7 +283,6 @@ func (ns *Indexer) rec_Name(tx *types.Tx, txD doc.EsTx, Type uint) bool {
 
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
 		nameDoc := ns.ConvNameTx(tx, txD.BlockNo)
-		nameDoc.UpdateBlock = txD.BlockNo
 
 		if Type == 1 {
 			// to bulk

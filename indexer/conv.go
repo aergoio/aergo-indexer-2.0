@@ -101,7 +101,7 @@ func bigIntToFloat(a *big.Int, exp int64) float32 {
 }
 
 // ConvTx converts Tx from RPC into Elasticsearch type
-func (ns *Indexer) ConvTx(tx *types.Tx, blockNo uint64) doc.EsTx {
+func (ns *Indexer) ConvTx(tx *types.Tx, blockD doc.EsBlock) doc.EsTx {
 
 	account := ns.encodeAndResolveAccount(tx.Body.Account, blockNo)
 	recipient := ns.encodeAndResolveAccount(tx.Body.Recipient, blockNo)
@@ -120,6 +120,8 @@ func (ns *Indexer) ConvTx(tx *types.Tx, blockNo uint64) doc.EsTx {
 		Type:           fmt.Sprintf("%d", tx.Body.Type),
 		Category:       category,
 		Method:         method,
+		Timestamp: 	blockD.Timestamp,
+		txD.BlockNo: 	blockD.BlockNo,
 		TokenTransfers: 0,
 	}
 	return doc
@@ -146,10 +148,30 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 	hash := base58.Encode(tx.Hash)
 	return doc.EsName{
 		BaseEsType: &doc.BaseEsType{fmt.Sprintf("%s-%s", name, hash)},
-		Name:       name,
-		Address:    address,
-		UpdateTx:   hash,
+		Name:       	name,
+		Address:    	address,
+		UpdateTx:   	hash,
+		BlockNo:	blockNo,
 	}
+}
+
+
+func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsAccountTokens {
+
+	document := doc.EsAccountTokens {
+		TokenAddress:	ttDoc.TokenAddress,
+		TokenId:	ttDoc.TokenId,
+		Account:	account,
+		BlockNo:	ttDoc.BlockNo,
+	}
+
+	document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.TokenAddress, document.TokenId)}
+	}
+
+//	fmt.Println("---- Balance :", Balance, document.Balance)
+//	ns.Stop()
+
+	return document
 }
 
 
@@ -158,21 +180,10 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	document := doc.EsAccountTokens {
 		Account:	account,
 		TokenAddress:	ttDoc.TokenAddress,
-		TokenId:	ttDoc.TokenId,
 		BlockNo:	ttDoc.BlockNo,
 	}
 
-	if document.TokenId == "" { // ARC1
-		document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.Account, document.TokenAddress)}
-	} else { // ARC2
-		document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.TokenAddress, document.TokenId)}
-	}
-
-	if document.TokenId != "" {
-		document.Balance = 0
-		return document
-	}
-
+	document.BaseEsType = &doc.BaseEsType{fmt.Sprintf("%s-%s", document.Account, document.TokenAddress)}
 	Balance, err := ns.queryContract(contractAddress, "balanceOf", []string{document.Account})
 
 	if err != nil {
@@ -186,6 +197,12 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		document.Balance = 0
 	}
 
+	if ttDoc.TokenId == "" {
+		document.Type = category.ARC1
+	} else {
+		document.Type = category.ARC2
+	}
+
 //	fmt.Println("---- Balance :", Balance, document.Balance)
 //	ns.Stop()
 
@@ -193,7 +210,6 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 }
 
 
-// ConvContractCreateTx creates document for token creation
 func (ns *Indexer) ConvTokenTx_mint(contractAddress []byte, txDoc doc.EsTx, idx int, args []interface{}) doc.EsTokenTransfer {
 
 	document := doc.EsTokenTransfer{
@@ -224,6 +240,38 @@ func (ns *Indexer) ConvTokenTx_mint(contractAddress []byte, txDoc doc.EsTx, idx 
 	return document
 }
 
+func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}) doc.EsTokenTransfer {
+
+	document := doc.EsTokenTransfer{
+		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
+		TxId:         txDoc.GetID(),
+		BlockNo:      txDoc.BlockNo,
+		Timestamp:    txDoc.Timestamp,
+		TokenAddress: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
+		From:         from,
+		To:           to
+	}
+
+	switch args.(type) {
+	case string :
+		if AmountFloat, err := strconv.ParseFloat(args[1].(string),32); err == nil {
+			document.AmountFloat = float32(AmountFloat)
+			document.Amount  = args[1].(string)
+			document.TokenId = ""
+//			document.TokenId = args[1].(string) // for arc2 token have number id
+		} else {
+			document.TokenId  = args[1].(string)
+			document.Amount = "1"
+			document.AmountFloat = 1.0
+		}
+	default : document.Amount = ""
+	}
+
+	return document
+}
+
+
+/*
 func (ns *Indexer) ConvTokenTx_burn(contractAddress []byte, txDoc doc.EsTx, idx int, args []interface{}) doc.EsTokenTransfer {
 
 	document := doc.EsTokenTransfer{
@@ -283,14 +331,17 @@ func (ns *Indexer) ConvTokenTx_transfer(contractAddress []byte, txDoc doc.EsTx, 
 
 	return document
 }
+*/
 
 // ConvContractCreateTx creates document for token creation
-func (ns *Indexer) ConvTokenCreateTx(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken {
+
+func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken {
 
 	document :=  doc.EsToken{
 		BaseEsType:  &doc.BaseEsType{ns.encodeAndResolveAccount(ContractAddress, txDoc.BlockNo)},
-		TxId:        txDoc.GetID(),
-		UpdateBlock: txDoc.BlockNo,
+		TxId:    txDoc.GetID(),
+		BlockNo: txDoc.BlockNo,
+		TokenTransfers:	uint64(0)
 	}
 
 	var err error
@@ -301,17 +352,30 @@ func (ns *Indexer) ConvTokenCreateTx(txDoc doc.EsTx, ContractAddress []byte) doc
 		return document
 	}
 
-	decimals, err := ns.queryContract(ContractAddress, "decimals", nil)
-        if err == nil {
+	document.Symbol, err = ns.queryContract(ContractAddress, "symbol", nil)
+
+	decimals, err := ns.queryContract(ContractAddress, "decimals")
+	        if err == nil {
                 if d, err := strconv.Atoi(decimals); err == nil {
                         document.Decimals = uint8(d)
                 }
 
-	} else {
+        } else {
                 document.Decimals = uint8(1)
+        }
+
+
+	supply, err := ns.queryContract(contractAddress, "totalSupply", nil)
+	if err != nil {
+		document.Supply = 0
+		return document
 	}
 
-	document.Symbol, err = ns.queryContract(ContractAddress, "symbol", nil)
+	if AmountFloat, err := strconv.ParseFloat(supply, 32); err == nil {
+		document.Supply = float32(AmountFloat)
+	} else {
+		document.Supply = 0
+	}
 
 	return document
 }

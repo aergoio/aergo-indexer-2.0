@@ -42,10 +42,6 @@ type QueryParams struct {
 type CreateDocFunction = func() doc.DocType
 
 type ScrollInstance interface {
-	/*
-		params QueryParams
-		current    int
-	*/
 	Next() (doc.DocType, error)
 }
 
@@ -93,7 +89,6 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
 	ctx := context.Background()
 	// seo
-	// for resetting nft woner
 //	_, err := esdb.Client.Index().Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(ctx)
 	_, err := esdb.Client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(ctx)
 	if err != nil {
@@ -104,19 +99,23 @@ func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName st
 
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
+
 	var query *elastic.RangeQuery
 	if params.IntegerRange != nil {
 		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
 	}
+
 	if params.StringMatch != nil {
 		return 0, errors.New("Delete is not imlemented for string matches")
 	}
 
 	ctx := context.Background()
 	res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(ctx)
+
 	if err != nil {
 		return 0, err
 	}
+
 	return uint64(res.Deleted), nil
 }
 
