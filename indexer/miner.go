@@ -117,7 +117,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
 					txD.TokenTransfers ++
 
-					// TODO:update Token
+					// update Token
+					if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
 
 					// Add tokenTx doc
 					if info.Type == 1 {
@@ -212,9 +213,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
 					}
 
-					// TODO: Update token's totalSupply
-					// supply, err := ns.queryContract(contractAddress, "totalSupply", nil)
-					// ns.db.Update(event.ContractAddress,ns.indexNamePrefix+"token") 
+					// update Token
+					if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
 
 					// update FROM-Account
 					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.From)

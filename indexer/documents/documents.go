@@ -117,38 +117,38 @@ var EsMappings = map[string]string{
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties":{
-					"ts": {
-						"type": "date"
-					},
-					"blockno": {
-						"type": "long"
-					},
-					"from": {
-						"type": "keyword"
-					},
-					"to": {
-						"type": "keyword"
-					},
-					"amount": {
-						"enabled": false
-					},
-					"amount_float": {
-						"type": "float"
-					},
-					"type": {
-						"type": "keyword"
-					},
-					"category": {
-						"type": "keyword"
-					},
-					"method": {
-						"type": "keyword"
-					},
-					"token_transfers": {
-						"type": "long"
-					}
+			"properties":{
+				"ts": {
+					"type": "date"
+				},
+				"blockno": {
+					"type": "long"
+				},
+				"from": {
+					"type": "keyword"
+				},
+				"to": {
+					"type": "keyword"
+				},
+				"amount": {
+					"enabled": false
+				},
+				"amount_float": {
+					"type": "float"
+				},
+				"type": {
+					"type": "keyword"
+				},
+				"category": {
+					"type": "keyword"
+				},
+				"method": {
+					"type": "keyword"
+				},
+				"token_transfers": {
+					"type": "long"
 				}
+			}
 		}
 	}`,
 	"block": `{
@@ -157,26 +157,26 @@ var EsMappings = map[string]string{
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties": {
-					"ts": {
-						"type": "date"
-					},
-					"no": {
-						"type": "long"
-					},
-					"txs": {
-						"type": "long"
-					},
-					"size": {
-						"type": "long"
-					},
-					"reward_account": {
-						"type": "keyword"
-					},
-					"reward_amount": {
-						"enabled": false
-					}
+			"properties": {
+				"ts": {
+					"type": "date"
+				},
+				"no": {
+					"type": "long"
+				},
+				"txs": {
+					"type": "long"
+				},
+				"size": {
+					"type": "long"
+				},
+				"reward_account": {
+					"type": "keyword"
+				},
+				"reward_amount": {
+					"enabled": false
 				}
+			}
 		}
 	}`,
 	"name": `{
@@ -185,20 +185,20 @@ var EsMappings = map[string]string{
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties": {
-					"name": {
-						"type": "keyword"
-					},
-					"address": {
-						"type": "keyword"
-					},
-					"blockno": {
-						"type": "long"
-					},
-					"tx": {
-						"type": "keyword"
-					}
+			"properties": {
+				"name": {
+					"type": "keyword"
+				},
+				"address": {
+					"type": "keyword"
+				},
+				"blockno": {
+					"type": "long"
+				},
+				"tx": {
+					"type": "keyword"
 				}
+			}
 		}
 	}`,
 	"token_transfer": `{
@@ -207,35 +207,35 @@ var EsMappings = map[string]string{
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties":{
-					"tx_id": {
-						"type": "keyword"
-					},
-					"blockno": {
-						"type": "long"
-					},
-					"ts": {
-						"type": "date"
-					},
-					"address": {
-						"type": "keyword"
-					},
-					"token_id": {
-						"type": "keyword"
-					},
-					"from": {
-						"type": "keyword"
-					},
-					"to": {
-						"type": "keyword"
-					},
-					"amount": {
-						"enabled": false
-					},
-					"amount_float": {
-						"type": "float"
-					}
+			"properties":{
+				"tx_id": {
+					"type": "keyword"
+				},
+				"blockno": {
+					"type": "long"
+				},
+				"ts": {
+					"type": "date"
+				},
+				"address": {
+					"type": "keyword"
+				},
+				"token_id": {
+					"type": "keyword"
+				},
+				"from": {
+					"type": "keyword"
+				},
+				"to": {
+					"type": "keyword"
+				},
+				"amount": {
+					"enabled": false
+				},
+				"amount_float": {
+					"type": "float"
 				}
+			}
 		}
 	}`,
 	"token": `{
@@ -244,35 +244,35 @@ var EsMappings = map[string]string{
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties":{
-					"tx_id": {
-						"type": "keyword"
-					},
-					"blockno": {
-						"type": "long"
-					},
-					"name": {
-						"type": "keyword"
-					},
-					"symbol": {
-						"type": "keyword"
-					},
-					"decimals": {
-						"type": "short"
-					},
-					"supply": {
-						"enabled": false
-					},
-					"supply_float": {
-						"type": "float"
-					},
-					"token_transfers": {
-						"type": "long"
-					},
-					"type": {
-						"type": "keyword"
-					}
+			"properties":{
+				"tx_id": {
+					"type": "keyword"
+				},
+				"blockno": {
+					"type": "long"
+				},
+				"name": {
+					"type": "keyword"
+				},
+				"symbol": {
+					"type": "keyword"
+				},
+				"decimals": {
+					"type": "short"
+				},
+				"supply": {
+					"enabled": false
+				},
+				"supply_float": {
+					"type": "float"
+				},
+				"token_transfers": {
+					"type": "long"
+				},
+				"type": {
+					"type": "keyword"
 				}
+			}
 		}
 	}`,
 	"account_tokens": `{
@@ -281,45 +281,45 @@ var EsMappings = map[string]string{
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties":{
-					"account": {
-						"type": "keyword"
-					},
-					"address": {
-						"type": "keyword"
-					},
-					"type": {
-						"type": "keyword"
-					},
-					"balance": {
-						"enabled": false
-					}
-					"balance_float": {
-						"type": "float"
-					}
+			"properties":{
+				"account": {
+					"type": "keyword"
+				},
+				"address": {
+					"type": "keyword"
+				},
+				"type": {
+					"type": "keyword"
+				},
+				"balance": {
+					"enabled": false
+				},
+				"balance_float": {
+					"type": "float"
 				}
+			}
 		}
 	}`,
 	"nft": `{
 		"settings" : {
-			"number_of_shards" : 10,
+			"number_of_shards" : 20,
 			"number_of_replicas" : 0
 		},
 		"mappings":{
-				"properties":{
-					"address": {
-						"type": "keyword"
-					},
-					"token_id": {
-						"type": "keyword"
-					},
-					"account": {
-						"type": "keyword"
-					},
-					"blockno": {
-						"type": "long"
-					}
+			"properties":{
+				"address": {
+					"type": "keyword"
+				},
+				"token_id": {
+					"type": "keyword"
+				},
+				"account": {
+					"type": "keyword"
+				},
+				"blockno": {
+					"type": "long"
 				}
+			}
 		}
 	}`,
 }

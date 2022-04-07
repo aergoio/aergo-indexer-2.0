@@ -264,8 +264,27 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 	return document
 }
 
-// ConvContractCreateTx creates document for token creation
+func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 
+	document :=  doc.EsToken{}
+	supply, err := ns.queryContract(ContractAddress, "totalSupply", nil)
+
+	if err != nil {
+		document.SupplyFloat = 0
+		document.Supply = "0"
+	} else if AmountFloat, err := strconv.ParseFloat(supply, 32); err == nil {
+		document.SupplyFloat = float32(AmountFloat)
+		document.Supply = supply
+	} else {
+		document.SupplyFloat = 0
+		document.Supply = "0"
+	}
+
+	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(ContractAddress))
+}
+
+
+// ConvContractCreateTx creates document for token creation
 func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken {
 
 	document :=  doc.EsToken{
