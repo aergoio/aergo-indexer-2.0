@@ -283,7 +283,7 @@ func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(ContractAddress))
-	ns.Stop()
+//	ns.Stop()
 }
 
 
