@@ -131,19 +131,15 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 					// update NFT
 					if (tokenTx.TokenId != "") { // ARC2
-						nft := ns.ConvNFT(event.ContractAddress,tokenTx,tokenTx.To)
-
-						if info.Type == 1 {
-							 ns.BChannel.NFT <- ChanInfo{1, nft}
-						} else {
-							ns.db.Insert(nft,ns.indexNamePrefix+"nft")
-						}
+						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
 					}
 
 				case "transfer" : 
 
 					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
 					// if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
+
+//					fmt.Println("token_transfer")
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil) { continue }
 
@@ -167,13 +163,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 					// update NFT
 					if (tokenTx.TokenId != "") { // ARC2
-						nft := ns.ConvNFT(event.ContractAddress,tokenTx,tokenTx.To)
-
-						if info.Type == 1 {
-							 ns.BChannel.NFT <- ChanInfo{1, nft}
-						} else {
-							ns.db.Insert(nft,ns.indexNamePrefix+"nft")
-						}
+						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
 					}
 
 				case "burn" : 
@@ -201,13 +191,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 					// Delete NFT --> Burn
 					if (tokenTx.TokenId != "") { // ARC2
-						nft := ns.ConvNFT(event.ContractAddress,tokenTx,"BURN")
-
-						if info.Type == 1 {
-							 ns.BChannel.NFT <- ChanInfo{1, nft}
-						} else {
-							ns.db.Insert(nft,ns.indexNamePrefix+"nft")
-						}
+						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,"BURN")
 					}
 
 				default : continue

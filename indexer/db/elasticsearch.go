@@ -48,10 +48,10 @@ type ScrollInstance interface {
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
         Client *elastic.Client
-	Update *elastic.UpdateService
-	Index  *elastic.IndexService
-	Search *elastic.SearchService
-	Exists *elastic.ExistsService
+	UpdateS *elastic.UpdateService
+	IndexS  *elastic.IndexService
+	SearchS *elastic.SearchService
+	ExistsS *elastic.ExistsService
 }
 
 // NewElasticClient creates a new instance of elastic.Client
@@ -86,21 +86,22 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 
 	return &ElasticsearchDbController{
 		Client: client,
-		Update: client.Update(),
-		Index: client.Index(),
-		Search: client.Search(),
-		Exists: client.Exists(),
+		UpdateS: client.Update(),
+		IndexS: client.Index(),
+		SearchS: client.Search(),
+		ExistsS: client.Exists(),
 	}, nil
 }
 
-func (esdb *ElasticsearchDbController) Exists(indexName string, id string) error {
-	ans, err := esdb.Exists.Index(indexName).Id(id).Do(context.Background())
+func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
+
+	ans, _ := esdb.ExistsS.Index(indexName).Id(id).Do(context.Background())
 
 	return ans
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
-	_, err := esdb.Update.Index(indexName).Id(id).Doc(document).Do(context.Background())
+	_, err := esdb.UpdateS.Index(indexName).Id(id).Doc(document).Do(context.Background())
 
 	return err
 }
@@ -109,8 +110,8 @@ func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName st
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
 
-//	_, err := esdb.Index.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
-	_, err := esdb.Index.Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
+//	_, err := esdb.IndexS.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
+	_, err := esdb.IndexS.Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 
 	return err
 }

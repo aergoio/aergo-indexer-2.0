@@ -118,7 +118,11 @@ type EsNFT struct {
 	*BaseEsType
 	TokenAddress string	`json:"address" db:"address"`
 	TokenId     string	`json:"token_id" db:"token_id"`
-	BlockNo     uint64	`json:"blockno" db:"blockno"`
+	Account     string	`json:"account" db:"account"`
+}
+
+type EsNFTUp struct {
+	*BaseEsType
 	Account     string	`json:"account" db:"account"`
 }
 
@@ -327,9 +331,6 @@ var EsMappings = map[string]string{
 				},
 				"account": {
 					"type": "keyword"
-				},
-				"blockno": {
-					"type": "long"
 				}
 			}
 		}

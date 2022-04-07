@@ -1,0 +1,7 @@
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_block'
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_tx'
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_nft'
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_token'
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_token_transfer'
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_account_tokens'
+curl -X DELETE 'http://localhost:9200/testnet_2022-04-07_12-26-23_name'
