@@ -92,6 +92,12 @@ type EsToken struct {
 	SupplyFloat	float32         `json:"supply_float" db:"supply_float"`
 }
 
+type EsTokenUp struct {
+	*BaseEsType
+	Supply		string          `json:"supply" db:"supply"`
+	SupplyFloat	float32         `json:"supply_float" db:"supply_float"`
+}
+
 // EsAccountTokens is meta data of a token of an account. The id is account_token address.
 type EsAccountTokens struct {
 	*BaseEsType

@@ -266,7 +266,9 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 
 func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 
-	document :=  doc.EsToken{}
+	document := doc.EsTokenUp{
+	}
+
 	supply, err := ns.queryContract(ContractAddress, "totalSupply", nil)
 
 	if err != nil {
@@ -281,6 +283,7 @@ func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(ContractAddress))
+	ns.Stop()
 }
 
 

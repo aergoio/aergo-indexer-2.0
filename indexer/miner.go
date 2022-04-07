@@ -114,11 +114,10 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1])
 					if tokenTx.Amount == "" { continue }
 
-					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
 					txD.TokenTransfers ++
 
 					// update Token
-					if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
+					 if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
 
 					// Add tokenTx doc
 					if info.Type == 1 {
@@ -149,6 +148,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 				case "transfer" : 
 
+					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
+					// if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil) { continue }
 
@@ -164,6 +165,9 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					} else {
 						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
 					}
+
+					// for test
+					// ns.UpdateToken(event.ContractAddress) 
 
 					// update TO-Account
 					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
@@ -203,7 +207,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1])
 					if tokenTx.Amount == "" { continue }
 
-					// if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
 					txD.TokenTransfers ++
 
 					// Add tokenTx doc

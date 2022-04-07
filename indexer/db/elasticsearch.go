@@ -87,7 +87,6 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 // It returns the number of inserted documents (1) or an error
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
-	//res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(ctx)
 
 	ctx := context.Background()
 	_, err := elastic.NewUpdateService(esdb.Client).Index(indexName).Id(id).Doc(document).Do(ctx)
