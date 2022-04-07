@@ -48,6 +48,10 @@ type ScrollInstance interface {
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
         Client *elastic.Client
+	Update *elastic.UpdateService
+	Index  *elastic.IndexService
+	Search *elastic.SearchService
+	Exists *elastic.ExistsService
 }
 
 // NewElasticClient creates a new instance of elastic.Client
@@ -75,36 +79,42 @@ func NewElasticClient(esURL string) (*elastic.Client, error) {
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
 func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, error) {
 	client, err := NewElasticClient(esURL)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &ElasticsearchDbController{
 		Client: client,
+		Update: client.Update(),
+		Index: client.Index(),
+		Search: client.Search(),
+		Exists: client.Exists(),
 	}, nil
 }
 
-// Insert inserts a single document using the updata params
-// It returns the number of inserted documents (1) or an error
+func (esdb *ElasticsearchDbController) Exists(indexName string, id string) error {
+	ans, err := esdb.Exists.Index(indexName).Id(id).Do(context.Background())
+
+	return ans
+}
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
-
-	ctx := context.Background()
-	_, err := elastic.NewUpdateService(esdb.Client).Index(indexName).Id(id).Doc(document).Do(ctx)
+	_, err := esdb.Update.Index(indexName).Id(id).Doc(document).Do(context.Background())
 
 	return err
 }
 
-
+// Insert inserts a single document using the updata params
+// It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
-	ctx := context.Background()
-	// seo
-//	_, err := esdb.Client.Index().Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(ctx)
-	_, err := esdb.Client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(ctx)
-	if err != nil {
-		return  err
-	}
-	return  nil
+
+//	_, err := esdb.Index.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
+	_, err := esdb.Index.Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
+
+	return err
 }
+
 
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
@@ -118,8 +128,7 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 		return 0, errors.New("Delete is not imlemented for string matches")
 	}
 
-	ctx := context.Background()
-	res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(ctx)
+	res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(context.Background())
 
 	if err != nil {
 		return 0, err
@@ -130,46 +139,48 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 
 // Count returns the number of indexed documents
 func (esdb *ElasticsearchDbController) Count(params QueryParams) (int64, error) {
-	ctx := context.Background()
-	return esdb.Client.Count(params.IndexName).Do(ctx)
+	return esdb.Client.Count(params.IndexName).Do(context.Background())
 }
 
 // SelectOne selects a single document
 func (esdb *ElasticsearchDbController) SelectOne(params QueryParams, createDocument CreateDocFunction) (doc.DocType, error) {
-	ctx := context.Background()
+
 	query := elastic.NewMatchAllQuery()
-	res, err := esdb.Client.Search().Index(params.IndexName).Query(query).Sort(params.SortField, params.SortAsc).From(params.From).Size(1).Do(ctx)
+	res, err := esdb.Client.Search().Index(params.IndexName).Query(query).Sort(params.SortField, params.SortAsc).From(params.From).Size(1).Do(context.Background())
+
 	if err != nil {
 		return nil, err
 	}
+
 	if res == nil || res.TotalHits() == 0 || len(res.Hits.Hits) == 0 {
 		return nil, nil
 	}
+
 	// Unmarshall document
 	hit := res.Hits.Hits[0]
 	document := createDocument()
 
-	// seo
 	if err := json.Unmarshal([]byte(hit.Source), document); err != nil {
-//	if err := json.Unmarshal(*hit.Source, document); err != nil {
 		return nil, err
 	}
 
 	document.SetID(hit.Id)
-	if err != nil {
-		return nil, err
-	}
+
 	return document, nil
 }
 
 // UpdateAlias updates an alias with a new index name and delete stale indices
 func (esdb *ElasticsearchDbController) UpdateAlias(aliasName string, indexName string) error {
+
 	ctx := context.Background()
 	svc := esdb.Client.Alias()
+
 	res, err := esdb.Client.Aliases().Index("_all").Do(ctx)
+
 	if err != nil {
 		return err
 	}
+
 	indices := res.IndicesByAlias(aliasName)
 	if len(indices) > 0 {
 		// Remove old aliases
@@ -177,43 +188,41 @@ func (esdb *ElasticsearchDbController) UpdateAlias(aliasName string, indexName s
 			svc.Remove(indexName, aliasName)
 		}
 	}
+
 	// Add new alias
 	svc.Add(indexName, aliasName)
+
 	_, err = svc.Do(ctx)
-	// seo
-	// Delete old indices
-	//if len(indices) > 0 {
-		for _, indexName := range indices {
-			esdb.Client.DeleteIndex(indexName).Do(ctx)
-		}
-	//}
+
+	for _, indexName := range indices {
+		esdb.Client.DeleteIndex(indexName).Do(ctx)
+	}
 
 	return err
 }
 
 // GetExistingIndexPrefix checks for existing indices and returns the prefix, if any
 func (esdb *ElasticsearchDbController) GetExistingIndexPrefix(aliasName string, documentType string) (bool, string, error) {
-	ctx := context.Background()
-	res, err := esdb.Client.Aliases().Index("_all").Do(ctx)
+
+	res, err := esdb.Client.Aliases().Index("_all").Do(context.Background())
 	if err != nil {
 		return false, "", err
 	}
+
 	indices := res.IndicesByAlias(aliasName)
 
 	if len(indices) > 0 {
-		// seo bugfix
 		indexNamePrefix := strings.TrimSuffix(indices[0], documentType)
-//		indexNamePrefix := strings.TrimRight(indices[0], documentType)
-
 		return true, indexNamePrefix, nil
 	}
+
 	return false, "", nil
 }
 
 // CreateIndex creates index according to documentType definition
 func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentType string) error {
-	ctx := context.Background()
-	createIndex, err := esdb.Client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(ctx)
+
+	createIndex, err := esdb.Client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(context.Background())
 	if err != nil {
 		return err
 	}

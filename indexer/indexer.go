@@ -118,6 +118,7 @@ func (ns *Indexer) Stop() {
 
 // GetBestBlockFromDb retrieves the current best block from the db
 func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
+
         block, err := ns.db.SelectOne(db.QueryParams{
                 IndexName: ns.indexNamePrefix + "block",
                 SortField: "no",

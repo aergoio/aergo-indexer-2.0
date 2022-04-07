@@ -183,6 +183,44 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 	return document
 }
 
+func (ns *Indexer) UpdateAccountToken(Type int, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string) {
+
+	if !ns.db.Exists(indexNamePrefix+"account_tokens",fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress)) {
+
+		aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,account)
+		if Type == 1 {
+			ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+		} else {
+			ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+		}
+
+		return
+	}
+
+	document := doc.EsAccountTokensUp {
+	}
+
+	Balance, err := ns.queryContract(contractAddress, "balanceOf", []string{account})
+
+	if err != nil {
+		document.Balance = "0"
+		document.BalanceFloat = 0
+
+		return document
+	}
+
+	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
+		document.BalanceFloat = float32(AmountFloat)
+		document.Balance = Balance
+	} else {
+		document.BalanceFloat = 0
+		document.Balance = "0"
+	}
+
+	ns.db.Update(document,ns.indexNamePrefix+"account_tokens",fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
+	ns.Stop()
+}
+
 
 func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsAccountTokens {
 
@@ -203,13 +241,6 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	if err != nil {
 		document.Balance = "0"
 		document.BalanceFloat = 0
-
-		/*
-		if document.Type == category.ARC1 {
-			fmt.Println("---- Account error :", document)
-			ns.Stop()
-		}
-		*/
 
 		return document
 	}
@@ -263,6 +294,7 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 
 	return document
 }
+
 
 func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 

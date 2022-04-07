@@ -116,9 +116,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 					txD.TokenTransfers ++
 
-					// update Token
-					 if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
-
 					// Add tokenTx doc
 					if info.Type == 1 {
 						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
@@ -126,14 +123,11 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
 					}
 
-					// update TO-Account
-					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
+					// update Token
+					 if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
 
-					if info.Type == 1 {
-						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-					} else {
-						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-					}
+					// update TO-Account
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
 
 					// update NFT
 					if (tokenTx.TokenId != "") { // ARC2
@@ -154,7 +148,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					if (args[0] == nil) { continue }
 
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2])
-//					tokenTx = ns.ConvTokenTx_transfer(event.ContractAddress, txD, idx, args)
 					if tokenTx.Amount == "" { continue }
 
 					txD.TokenTransfers ++
@@ -166,26 +159,11 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						ns.db.Insert(tokenTx,ns.indexNamePrefix+"token_transfer")
 					}
 
-					// for test
-					// ns.UpdateToken(event.ContractAddress) 
-
 					// update TO-Account
-					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.To)
-
-					if info.Type == 1 {
-						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-					} else {
-						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-					}
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
 
 					// update FROM-Account
-					aTokens = ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.From)
-
-					if info.Type == 1 {
-						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-					} else {
-						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-					}
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From)
 
 					// update NFT
 					if (tokenTx.TokenId != "") { // ARC2
@@ -203,7 +181,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil) { continue }
 
-//					tokenTx = ns.ConvTokenTx_burn(event.ContractAddress, txD, idx, args)
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1])
 					if tokenTx.Amount == "" { continue }
 
@@ -220,12 +197,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
 
 					// update FROM-Account
-					aTokens := ns.ConvAccountTokens(event.ContractAddress,tokenTx,tokenTx.From)
-					if info.Type == 1 {
-						 ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-					} else {
-						ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-					}
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From)
 
 					// Delete NFT --> Burn
 					if (tokenTx.TokenId != "") { // ARC2

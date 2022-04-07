@@ -108,6 +108,12 @@ type EsAccountTokens struct {
 	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
 }
 
+type EsAccountTokensUp struct {
+	*BaseEsType
+	Balance		string	`json:"balance" db:"balance"`
+	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
+}
+
 type EsNFT struct {
 	*BaseEsType
 	TokenAddress string	`json:"address" db:"address"`
