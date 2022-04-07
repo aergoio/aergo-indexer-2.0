@@ -27,6 +27,7 @@ func (ns *Indexer) Rebuild() error {
 	ns.CreateIndex("block")
 	ns.CreateIndex("token_transfer")
 	ns.CreateIndex("account_tokens")
+	ns.CreateIndex("nft")
 
 	ns.StartBulkChannel()
 

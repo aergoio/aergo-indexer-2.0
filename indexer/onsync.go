@@ -19,6 +19,7 @@ func (ns *Indexer) OnSync(startFrom uint64, stopAt uint64) error {
 	ns.CreateIndexIfNotExists("token")
 	ns.CreateIndexIfNotExists("token_transfer")
 	ns.CreateIndexIfNotExists("account_tokens")
+	ns.CreateIndexIfNotExists("nft")
 
 	ns.lastBlockHeight = uint64(ns.GetNodeBlockHeight()) - 1
 
