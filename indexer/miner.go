@@ -124,7 +124,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					}
 
 					// update Token
-					 if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
+					 if info.Type == 2 { ns.UpdateToken(event.ContractAddress) }
 
 					// update TO-Account
 					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
@@ -184,7 +184,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					}
 
 					// update Token
-					if info.Type != 1 { ns.UpdateToken(event.ContractAddress) }
+					if info.Type == 2 { ns.UpdateToken(event.ContractAddress) }
 
 					// update FROM-Account
 					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From)

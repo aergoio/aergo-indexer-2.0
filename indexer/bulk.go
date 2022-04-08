@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 	"fmt"
-	"encoding/json"
+//	"encoding/json"
 	"github.com/olivere/elastic/v7"
 )
 
@@ -113,13 +113,13 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 						ns.BChannel.Block <- ChanInfo{2,nil}
 					}
 
-					if return_flag { return }
+//					if return_flag { return }
 				}
 			}
 		}()
 	}
 
-	commitBulk := func(sync bool) error {
+	commitBulk := func(sync bool) {
 
 		if total == 0 {
 			if (sync && !isBlock) {
@@ -127,7 +127,8 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 			}
 
 			return_flag = true
-			return nil
+
+			return
 		}
 
 		// Block Channel : wait other Channels
@@ -143,26 +144,16 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 			for i := 0 ; i < 6 ; i ++ {
 				<-ns.SynDone
 			}
-
-			fmt.Println(">>> Commit block : ", total)
 		}
 
-		res, err := bulk.Do(ctx)
+		_, err := bulk.Do(ctx)
 
-		if sync && !isBlock  {
-			ns.SynDone <- true
-//			fmt.Println(">>>>>>> Response Sync <<<<<", indexName, total)
-		}
+		if sync && !isBlock  { ns.SynDone <- true }
 
 		if err != nil {
-			fmt.Println(">>>>>>> error Commit 0 <<<<<", indexName, total)
-			ns.log.Info().Err(err).Str("indexName", indexName)
+			fmt.Println(">>>>>>> error Commit <<<<<", indexName, total, sync)
+			ns.log.Error().Err(err).Str("indexName", indexName)
 			ns.StopBulkChannel()
-		}
-
-		err = ns.getFirstError(res)
-		if err != nil {
-			ns.log.Info().Err(err).Str("indexName", indexName)
 		}
 
 		dur := time.Since(begin).Seconds()
@@ -170,10 +161,10 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 		ns.log.Info().Str("Commit",indexName).Int32("total", total).Int64("perSecond", pps).Msg("")
 		begin = time.Now()
+
 		total = 0
 
 		return_flag = true
-		return nil
 	}
 
 	for I := range docChannel {
@@ -185,51 +176,18 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 		// commit
 		if I.Type == 2 {
-
-			err := commitBulk(true)
-			if err != nil {
-				fmt.Println(">>>>>>> error Commit 1 <<<<<", indexName, total)
-				ns.log.Error().Err(err).Str("indexName", indexName)
-				ns.StopBulkChannel()
-			}
-
+			commitBulk(true)
 			continue
 		}
 
 		// commit
-		if total >= bulkSize {
-
-			err := commitBulk(false)
-			if err != nil {
-				fmt.Println(">>>>>>> error Commit 2 <<<<<", indexName, total)
-				ns.log.Error().Err(err).Str("indexName", indexName)
-				ns.StopBulkChannel()
-			}
-		}
+		if total >= bulkSize { commitBulk(false) }
 
 		total ++
 
-		// Only Create Indexing : for account tokens
+		// Only Create Indexing : for NFT
 		bulk.Add(elastic.NewBulkIndexRequest().OpType("create").Id(I.Doc.GetID()).Doc(I.Doc))
 //		bulk.Add(elastic.NewBulkUpdateRequest().Id(I.Doc.GetID()).Doc(I.Doc).DocAsUpsert(true))
 	}
-}
-
-func (ns *Indexer) getFirstError(res *elastic.BulkResponse) error {
-
-        if res.Errors {
-                for _, v := range res.Items {
-                        for action, item := range v {
-                                if item.Error != nil {
-                                        resJSON, _ := json.Marshal(item.Error)
-                                        fmt.Println(">>>>>> ERROR : ", action, item.Id, string(resJSON))
-
-                                       // return fmt.Errorf(">>>>>> ERROR : %s %s (%s): %s", action, item.Type, item.Id, string(resJSON))
-                                }
-                        }
-                }
-        }
-
-        return nil
 }
 

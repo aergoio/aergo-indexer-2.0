@@ -63,7 +63,7 @@ func (ns *Indexer) encodeAndResolveAccount(account []byte, blockNo uint64) strin
 
 	var encoded = encodeAccount(account)
 
-	//FIXME:seo test
+	// Seo
 	return encoded
 
 	if len(encoded) > 12 || isInternalName(encoded) || encoded == "" {
@@ -208,7 +208,7 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 //	fmt.Println("==> Success")
 //	ns.Stop()
 
-	if Type == 1 { return }
+	if Type != 2 { return }
 
 	document := doc.EsNFTUp {
 		Account: "BURN",
@@ -221,14 +221,15 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"nft",fmt.Sprintf("%s-%s", tokenTx.TokenAddress,tokenTx.TokenId))
+	fmt.Println("Update NFT :", fmt.Sprintf("%s-%s", tokenTx.TokenAddress,tokenTx.TokenId))
 }
 
 
 func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string) {
 
-//	fmt.Println("ID : ", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
-
 	if !ns.db.Exists(ns.indexNamePrefix+"account_tokens",fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress)) {
+
+	//	fmt.Println("----> Not Exist", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
 
 		aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account)
 		if Type == 1 {
@@ -242,7 +243,8 @@ func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenT
 
 //	fmt.Println("----> Exist", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
 
-	if Type == 1 { return }
+	// On_Sync
+	if Type != 2 { return }
 
 	document := doc.EsAccountTokensUp {
 	}
@@ -265,6 +267,7 @@ func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenT
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"account_tokens",fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
+	fmt.Println("Update Account :", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
 }
 
 
@@ -361,6 +364,7 @@ func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(ContractAddress))
+	fmt.Println("Update Token :", encodeAccount(ContractAddress))
 //	ns.Stop()
 }
 

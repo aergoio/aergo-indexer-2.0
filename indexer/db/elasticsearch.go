@@ -95,13 +95,17 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 
 func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
 
+//	return false
+
 	ans, _ := esdb.ExistsS.Index(indexName).Id(id).Do(context.Background())
+//	ans, _ := esdb.Client.Exists().Index(indexName).Id(id).Do(context.Background())
 
 	return ans
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
 	_, err := esdb.UpdateS.Index(indexName).Id(id).Doc(document).Do(context.Background())
+//	_, err := esdb.Client.Update().Index(indexName).Id(id).Doc(document).Do(context.Background())
 
 	return err
 }
@@ -112,10 +116,10 @@ func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName st
 
 //	_, err := esdb.IndexS.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	_, err := esdb.IndexS.Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
+//	_, err := esdb.Client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 
 	return err
 }
-
 
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {

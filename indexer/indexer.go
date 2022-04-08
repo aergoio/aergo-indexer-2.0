@@ -29,7 +29,7 @@ type ChanType struct {
 }
 
 type BlockInfo struct {
-	Type    uint			
+	Type    uint			// 0:stop_miner, 1:bulk, 2:sync			
         Height  uint64
 }
 
