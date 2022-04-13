@@ -95,7 +95,7 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 
 func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
 
-//	return false
+	return false
 
 	ans, _ := esdb.ExistsS.Index(indexName).Id(id).Do(context.Background())
 //	ans, _ := esdb.Client.Exists().Index(indexName).Id(id).Do(context.Background())

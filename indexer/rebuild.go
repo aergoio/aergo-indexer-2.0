@@ -39,8 +39,10 @@ func (ns *Indexer) Rebuild() error {
 	ns.UpdateAliasForType("tx")
 	ns.UpdateAliasForType("name")
 	ns.UpdateAliasForType("token")
-	ns.UpdateAliasForType("token_transfer")
 	ns.UpdateAliasForType("block")
+	ns.UpdateAliasForType("token_transfer")
+	ns.UpdateAliasForType("account_tokens")
+	ns.UpdateAliasForType("nft")
 
 	return nil
 }

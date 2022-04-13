@@ -8,7 +8,6 @@ import (
 	"errors"
 	"github.com/kjunblk/aergo-indexer/indexer/db"
 	"github.com/kjunblk/aergo-indexer/types"
-
 	doc "github.com/kjunblk/aergo-indexer/indexer/documents"
 	"github.com/aergoio/aergo-lib/log"
 )
@@ -25,7 +24,7 @@ type ChanType struct {
         Token   chan ChanInfo
         TokenTx chan ChanInfo
         AccTokens chan ChanInfo
-        NFT 	chan ChanInfo
+        NFT	chan ChanInfo
 }
 
 type BlockInfo struct {
@@ -119,13 +118,14 @@ func (ns *Indexer) Stop() {
 // GetBestBlockFromDb retrieves the current best block from the db
 func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
 
-        block, err := ns.db.SelectOne(db.QueryParams{
+        block, err := ns.db.SelectOne(db.QueryParams {
                 IndexName: ns.indexNamePrefix + "block",
                 SortField: "no",
                 SortAsc:   false,
         }, func() doc.DocType {
                 block := new(doc.EsBlock)
                 block.BaseEsType = new(doc.BaseEsType)
+
                 return block
         })
 

@@ -173,6 +173,7 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress:	ttDoc.TokenAddress,
 		TokenId:	ttDoc.TokenId,
+		BlockNo:	ttDoc.BlockNo,
 		Account:	account,
 	}
 
@@ -215,6 +216,8 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 	}
 
 	owner, err := ns.queryContract(contractAddress, "ownerOf", []string{tokenTx.TokenId})
+
+	document.BlockNo = tokenTx.BlockNo
 
 	if err == nil && owner != "" {
 		document.Account = owner
