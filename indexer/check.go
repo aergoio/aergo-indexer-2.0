@@ -54,6 +54,7 @@ func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) error {
 	return nil
 }
 
+
 func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 
 	ns.log.Info().Uint64("startFrom", Start_Pos).Uint64("stopAt", End_Pos).Msg("Check Block range")
@@ -126,3 +127,4 @@ func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 	ns.log.Info().Uint64("missing", missingBlocks).Msg("Done with consistency check")
 	os.WriteFile("./bulk_end_time.txt", []byte(time.Now().String()), 0644)
 }
+

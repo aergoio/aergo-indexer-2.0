@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 	"fmt"
-//	"encoding/json"
 	"github.com/olivere/elastic/v7"
 )
 
@@ -25,8 +24,10 @@ func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uin
 }
 
 
+// Run Bulk Indexing 
 func (ns *Indexer) StartBulkChannel () {
 
+	// Open channels for each indices
 	ns.BChannel.Block = make(chan ChanInfo)
 	ns.BChannel.Tx = make(chan ChanInfo)
 	ns.BChannel.Name = make(chan ChanInfo)
@@ -36,6 +37,7 @@ func (ns *Indexer) StartBulkChannel () {
 	ns.BChannel.NFT = make(chan ChanInfo)
 	ns.SynDone = make(chan bool)
 
+	// Start bulk indexers for each indices
 	go ns.BulkIndexer(ns.BChannel.Block, ns.indexNamePrefix+"block", ns.BulkSize, ns.BatchTime, true)
 	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.Name, ns.indexNamePrefix+"name", ns.BulkSize, ns.BatchTime, false)
@@ -44,6 +46,7 @@ func (ns *Indexer) StartBulkChannel () {
 	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.BulkSize, ns.BatchTime, false)
 
+	// Start multiple miners 
 	ns.RChannel = make([]chan BlockInfo, ns.MinerNum)
 	for i := 0 ; i < ns.MinerNum ; i ++ {
 
@@ -54,6 +57,7 @@ func (ns *Indexer) StartBulkChannel () {
 	}
 }
 
+// Stop Bulk indexing
 func (ns *Indexer) StopBulkChannel () {
 
 	fmt.Println(":::::::::::::::::::::: STOP Channels")
@@ -63,11 +67,12 @@ func (ns *Indexer) StopBulkChannel () {
 		close(ns.RChannel[i])
 	}
 
-	// last commit 
+	// Force commit 
 	time.Sleep(5*time.Second)
 	ns.BChannel.Block <- ChanInfo{2,nil}
 	time.Sleep(5*time.Second)
 
+	// Send stop messages to each bulk channels
 	ns.BChannel.Block <- ChanInfo{0,nil}
 	ns.BChannel.Tx <- ChanInfo{0,nil}
 	ns.BChannel.Name <- ChanInfo{0,nil}
@@ -76,6 +81,7 @@ func (ns *Indexer) StopBulkChannel () {
 	ns.BChannel.AccTokens <- ChanInfo{0,nil}
 	ns.BChannel.NFT <- ChanInfo{0,nil}
 
+	// Close bulk channels
 	close(ns.BChannel.Block)
 	close(ns.BChannel.Tx)
 	close(ns.BChannel.Name)
@@ -89,6 +95,7 @@ func (ns *Indexer) StopBulkChannel () {
 }
 
 
+// Do Bulk Indexing 
 func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize int32, batchTime time.Duration, isBlock bool)  {
 
 	ctx := context.Background()
@@ -98,27 +105,25 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 	return_flag := false
 
+	// Block Channel : Time-out Sync  
 	if isBlock {
 		go func() {
 			for {
-				switch  return_flag {
-				case true :
+				if  return_flag {
 					return
-				default :
+				} else {
 
 					time.Sleep(batchTime)
 
 					if total > 0 && time.Now().Sub(begin) > batchTime {
-//						fmt.Println(">>>>>>> Push blocks <<<<<", total)
 						ns.BChannel.Block <- ChanInfo{2,nil}
 					}
-
-//					if return_flag { return }
 				}
 			}
 		}()
 	}
 
+	// Do commit
 	commitBulk := func(sync bool) {
 
 		if total == 0 {
@@ -131,7 +136,7 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 			return
 		}
 
-		// Block Channel : wait other Channels
+		// Block Channel : wait other channels
 		if isBlock {
 
 			ns.BChannel.Tx		<- ChanInfo{2,nil}
@@ -151,7 +156,6 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 		if sync && !isBlock  { ns.SynDone <- true }
 
 		if err != nil {
-			fmt.Println(">>>>>>> error Commit <<<<<", indexName, total, sync)
 			ns.log.Error().Err(err).Str("indexName", indexName)
 			ns.StopBulkChannel()
 		}
@@ -160,12 +164,13 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 		pps := int64(float64(total) / dur)
 
 		ns.log.Info().Str("Commit",indexName).Int32("total", total).Int64("perSecond", pps).Msg("")
-		begin = time.Now()
 
+		begin = time.Now()
 		total = 0
 
 		return_flag = true
 	}
+
 
 	for I := range docChannel {
 
@@ -185,9 +190,8 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 		total ++
 
-		// Only Create Indexing : for NFT
+		// Only Create Indexing 
 		bulk.Add(elastic.NewBulkIndexRequest().OpType("create").Id(I.Doc.GetID()).Doc(I.Doc))
 //		bulk.Add(elastic.NewBulkUpdateRequest().Id(I.Doc.GetID()).Doc(I.Doc).DocAsUpsert(true))
 	}
 }
-

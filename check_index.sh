@@ -3,8 +3,8 @@ echo "Starting indexer"
 AERGO_URL="testnet-api.aergo.io:7845"
 ES_URL="http://localhost:9200"
 CHAIN_PREFIX="testnet_"
-SYNC_FROM=0
-SYNC_TO=84500000
+SYNC_FROM=89000000
+SYNC_TO=0
 #SYNC_TO=0
 MINER=32
 BULK=3000

@@ -18,7 +18,7 @@ import (
 	"github.com/mr-tron/base58/base58"
 )
 
-// ConvBlock converts Block from RPC into Elasticsearch type
+// ConvBlock converts Block from RPC into Elasticsearch type - 1.0
 func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 	rewardAmount := ""
 	if len(block.Header.Consensus) > 0 {
@@ -43,6 +43,7 @@ func isInternalName(name string) bool {
 		"aergo.system",
 		"aergo.enterprise",
 		"aergo.vault":
+
 		return true
 	}
 	return false

@@ -74,6 +74,7 @@ func NewIndexer(grpcClient types.AergoRPCServiceClient, logger *log.Logger, dbUR
 	return svc, nil
 }
 
+// Generate aliases of index name
 func generateIndexPrefix(aliasNamePrefix string) string {
 	return fmt.Sprintf("%s%s_", aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 }
@@ -102,7 +103,7 @@ func (ns *Indexer) GetNodeBlockHeight() uint64 {
 	}
 }
 
-// Stop stops the indexer
+// Stops the indexer
 func (ns *Indexer) Stop() {
 
         if ns.stream != nil {
