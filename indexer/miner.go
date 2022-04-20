@@ -88,7 +88,12 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 				case "new_arc1_token", "new_arc2_token" :
 
-					contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
+//					contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
+
+					// 2022.04.20 FIX
+					json.Unmarshal([]byte(event.JsonArgs), &args)
+					contractAddress, err := types.DecodeAddress(args[0].(string))
+
 					if err != nil { continue }
 
 					// Get Token doc
