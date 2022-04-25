@@ -73,6 +73,7 @@ type EsTokenTransfer struct {
 	TokenAddress string    `json:"address" db:"address"`
 	From         string    `json:"from" db:"from"`
 	To           string    `json:"to" db:"to"`
+	Sender       string    `json:"sender" db:"sender"`
 	Amount       string    `json:"amount" db:"amount"`             // string of BigInt
 	AmountFloat  float32   `json:"amount_float" db:"amount_float"` // float for sorting
 	TokenId      string    `json:"token_id" db:"token_id"`
@@ -245,6 +246,9 @@ var EsMappings = map[string]string{
 					"type": "keyword"
 				},
 				"to": {
+					"type": "keyword"
+				},
+				"sender": {
 					"type": "keyword"
 				},
 				"amount": {

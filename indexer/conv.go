@@ -120,8 +120,8 @@ func (ns *Indexer) ConvTx(tx *types.Tx, blockD doc.EsBlock) doc.EsTx {
 		Type:           fmt.Sprintf("%d", tx.Body.Type),
 		Category:       category,
 		Method:         method,
-		Timestamp: 	blockD.Timestamp,
-		BlockNo: 	blockD.BlockNo,
+		Timestamp:	blockD.Timestamp,
+		BlockNo:	blockD.BlockNo,
 		TokenTransfers: 0,
 	}
 
@@ -315,13 +315,14 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}) doc.EsTokenTransfer {
 
 	document := doc.EsTokenTransfer{
-		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
-		TxId:         txDoc.GetID(),
-		BlockNo:      txDoc.BlockNo,
-		Timestamp:    txDoc.Timestamp,
-		TokenAddress: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
-		From:         from,
-		To:           to,
+		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
+		TxId:		txDoc.GetID(),
+		BlockNo:	txDoc.BlockNo,
+		Timestamp:	txDoc.Timestamp,
+		TokenAddress:	ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo),
+		Sender:		txDoc.Account,
+		From:		from,
+		To:		to,
 	}
 
 	switch args.(type) {
