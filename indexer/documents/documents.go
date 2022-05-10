@@ -105,12 +105,14 @@ type EsAccountTokens struct {
 	Account		string	`json:"account" db:"account"`
 	TokenAddress	string	`json:"address" db:"address"`
 	Type		category.TokenType `json:"type" db:"type"`
+	Timestamp    	time.Time `json:"ts" db:"ts"`
 	Balance		string	`json:"balance" db:"balance"`
 	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
 }
 
 type EsAccountTokensUp struct {
 	*BaseEsType
+	Timestamp    time.Time `json:"ts" db:"ts"`
 	Balance		string	`json:"balance" db:"balance"`
 	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
 }
@@ -132,7 +134,7 @@ type EsNFTUp struct {
 var EsMappings = map[string]string{
 	"tx": `{
 		"settings" : {
-			"number_of_shards" : 50,
+			"number_of_shards" : 20,
 			"number_of_replicas" : 0
 		},
 		"mappings":{
@@ -172,7 +174,7 @@ var EsMappings = map[string]string{
 	}`,
 	"block": `{
 		"settings" : {
-			"number_of_shards" : 50,
+			"number_of_shards" : 100,
 			"number_of_replicas" : 0
 		},
 		"mappings":{
@@ -313,6 +315,9 @@ var EsMappings = map[string]string{
 				"type": {
 					"type": "keyword"
 				},
+				"ts": {
+					"type": "date"
+				},
 				"balance": {
 					"enabled": false
 				},
@@ -324,7 +329,7 @@ var EsMappings = map[string]string{
 	}`,
 	"nft": `{
 		"settings" : {
-			"number_of_shards" : 20,
+			"number_of_shards" : 50,
 			"number_of_replicas" : 0
 		},
 		"mappings":{

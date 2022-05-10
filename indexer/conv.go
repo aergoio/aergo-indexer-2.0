@@ -192,11 +192,16 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 
 		nft := ns.ConvNFT(contractAddress,tokenTx,"BURN")
 
+		/*
 		owner, err := ns.queryContract(contractAddress, "ownerOf", []string{tokenTx.TokenId})
 
 		if err == nil && owner != "" {
 			nft.Account = owner
 		}
+		*/
+
+		// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
+		nft.Account = tokenTx.Amount
 
 		if Type == 1 {
 			ns.BChannel.NFT <- ChanInfo{1, nft}
@@ -212,16 +217,22 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 
 	if Type != 2 { return }
 
+	/*
 	document := doc.EsNFTUp {
 		Account: "BURN",
 	}
 
-	owner, err := ns.queryContract(contractAddress, "ownerOf", []string{tokenTx.TokenId})
 
-	document.BlockNo = tokenTx.BlockNo
+	owner, err := ns.queryContract(contractAddress, "ownerOf", []string{tokenTx.TokenId})
 
 	if err == nil && owner != "" {
 		document.Account = owner
+	}
+	*/
+
+	document := doc.EsNFTUp {
+		Account: tokenTx.Amount,
+		BlockNo: tokenTx.BlockNo,
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"nft",fmt.Sprintf("%s-%s", tokenTx.TokenAddress,tokenTx.TokenId))
@@ -262,9 +273,12 @@ func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenT
 	}
 	*/
 
+	document.Timestamp = tokenTx.Timestamp
+
 	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
 		document.BalanceFloat = float32(AmountFloat)
 		document.Balance = Balance
+
 	} else {
 		document.BalanceFloat = 0
 		document.Balance = "0"
@@ -281,6 +295,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
 		Account:	account,
 		TokenAddress:	ttDoc.TokenAddress,
+		Timestamp:	ttDoc.Timestamp,
 	}
 
 	if ttDoc.TokenId == "" {
@@ -327,15 +342,29 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 
 	switch args.(type) {
 	case string :
-		if AmountFloat, err := strconv.ParseFloat(args.(string),32); err == nil {
-			document.AmountFloat = float32(AmountFloat)
-			document.Amount  = args.(string)
-			document.TokenId = ""
-		} else {
+
+		owner, err := ns.queryContract(contractAddress, "ownerOf", []string{args.(string)})
+
+		if err == nil && owner != "" {
+
 			document.TokenId  = args.(string)
-			document.Amount = "1"
+			// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
+			document.Amount = owner
 			document.AmountFloat = 1.0
+
+		} else {
+
+			if AmountFloat, err := strconv.ParseFloat(args.(string),32); err == nil {
+				document.AmountFloat = float32(AmountFloat)
+				document.Amount  = args.(string)
+				document.TokenId = ""
+			} else {
+				document.TokenId  = args.(string)
+				document.Amount  = "BURN"
+				document.AmountFloat = 1.0
+			}
 		}
+
 	default : document.Amount = ""
 	}
 
@@ -393,7 +422,6 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken
 	}
 
 	document.Symbol, err = ns.queryContract(ContractAddress, "symbol", nil)
-
 	decimals, err := ns.queryContract(ContractAddress, "decimals", nil)
 
 	if err == nil {
