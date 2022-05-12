@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kjunblk/aergo-indexer/indexer/category"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
 )
 
 // DocType is an interface for structs to be used as database documents
@@ -123,12 +123,14 @@ type EsNFT struct {
 	TokenId     string	`json:"token_id" db:"token_id"`
 	Account     string	`json:"account" db:"account"`
 	BlockNo      uint64    `json:"blockno" db:"blockno"`
+	Timestamp	time.Time `json:"ts" db:"ts"`
 }
 
 type EsNFTUp struct {
 	*BaseEsType
 	Account     string	`json:"account" db:"account"`
 	BlockNo      uint64    `json:"blockno" db:"blockno"`
+	Timestamp	time.Time `json:"ts" db:"ts"`
 }
 
 var EsMappings = map[string]string{
@@ -342,6 +344,9 @@ var EsMappings = map[string]string{
 				},
 				"blockno": {
 					"type": "long"
+				},
+				"ts": {
+					"type": "date"
 				},
 				"account": {
 					"type": "keyword"

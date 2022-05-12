@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	indx "github.com/kjunblk/aergo-indexer/indexer"
-	"github.com/kjunblk/aergo-indexer/types"
+	indx "github.com/kjunblk/aergo-indexer-2.0/indexer"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"

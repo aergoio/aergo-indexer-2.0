@@ -1,7 +1,7 @@
 package indexer
 
 import (
-//	"github.com/kjunblk/aergo-indexer/types"
+//	"github.com/kjunblk/aergo-indexer-2.0/types"
 )
 
 func (ns *Indexer) CreateIndex (documentType string) {

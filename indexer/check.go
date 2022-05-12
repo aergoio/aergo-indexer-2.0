@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kjunblk/aergo-indexer/indexer/db"
-	doc "github.com/kjunblk/aergo-indexer/indexer/documents"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/db"
+	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
 )
 
 type esBlockNo struct {

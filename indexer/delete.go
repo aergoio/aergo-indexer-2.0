@@ -2,7 +2,7 @@ package indexer
 
 import (
 	"fmt"
-	"github.com/kjunblk/aergo-indexer/indexer/db"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/db"
 )
 
 func (ns *Indexer) deleteTypeByQuery(typeName string, rangeQuery db.IntegerRangeQuery) {

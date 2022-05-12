@@ -10,9 +10,9 @@ import (
 	"strings"
 //	"strconv"
 //	"bytes"
-	"github.com/kjunblk/aergo-indexer/indexer/category"
-	doc "github.com/kjunblk/aergo-indexer/indexer/documents"
-	"github.com/kjunblk/aergo-indexer/types"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
+	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 //	"github.com/mr-tron/base58/base58"
 )
 

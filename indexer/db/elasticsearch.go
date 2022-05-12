@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	doc "github.com/kjunblk/aergo-indexer/indexer/documents"
+	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
 	"github.com/olivere/elastic/v7"
 )
 

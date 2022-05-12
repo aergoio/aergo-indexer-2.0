@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 //	"os"
 
-	"github.com/kjunblk/aergo-indexer/indexer/category"
-	doc "github.com/kjunblk/aergo-indexer/indexer/documents"
-	"github.com/kjunblk/aergo-indexer/indexer/transaction"
-	"github.com/kjunblk/aergo-indexer/types"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
+	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/transaction"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/mr-tron/base58/base58"
 )
@@ -174,6 +174,7 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress:	ttDoc.TokenAddress,
 		TokenId:	ttDoc.TokenId,
+		Timestamp:	ttDoc.Timestamp,
 		BlockNo:	ttDoc.BlockNo,
 		Account:	account,
 	}
@@ -233,6 +234,7 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 	document := doc.EsNFTUp {
 		Account: tokenTx.Amount,
 		BlockNo: tokenTx.BlockNo,
+		Timestamp:	tokenTx.Timestamp,
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"nft",fmt.Sprintf("%s-%s", tokenTx.TokenAddress,tokenTx.TokenId))

@@ -3,8 +3,8 @@ package category
 import (
 	"strings"
 
-	"github.com/kjunblk/aergo-indexer/indexer/transaction"
-	"github.com/kjunblk/aergo-indexer/types"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/transaction"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 )
 
 // TxCategory is a user-friendly categorization of a transaction

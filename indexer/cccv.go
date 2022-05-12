@@ -1,8 +1,8 @@
 package indexer
 
 import (
-	"github.com/kjunblk/aergo-indexer/indexer/category"
-	doc "github.com/kjunblk/aergo-indexer/indexer/documents"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
+	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
 )
 
 // IndexTxs indexes a list of transactions in bulk

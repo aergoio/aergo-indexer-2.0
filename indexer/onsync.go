@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 	"fmt"
-	"github.com/kjunblk/aergo-indexer/types"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 
 )
 
