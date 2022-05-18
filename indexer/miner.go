@@ -79,6 +79,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 			}
 
 			if receipt.Status == "ERROR" { goto ADD_TX }
+//			if receipt.Status == "ERROR" { continue }
 
 			// Process Events 
 			events = receipt.GetEvents()
@@ -111,7 +112,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
 					fmt.Println(">>>>>>>>>>> POLICY 1 :", encodeAccount(contractAddress))
 
-				case "mint" : 
+				case "mint" :
 
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil) { continue }
@@ -139,7 +140,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
 					}
 
-				case "transfer" : 
+				case "transfer" :
 
 					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
 					// if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
