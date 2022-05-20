@@ -197,7 +197,7 @@ var EsMappings = map[string]string{
 					"type": "keyword"
 				},
 				"reward_amount": {
-					"enabled": false
+					"type": "float"
 				}
 			}
 		}
