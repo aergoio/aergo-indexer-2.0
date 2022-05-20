@@ -31,8 +31,8 @@ func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 		TxCount:       uint(len(block.Body.Txs)),
 		Size:          int64(proto.Size(block)),
 //		RewardAccount: ns.encodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
-//		RewardAccount: ns.encodeAndResolveAccount(block.Header.CoinbaseAccount, block.Header.BlockNo),
-		RewardAccount: ns.encodeAndResolveAccount(block.Header.PubKey, block.Header.BlockNo),
+		RewardAccount: ns.encodeAndResolveAccount(block.Header.CoinbaseAccount, block.Header.BlockNo),
+//		RewardAccount: ns.encodeAndResolveAccount(block.Header.PubKey, block.Header.BlockNo),
 		RewardAmount:  rewardAmount,
 	}
 }
