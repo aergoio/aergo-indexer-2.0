@@ -137,7 +137,7 @@ var EsMappings = map[string]string{
 	"tx": `{
 		"settings" : {
 			"number_of_shards" : 20,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -177,7 +177,7 @@ var EsMappings = map[string]string{
 	"block": `{
 		"settings" : {
 			"number_of_shards" : 100,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties": {
@@ -205,7 +205,7 @@ var EsMappings = map[string]string{
 	"name": `{
 		"settings" : {
 			"number_of_shards" : 2,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties": {
@@ -227,7 +227,7 @@ var EsMappings = map[string]string{
 	"token_transfer": `{
 		"settings" : {
 			"number_of_shards" : 50,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -267,7 +267,7 @@ var EsMappings = map[string]string{
 	"token": `{
 		"settings" : {
 			"number_of_shards" : 5,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -304,7 +304,7 @@ var EsMappings = map[string]string{
 	"account_tokens": `{
 		"settings" : {
 			"number_of_shards" : 10,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -332,7 +332,7 @@ var EsMappings = map[string]string{
 	"nft": `{
 		"settings" : {
 			"number_of_shards" : 50,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
