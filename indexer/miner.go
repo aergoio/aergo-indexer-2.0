@@ -115,7 +115,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 				case "mint" :
 
 					json.Unmarshal([]byte(event.JsonArgs), &args)
-					if (args[0] == nil) { continue }
+					if (args[0] == nil || len(args) < 2) { continue }
 
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1])
 					if tokenTx.Amount == "" { continue }
@@ -147,7 +147,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 //					fmt.Println("token_transfer")
 					json.Unmarshal([]byte(event.JsonArgs), &args)
-					if (args[0] == nil) { continue }
+					if (args[0] == nil || len(args) < 3) { continue }
 
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2])
 					if tokenTx.Amount == "" { continue }
@@ -175,7 +175,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 				case "burn" : 
 
 					json.Unmarshal([]byte(event.JsonArgs), &args)
-					if (args[0] == nil) { continue }
+					if (args[0] == nil || len(args) < 2) { continue }
 
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1])
 					if tokenTx.Amount == "" { continue }
