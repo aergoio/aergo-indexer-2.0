@@ -37,7 +37,7 @@ func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) error {
         ns.CreateIndexIfNotExists("account_tokens")
         ns.CreateIndexIfNotExists("nft")
 
-        if ns.aliasNamePrefix == "main_" {
+        if ns.aliasNamePrefix == "mainnet_" {
                 ns.cccv_nft_mainnet()
         } else if ns.aliasNamePrefix == "testnet_" {
                 ns.cccv_nft_testnet()
