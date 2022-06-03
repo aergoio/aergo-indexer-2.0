@@ -269,7 +269,14 @@ func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenT
 	document := doc.EsAccountTokensUp {
 	}
 
-	Balance, _ := ns.queryContract(contractAddress, "balanceOf", []string{account})
+	var Balance string
+
+	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
+		Balance, _ = ns.queryContract(contractAddress, "query", []string{"balanceOf", account})
+	} else {
+		Balance, _ = ns.queryContract(contractAddress, "balanceOf", []string{account})
+	}
+
 
 	/*
 	if err != nil {
@@ -309,12 +316,18 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		document.Type = category.ARC2
 	}
 
-	Balance, err := ns.queryContract(contractAddress, "balanceOf", []string{document.Account})
+	var Balance string
+	var err error
+
+	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
+		Balance, err = ns.queryContract(contractAddress, "query", []string{"balanceOf", account})
+	} else {
+		Balance, err = ns.queryContract(contractAddress, "balanceOf", []string{account})
+	}
 
 	if err != nil {
 		document.Balance = "0"
 		document.BalanceFloat = 0
-
 		return document
 	}
 
@@ -352,21 +365,11 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 		var owner string
 
 		if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
-
-			/*
-			q_args := make([]interface{}, 0)
-			q_args = append(q_args, "ownerOf")
-			q_args = append(q_args, args.(string))
-
-			owner, err := ns.queryContract(contractAddress, "query", q_args)
-			*/
-
 			owner, err = ns.queryContract(contractAddress, "query", []string{"ownerOf", args.(string)})
 
 		} else {
 			owner, err = ns.queryContract(contractAddress, "ownerOf", []string{args.(string)})
 		}
-
 
 		if err == nil && owner != "" {
 
@@ -402,12 +405,18 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 }
 
 
-func (ns *Indexer) UpdateToken(ContractAddress []byte) {
+func (ns *Indexer) UpdateToken(contractAddress []byte) {
 
 	document := doc.EsTokenUp{
 	}
 
-	supply, err := ns.queryContract(ContractAddress, "totalSupply", nil)
+	var err error
+	var supply string
+	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
+		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"})
+	} else {
+		supply, err = ns.queryContract(contractAddress, "totalSupply", nil)
+	}
 
 	if err != nil {
 		document.SupplyFloat = 0
@@ -420,17 +429,17 @@ func (ns *Indexer) UpdateToken(ContractAddress []byte) {
 		document.Supply = "0"
 	}
 
-	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(ContractAddress))
-	fmt.Println("Update Token :", encodeAccount(ContractAddress))
+	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(contractAddress))
+	fmt.Println("Update Token :", encodeAccount(contractAddress))
 //	ns.Stop()
 }
 
 
 // ConvContractCreateTx creates document for token creation
-func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken {
+func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte) doc.EsToken {
 
 	document :=  doc.EsToken{
-		BaseEsType:  &doc.BaseEsType{ns.encodeAndResolveAccount(ContractAddress, txDoc.BlockNo)},
+		BaseEsType:  &doc.BaseEsType{ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		TxId:    txDoc.GetID(),
 		BlockNo: txDoc.BlockNo,
 		TokenTransfers:	uint64(0),
@@ -438,14 +447,14 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken
 
 	var err error
 
-	document.Name, err = ns.queryContract(ContractAddress, "name", nil)
+	document.Name, err = ns.queryContract(contractAddress, "name", nil)
 	if document.Name == "null" || err != nil {
 		document.Name = ""
 		return document
 	}
 
-	document.Symbol, err = ns.queryContract(ContractAddress, "symbol", nil)
-	decimals, err := ns.queryContract(ContractAddress, "decimals", nil)
+	document.Symbol, err = ns.queryContract(contractAddress, "symbol", nil)
+	decimals, err := ns.queryContract(contractAddress, "decimals", nil)
 
 	if err == nil {
 		if d, err := strconv.Atoi(decimals); err == nil {
@@ -456,7 +465,13 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, ContractAddress []byte) doc.EsToken
                 document.Decimals = uint8(1)
         }
 
-	supply, err := ns.queryContract(ContractAddress, "totalSupply", nil)
+	var supply string
+	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
+		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"})
+	} else {
+		supply, err = ns.queryContract(contractAddress, "totalSupply", nil)
+	}
+
 	if err != nil {
 		document.SupplyFloat = 0
 		document.Supply = "0"
