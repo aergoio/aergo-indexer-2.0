@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 	"encoding/json"
+	"bytes"
 //	"os"
 
 	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
@@ -347,7 +348,25 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 	switch args.(type) {
 	case string :
 
-		owner, err := ns.queryContract(contractAddress, "ownerOf", []string{args.(string)})
+		var err error
+		var owner string
+
+		if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
+
+			/*
+			q_args := make([]interface{}, 0)
+			q_args = append(q_args, "ownerOf")
+			q_args = append(q_args, args.(string))
+
+			owner, err := ns.queryContract(contractAddress, "query", q_args)
+			*/
+
+			owner, err = ns.queryContract(contractAddress, "query", []string{"ownerOf", args.(string)})
+
+		} else {
+			owner, err = ns.queryContract(contractAddress, "ownerOf", []string{args.(string)})
+		}
+
 
 		if err == nil && owner != "" {
 
