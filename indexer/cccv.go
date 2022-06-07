@@ -8,9 +8,7 @@ import (
 
 var cccv_nft_address []byte
 
-// IndexTxs indexes a list of transactions in bulk
 func (ns *Indexer) cccv_nft_mainnet() {
-
 
 	cccv_nft_string := "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
 
@@ -32,6 +30,7 @@ func (ns *Indexer) cccv_nft_mainnet() {
 
 	ns.db.Insert(document,ns.indexNamePrefix+"token")
 }
+
 
 func (ns *Indexer) cccv_nft_testnet() {
 

@@ -79,7 +79,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 			}
 
 			if receipt.Status == "ERROR" { goto ADD_TX }
-//			if receipt.Status == "ERROR" { continue }
 
 			// Process Events 
 			events = receipt.GetEvents()
@@ -89,9 +88,9 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 				case "new_arc1_token", "new_arc2_token" :
 
-//					contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
-
 					// 2022.04.20 FIX
+					// 배포된 컨트랙트 주소 값이 return 값으로 출력하던 스펙 변경
+//					contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					contractAddress, err := types.DecodeAddress(args[0].(string))
 
@@ -142,10 +141,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 
 				case "transfer" :
 
-					// if strings.Contains(tokenTx.From,"1111111111111111111111111") { tokenTx.From = "MINT" } 
-					// if strings.Contains(tokenTx.To,"1111111111111111111111111") { tokenTx.To = "BURN" }
-
-//					fmt.Println("token_transfer")
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil || len(args) < 3) { continue }
 
@@ -172,7 +167,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
 					}
 
-				case "burn" : 
+				case "burn" :
 
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil || len(args) < 2) { continue }
