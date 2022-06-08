@@ -178,72 +178,26 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 
 func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string) {
 
-	if !ns.db.Exists(ns.indexNamePrefix+"nft",fmt.Sprintf("%s-%s", tokenTx.TokenAddress,tokenTx.TokenId)) {
-		nft := ns.ConvNFT(contractAddress,tokenTx,"BURN")
+	// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
+	nft := ns.ConvNFT(contractAddress,tokenTx,tokenTx.Amount)
 
-		// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
-		nft.Account = tokenTx.Amount
-
-		if Type == 1 {
-			ns.BChannel.NFT <- ChanInfo{1, nft}
-		} else {
-			ns.db.Insert(nft,ns.indexNamePrefix+"nft")
-		}
-
-		return
+	if Type == 1 {
+		ns.BChannel.NFT <- ChanInfo{1, nft}
+	} else {
+		ns.db.Insert(nft,ns.indexNamePrefix+"nft")
 	}
 
-	// Only Sync_indexing 
-	if Type != 2 { return }
-
-	document := doc.EsNFTUp {
-		Account: tokenTx.Amount,
-		BlockNo: tokenTx.BlockNo,
-		Timestamp:	tokenTx.Timestamp,
-	}
-
-	ns.db.Update(document,ns.indexNamePrefix+"nft",fmt.Sprintf("%s-%s", tokenTx.TokenAddress,tokenTx.TokenId))
 }
 
 
 func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string) {
 
-	if !ns.db.Exists(ns.indexNamePrefix+"account_tokens",fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress)) {
-
-		aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account)
-		if Type == 1 {
-			ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-		} else {
-			ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-		}
-
-		return
-	}
-
-	// for Only On_Sync
-	if Type != 2 { return }
-
-	document := doc.EsAccountTokensUp {
-		Timestamp: tokenTx.Timestamp,
-	}
-
-	var Balance string
-	var err error
-	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
-		Balance, err = ns.queryContract(contractAddress, "query", []string{"balanceOf", account})
+	aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account)
+	if Type == 1 {
+		ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
 	} else {
-		Balance, err = ns.queryContract(contractAddress, "balanceOf", []string{account})
+		ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
 	}
-
-	if err != nil { return }
-
-	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
-		document.BalanceFloat = float32(AmountFloat)
-		document.Balance = Balance
-
-	} else { return }
-
-	ns.db.Update(document,ns.indexNamePrefix+"account_tokens",fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
 }
 
 
@@ -313,7 +267,6 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 		// 2022/06/05 숫자인 token ID 허용
 		if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
 			owner, err = ns.queryContract(contractAddress, "query", []string{"ownerOf", args.(string)})
-
 		} else {
 			owner, err = ns.queryContract(contractAddress, "ownerOf", []string{args.(string)})
 		}
@@ -326,6 +279,7 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 			// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
 			if owner != "" {
 				document.Amount = owner
+			//	fmt.Println("SUCESS Owner:", owner)
 			} else {
 				document.Amount  = "BURN"
 			}
@@ -373,6 +327,7 @@ func (ns *Indexer) UpdateToken(contractAddress []byte) {
 	}
 
 	ns.db.Update(document,ns.indexNamePrefix+"token",encodeAccount(contractAddress))
+
 	//fmt.Println("Update Token :", encodeAccount(contractAddress))
 }
 

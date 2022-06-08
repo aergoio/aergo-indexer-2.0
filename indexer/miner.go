@@ -147,6 +147,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2])
 					if tokenTx.Amount == "" { continue }
 
+//					fmt.Println("tokenTx.Amount :", tokenTx.Amount)
+
 					txD.TokenTransfers ++
 
 					// Add tokenTx doc

@@ -93,20 +93,20 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 	}, nil
 }
 
-func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
 
-	// FIX:
-	return false
+func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
 
 	ans, _ := esdb.ExistsS.Index(indexName).Id(id).Do(context.Background())
 	return ans
 }
+
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
 	_, err := esdb.UpdateS.Index(indexName).Id(id).Doc(document).Do(context.Background())
 
 	return err
 }
+
 
 // Insert inserts a single document using the updata params
 // It returns the number of inserted documents (1) or an error
@@ -125,6 +125,7 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 	if params.IntegerRange != nil {
 		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
 	}
+
 
 	if params.StringMatch != nil {
 		return 0, errors.New("Delete is not imlemented for string matches")
