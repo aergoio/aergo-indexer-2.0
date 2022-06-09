@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,10 +8,8 @@ import (
 	"time"
 
 	indx "github.com/kjunblk/aergo-indexer-2.0/indexer"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
 )
 
 var (
@@ -35,10 +32,9 @@ var (
 	batchTime       int32
 	bulkSize        int32
 	minerNum	int
+	grpcNum		int
 
 	logger *log.Logger
-
-	client  types.AergoRPCServiceClient
 	indexer *indx.Indexer
 )
 
@@ -56,6 +52,7 @@ func init() {
 	fs.Int32VarP(&bulkSize, "bulk", "", 0, "bulk size")
 	fs.Int32VarP(&batchTime, "batch", "", 0, "batch duration")
 	fs.IntVarP(&minerNum, "miner", "", 0, "number of miner")
+	fs.IntVarP(&grpcNum, "grpc", "", 0, "number of miner")
 }
 
 func main() {
@@ -69,18 +66,18 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
-	client = waitForClient(getServerAddress())
-	indexer, err := indx.NewIndexer(client, logger, dbURL, indexNamePrefix)
+	indexer, err := indx.NewIndexer(getServerAddress(), logger, dbURL, indexNamePrefix)
 
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
 		return
-	} else {
-		indexer.BulkSize = bulkSize
-		indexer.BatchTime = time.Duration(batchTime) * time.Second
-		indexer.StartHeight = startFrom
-		indexer.MinerNum = int(minerNum)
 	}
+
+	indexer.BulkSize = bulkSize
+	indexer.BatchTime = time.Duration(batchTime) * time.Second
+	indexer.StartHeight = startFrom
+	indexer.MinerNum = int(minerNum)
+	indexer.GrpcNum = int(grpcNum)
 
 	if (checkMode) {
 		err = indexer.RunCheckIndex(startFrom, stopAt)
@@ -112,32 +109,6 @@ func getServerAddress() string {
 		return aergoAddress
 	}
 	return fmt.Sprintf("%s:%d", host, port)
-}
-
-
-func waitForClient(serverAddr string) types.AergoRPCServiceClient {
-	var conn *grpc.ClientConn
-	var err error
-
-	for {
-		ctx := context.Background()
-		maxMsgSize := 1024 * 1024 * 10 // 10mb
-		conn, err = grpc.DialContext(ctx, serverAddr,
-			grpc.WithInsecure(),
-			grpc.WithBlock(),
-			grpc.WithTimeout(5*time.Second),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)),
-		)
-
-		if err == nil && conn != nil {
-			break
-		}
-
-		logger.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
-		time.Sleep(time.Second)
-	}
-	logger.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
-	return types.NewAergoRPCServiceClient(conn)
 }
 
 

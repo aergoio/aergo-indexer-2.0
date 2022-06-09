@@ -190,9 +190,9 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 }
 
 
-func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string) {
+func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
 
-	aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account)
+	aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account, grpcc)
 	if Type == 1 {
 		ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
 	} else {
@@ -201,7 +201,7 @@ func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenT
 }
 
 
-func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsAccountTokens {
+func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) doc.EsAccountTokens {
 
 	document := doc.EsAccountTokens {
 		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
@@ -220,9 +220,9 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	var err error
 
 	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
-		Balance, err = ns.queryContract(contractAddress, "query", []string{"balanceOf", account})
+		Balance, err = ns.queryContract(contractAddress, "query", []string{"balanceOf", account}, grpcc)
 	} else {
-		Balance, err = ns.queryContract(contractAddress, "balanceOf", []string{account})
+		Balance, err = ns.queryContract(contractAddress, "balanceOf", []string{account}, grpcc)
 	}
 
 	if err != nil {
@@ -245,7 +245,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	return document
 }
 
-func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}) doc.EsTokenTransfer {
+func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
 
 	document := doc.EsTokenTransfer{
 		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
@@ -266,9 +266,9 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 
 		// 2022/06/05 숫자인 token ID 허용
 		if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
-			owner, err = ns.queryContract(contractAddress, "query", []string{"ownerOf", args.(string)})
+			owner, err = ns.queryContract(contractAddress, "query", []string{"ownerOf", args.(string)}, grpcc)
 		} else {
-			owner, err = ns.queryContract(contractAddress, "ownerOf", []string{args.(string)})
+			owner, err = ns.queryContract(contractAddress, "ownerOf", []string{args.(string)}, grpcc)
 		}
 
 		// ARC 2
@@ -302,7 +302,7 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 }
 
 
-func (ns *Indexer) UpdateToken(contractAddress []byte) {
+func (ns *Indexer) UpdateToken(contractAddress []byte, grpcc types.AergoRPCServiceClient) {
 
 	document := doc.EsTokenUp{
 	}
@@ -310,9 +310,9 @@ func (ns *Indexer) UpdateToken(contractAddress []byte) {
 	var err error
 	var supply string
 	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
-		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"})
+		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"}, grpcc)
 	} else {
-		supply, err = ns.queryContract(contractAddress, "totalSupply", nil)
+		supply, err = ns.queryContract(contractAddress, "totalSupply", nil, grpcc)
 	}
 
 	if err != nil {
@@ -333,7 +333,7 @@ func (ns *Indexer) UpdateToken(contractAddress []byte) {
 
 
 // ConvContractCreateTx creates document for token creation
-func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte) doc.EsToken {
+func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc types.AergoRPCServiceClient) doc.EsToken {
 
 	document :=  doc.EsToken{
 		BaseEsType:  &doc.BaseEsType{ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
@@ -344,14 +344,14 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte) doc.EsToken
 
 	var err error
 
-	document.Name, err = ns.queryContract(contractAddress, "name", nil)
+	document.Name, err = ns.queryContract(contractAddress, "name", nil, grpcc)
 	if document.Name == "null" || err != nil {
 		document.Name = ""
 		return document
 	}
 
-	document.Symbol, err = ns.queryContract(contractAddress, "symbol", nil)
-	decimals, err := ns.queryContract(contractAddress, "decimals", nil)
+	document.Symbol, err = ns.queryContract(contractAddress, "symbol", nil, grpcc)
+	decimals, err := ns.queryContract(contractAddress, "decimals", nil, grpcc)
 
 	if err == nil {
 		if d, err := strconv.Atoi(decimals); err == nil {
@@ -364,9 +364,9 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte) doc.EsToken
 
 	var supply string
 	if bytes.Compare(contractAddress,cccv_nft_address) == 0 {
-		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"})
+		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"}, grpcc)
 	} else {
-		supply, err = ns.queryContract(contractAddress, "totalSupply", nil)
+		supply, err = ns.queryContract(contractAddress, "totalSupply", nil, grpcc)
 	}
 
 	if err != nil {
@@ -388,7 +388,7 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte) doc.EsToken
 }
 
 
-func (ns *Indexer) queryContract(address []byte, name string, args []string) (string, error) {
+func (ns *Indexer) queryContract(address []byte, name string, args []string, grpcc types.AergoRPCServiceClient) (string, error) {
 
 	queryinfo := map[string]interface{}{"Name": name}
 
@@ -398,7 +398,8 @@ func (ns *Indexer) queryContract(address []byte, name string, args []string) (st
 
 	if err != nil { return "", err }
 
-	result, err := ns.grpcClient.QueryContract(context.Background(), &types.Query{
+//	result, err := ns.grpcClient.QueryContract(context.Background(), &types.Query{
+	result, err := grpcc.QueryContract(context.Background(), &types.Query{
 		ContractAddress: address,
 		Queryinfo:       queryinfoJson,
 	})

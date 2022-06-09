@@ -10,6 +10,7 @@ import (
 	"github.com/kjunblk/aergo-indexer-2.0/types"
 	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-lib/log"
+	"google.golang.org/grpc"
 )
 
 type ChanInfo struct {
@@ -49,10 +50,13 @@ type Indexer struct {
 	BulkSize	int32
 	BatchTime	time.Duration
 	MinerNum	int
+	//for performance
+	ServerAddr	string
+	GrpcNum		int
 }
 
 // NewIndexer creates new Indexer instance
-func NewIndexer(grpcClient types.AergoRPCServiceClient, logger *log.Logger, dbURL string, namePrefix string) (*Indexer, error) {
+func NewIndexer(serverAddr string, logger *log.Logger, dbURL string, namePrefix string) (*Indexer, error) {
 	aliasNamePrefix := namePrefix
 	var err error
 
@@ -66,10 +70,12 @@ func NewIndexer(grpcClient types.AergoRPCServiceClient, logger *log.Logger, dbUR
 		db:              dbController,
 		aliasNamePrefix: aliasNamePrefix,
 		indexNamePrefix: generateIndexPrefix(aliasNamePrefix),
-		grpcClient:	 grpcClient,
 		lastBlockHeight: 0,
 		log:             logger,
+		ServerAddr: serverAddr,
 	}
+
+	svc.grpcClient = svc.WaitForClient(serverAddr)
 
 	return svc, nil
 }
@@ -102,6 +108,36 @@ func (ns *Indexer) GetNodeBlockHeight() uint64 {
 		return blockchain.BestHeight
 	}
 }
+
+
+func (ns *Indexer) WaitForClient(serverAddr string) types.AergoRPCServiceClient {
+        var conn *grpc.ClientConn
+        var err error
+
+        for {
+                ctx := context.Background()
+                maxMsgSize := 1024 * 1024 * 10 // 10mb
+                conn, err = grpc.DialContext(ctx, serverAddr,
+                        grpc.WithInsecure(),
+                        grpc.WithBlock(),
+                        grpc.WithTimeout(5*time.Second),
+                        grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)),
+                )
+
+                if err == nil && conn != nil {
+                        break
+                }
+
+                ns.log.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
+                time.Sleep(time.Second)
+        }
+
+        ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
+
+        return types.NewAergoRPCServiceClient(conn)
+}
+
+
 
 // Stops the indexer
 func (ns *Indexer) Stop() {

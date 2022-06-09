@@ -100,7 +100,7 @@ func (ns *Indexer) StartStream() {
 	// SyncBlock indexes new block after checking for skipped blocks and reorgs
 	MChannel := make(chan BlockInfo)
 
-	go ns.Miner(MChannel)
+	go ns.Miner(MChannel, ns.grpcClient)
 
 	SyncBlock := func (block *types.Block) error {
 

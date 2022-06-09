@@ -5,8 +5,8 @@ import (
 	"time"
 	"fmt"
 	"github.com/olivere/elastic/v7"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 )
-
 
 // FOR BULK INSERT
 func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64) {
@@ -47,15 +47,21 @@ func (ns *Indexer) StartBulkChannel () {
 	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.BulkSize, ns.BatchTime, false)
 
 	// Start multiple miners 
+	GrpcClients := make([]types.AergoRPCServiceClient, ns.GrpcNum)
+	for i := 0 ; i < ns.GrpcNum ; i ++ {
+		GrpcClients[i] = ns.WaitForClient(ns.ServerAddr)
+	}
+
 	ns.RChannel = make([]chan BlockInfo, ns.MinerNum)
 	for i := 0 ; i < ns.MinerNum ; i ++ {
 
 		fmt.Println(":::::::::::::::::::::: Start Channels")
 
 		ns.RChannel[i] = make(chan BlockInfo)
-		go ns.Miner(ns.RChannel[i])
+		go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.GrpcNum])
 	}
 }
+
 
 // Stop Bulk indexing
 func (ns *Indexer) StopBulkChannel () {

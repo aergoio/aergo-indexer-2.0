@@ -17,7 +17,7 @@ import (
 )
 
 // IndexTxs indexes a list of transactions in bulk
-func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
+func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServiceClient) error {
 
 	var block *types.Block
 	blockQuery := make([]byte, 8)
@@ -41,7 +41,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 		binary.LittleEndian.PutUint64(blockQuery, uint64(blockHeight))
 
 		for {
-			block, err = ns.grpcClient.GetBlock(context.Background(), &types.SingleBytes{Value: blockQuery})
+			block, err = MinerGRPC.GetBlock(context.Background(), &types.SingleBytes{Value: blockQuery})
 
 			if err != nil {
 				ns.log.Warn().Uint64("blockHeight", blockHeight).Err(err).Msg("Failed to get block")
@@ -71,7 +71,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
                         }
 
 //			fmt.Println("category :", txD.Category)
-			receipt, err = ns.grpcClient.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
+
+			receipt, err = MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
 
 			if err != nil {
 				ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
@@ -97,7 +98,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					if err != nil { continue }
 
 					// Get Token doc
-					token := ns.ConvToken(txD, contractAddress)
+					token := ns.ConvToken(txD, contractAddress, MinerGRPC)
 
 					// Add Token doc
 					if token.Name == "" { continue }
@@ -116,7 +117,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil || len(args) < 2) { continue }
 
-					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1])
+					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1], MinerGRPC)
 					if tokenTx.Amount == "" { continue }
 
 					txD.TokenTransfers ++
@@ -129,10 +130,10 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					}
 
 					// update Token
-					 if info.Type == 2 { ns.UpdateToken(event.ContractAddress) }
+					 if info.Type == 2 { ns.UpdateToken(event.ContractAddress, MinerGRPC) }
 
 					// update TO-Account
-					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To, MinerGRPC)
 
 					// update NFT
 					if (tokenTx.TokenId != "") { // ARC2
@@ -144,10 +145,16 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil || len(args) < 3) { continue }
 
-					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2])
+					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2], MinerGRPC)
 					if tokenTx.Amount == "" { continue }
 
 //					fmt.Println("tokenTx.Amount :", tokenTx.Amount)
+
+					if strings.Contains(tokenTx.From,"1111111111111111111111111") {
+						tokenTx.From = "MINT"
+					} else if strings.Contains(tokenTx.To,"1111111111111111111111111") {
+						tokenTx.To = "BURN"
+					}
 
 					txD.TokenTransfers ++
 
@@ -159,10 +166,10 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					}
 
 					// update TO-Account
-					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To, MinerGRPC)
 
 					// update FROM-Account
-					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From)
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From, MinerGRPC)
 
 					// update NFT
 					if (tokenTx.TokenId != "") { // ARC2
@@ -174,7 +181,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					json.Unmarshal([]byte(event.JsonArgs), &args)
 					if (args[0] == nil || len(args) < 2) { continue }
 
-					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1])
+					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1], MinerGRPC)
 					if tokenTx.Amount == "" { continue }
 
 					txD.TokenTransfers ++
@@ -187,10 +194,10 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 					}
 
 					// update Token
-					if info.Type == 2 { ns.UpdateToken(event.ContractAddress) }
+					if info.Type == 2 { ns.UpdateToken(event.ContractAddress, MinerGRPC) }
 
 					// update FROM-Account
-					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From)
+					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From, MinerGRPC)
 
 					// Delete NFT --> Burn
 					if (tokenTx.TokenId != "") { // ARC2
@@ -206,7 +213,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo) error {
 			switch  tType {
 			case 1, 2 :
 				// Get ARC Token doc
-				token := ns.ConvToken(txD, receipt.ContractAddress)
+				token := ns.ConvToken(txD, receipt.ContractAddress, MinerGRPC)
 
 				if token.Name == "" { goto ADD_TX }
 
