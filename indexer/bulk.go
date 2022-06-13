@@ -58,7 +58,12 @@ func (ns *Indexer) StartBulkChannel () {
 		fmt.Println(":::::::::::::::::::::: Start Channels")
 
 		ns.RChannel[i] = make(chan BlockInfo)
-		go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.GrpcNum])
+
+		if ns.GrpcNum > 0 {
+			go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.GrpcNum])
+		} else {
+			go ns.Miner(ns.RChannel[i], ns.grpcClient)
+		}
 	}
 }
 

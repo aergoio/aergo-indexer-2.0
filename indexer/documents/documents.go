@@ -136,7 +136,7 @@ type EsNFTUp struct {
 var EsMappings = map[string]string{
 	"tx": `{
 		"settings" : {
-			"number_of_shards" : 20,
+			"number_of_shards" : 50,
 			"number_of_replicas" : 1
 		},
 		"mappings":{
@@ -226,7 +226,7 @@ var EsMappings = map[string]string{
 	}`,
 	"token_transfer": `{
 		"settings" : {
-			"number_of_shards" : 50,
+			"number_of_shards" : 30,
 			"number_of_replicas" : 1
 		},
 		"mappings":{
@@ -331,7 +331,7 @@ var EsMappings = map[string]string{
 	}`,
 	"nft": `{
 		"settings" : {
-			"number_of_shards" : 50,
+			"number_of_shards" : 30,
 			"number_of_replicas" : 1
 		},
 		"mappings":{
