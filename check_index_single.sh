@@ -8,7 +8,6 @@ SYNC_TO=0
 MINER=32
 BULK=4000
 BATCH=60
-GRPC=3
+GRPC=16
 
 /home/bin/indexer_single  -A $AERGO_URL --dburl $ES_URL --prefix $CHAIN_PREFIX --from $SYNC_FROM --to $SYNC_TO --bulk $BULK --batch $BATCH --miner $MINER --grpc $GRPC --check true
-
