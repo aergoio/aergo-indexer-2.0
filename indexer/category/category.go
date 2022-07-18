@@ -27,10 +27,11 @@ const (
 	Cluster    TxCategory = "cluster"
 	Deploy     TxCategory = "deploy"
 	Redeploy   TxCategory = "redeploy"
+	MultiCall  TxCategory = "multicall"
 )
 
 // TxCategories is the list of available categories in order of increasing weight
-var TxCategories = []TxCategory{None, Payload, Call, Governance, System, Staking, Voting, Name, NameCreate, NameUpdate, Enterprise, Conf, Cluster, Deploy, Redeploy}
+var TxCategories = []TxCategory{None, Payload, Call, Governance, System, Staking, Voting, Name, NameCreate, NameUpdate, Enterprise, Conf, Cluster, Deploy, Redeploy, MultiCall}
 
 // DetectTxCategory by performing a cascade of checks with fallbacks
 func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
@@ -41,6 +42,10 @@ func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
 
 	if txType == types.TxType_REDEPLOY {
 		return Redeploy, ""
+	}
+
+	if txType == types.TxType_MULTICALL {
+		return MultiCall, ""
 	}
 
 	if txRecipient == "" && len(txBody.Payload) > 0 {
