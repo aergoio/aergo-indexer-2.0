@@ -14,7 +14,7 @@ docker run -d --net=host --rm --name es_main_02 \
         -e node.data=true  \
         -e network.host=0.0.0.0  \
         -e discovery.seed_hosts=v2-main-scan01,v2-main-scan03 \
-        -e cluster.initial_master_nodes=v2-main-scan01 \
+        -e cluster.initial_master_nodes=es_main_01_v2 \
         -e xpack.security.enabled=false \
         -e bootstrap.memory_lock=true --ulimit memlock=-1:-1 \
         -e "ES_JAVA_OPTS=-Xms24g -Xmx24g" \

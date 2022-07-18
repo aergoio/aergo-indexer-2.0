@@ -30,6 +30,7 @@ const (
 	TxType_TRANSFER      TxType = 4
 	TxType_CALL          TxType = 5
 	TxType_DEPLOY        TxType = 6
+	TxType_MULTICALL     TxType = 7
 )
 
 var TxType_name = map[int32]string{
@@ -40,6 +41,7 @@ var TxType_name = map[int32]string{
 	4: "TRANSFER",
 	5: "CALL",
 	6: "DEPLOY",
+	7: "MULTICALL",
 }
 
 var TxType_value = map[string]int32{
@@ -50,6 +52,7 @@ var TxType_value = map[string]int32{
 	"TRANSFER":      4,
 	"CALL":          5,
 	"DEPLOY":        6,
+	"MULTICALL":     7,
 }
 
 func (x TxType) String() string {
