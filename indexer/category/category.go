@@ -49,10 +49,6 @@ func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
 		return MultiCall, ""
 	}
 
-	if txType == types.TxType_TRANSFER {
-		return Transfer, ""
-	}
-
 	if txRecipient == "" && len(txBody.Payload) > 0 {
 		return Deploy, ""
 	}
@@ -113,6 +109,10 @@ func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
 
 	if len(txBody.Payload) > 0 {
 		return Payload, ""
+	}
+
+	if txType == types.TxType_TRANSFER {
+		return Transfer, ""
 	}
 
 	return None, ""
