@@ -28,6 +28,7 @@ const (
 	Deploy     TxCategory = "deploy"
 	Redeploy   TxCategory = "redeploy"
 	MultiCall  TxCategory = "multicall"
+	Transfer   TxCategory = "transfer"
 )
 
 // TxCategories is the list of available categories in order of increasing weight
@@ -46,6 +47,10 @@ func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
 
 	if txType == types.TxType_MULTICALL {
 		return MultiCall, ""
+	}
+
+	if txType == types.TxType_TRANSFER {
+		return Transfer, ""
 	}
 
 	if txRecipient == "" && len(txBody.Payload) > 0 {
