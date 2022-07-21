@@ -67,6 +67,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 			case category.Call :
 			case category.Deploy :
 			case category.Payload :
+			case category.MultiCall :
 			default : goto ADD_TX
                         }
 
