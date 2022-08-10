@@ -111,6 +111,13 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					}
 
 					if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
+					// update Account
+					tokenTx := doc.EsTokenTransfer{
+						Timestamp:      txD.Timestamp,
+						TokenAddress:   ns.encodeAndResolveAccount(contractAddress, txD.BlockNo),
+					}
+					ns.UpdateAccountTokens(info.Type, contractAddress, tokenTx, txD.Account, MinerGRPC)
+
 					fmt.Println(">>>>>>>>>>> POLICY 1 :", encodeAccount(contractAddress))
 
 				case "mint" :
