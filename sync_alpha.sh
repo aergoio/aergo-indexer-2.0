@@ -1,7 +1,13 @@
-docker pull ubuntu:22.04
-docker rm -f idx_alpha
-docker run -d -it --name idx_alpha --net=host --privileged \
+OS=ubuntu:22.04
+docker pull $OS
+docker rm -f sync_idx
+docker run -d -it --name sync_idx --net=host --privileged \
 	-v $(pwd):/home \
-	-e AERGO_URL="alpha-api.aergo.io:7845" \
-	-e CHAIN_PREFIX="alpha_" \
-	ubuntu:22.04 bash /home/sync_index_single.sh
+	$OS /home/bin/indexer_single \
+	-A "alpha-api.aergo.io:7845" \
+	--dburl "http://localhost:9200" \
+	--prefix ="alpha_" \
+	--bulk 500 \
+	--batch 5 \
+	--miner 4 \
+	--grpc 8
