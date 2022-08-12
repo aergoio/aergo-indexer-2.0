@@ -6,7 +6,7 @@ docker run -d -it --name sync_idx --net=host --privileged \
 	$OS /home/bin/indexer_single \
 	-A "218.147.120.149:7845" \
 	--dburl "http://localhost:9200" \
-	--prefix ="mainnet_" \
+	--prefix "mainnet_" \
 	--bulk 500 \
 	--batch 5 \
 	--miner 4 \
