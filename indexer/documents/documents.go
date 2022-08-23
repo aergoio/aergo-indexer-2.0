@@ -133,6 +133,14 @@ type EsNFTUp struct {
 	Timestamp	time.Time `json:"ts" db:"ts"`
 }
 
+type EsContract struct {
+	*BaseEsType
+	TxId		string	`json:"tx_id" db:"tx_id"`
+	Creator 	string	`json:"creator" db:"creator"`
+	BlockNo      	uint64    `json:"blockno" db:"blockno"`
+	Timestamp	time.Time `json:"ts" db:"ts"`
+}
+
 var EsMappings = map[string]string{
 	"tx": `{
 		"settings" : {
@@ -350,6 +358,28 @@ var EsMappings = map[string]string{
 				},
 				"account": {
 					"type": "keyword"
+				}
+			}
+		}
+	}`,
+	"contract": `{
+		"settings" : {
+			"number_of_shards" : 20,
+			"number_of_replicas" : 1
+		},
+		"mappings":{
+			"properties":{
+				"tx_id": {
+					"type": "keyword"
+				},
+				"creator": {
+					"type": "keyword"
+				},
+				"blockno": {
+					"type": "long"
+				},
+				"ts": {
+					"type": "date"
 				}
 			}
 		}

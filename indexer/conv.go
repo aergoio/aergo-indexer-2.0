@@ -333,6 +333,20 @@ func (ns *Indexer) UpdateToken(contractAddress []byte, grpcc types.AergoRPCServi
 
 
 // ConvContractCreateTx creates document for token creation
+func (ns *Indexer) ConvContract(txDoc doc.EsTx, contractAddress []byte) doc.EsContract {
+
+	document :=  doc.EsContract{
+		BaseEsType:  &doc.BaseEsType{ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		Creator: txDoc.Account,
+		TxId:    txDoc.GetID(),
+		BlockNo: txDoc.BlockNo,
+	}
+
+	return document
+}
+
+
+// ConvContractCreateTx creates document for token creation
 func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc types.AergoRPCServiceClient) doc.EsToken {
 
 	document :=  doc.EsToken{

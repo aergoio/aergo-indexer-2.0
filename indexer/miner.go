@@ -82,6 +82,12 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 
 			if receipt.Status == "ERROR" { goto ADD_TX }
 
+			// Contract Deploy
+			if txD.Category == category.Deploy {
+				contract := ns.ConvContract(txD, receipt.ContractAddress)
+				ns.db.Insert(contract,ns.indexNamePrefix+"contract")
+			}
+
 			// Process Events 
 			events = receipt.GetEvents()
 			for idx, event := range events {
@@ -111,12 +117,16 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					}
 
 					if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
-					// update Account
+
+					// update amount 
 					tokenTx := doc.EsTokenTransfer{
 						Timestamp:      txD.Timestamp,
 						TokenAddress:   ns.encodeAndResolveAccount(contractAddress, txD.BlockNo),
 					}
 					ns.UpdateAccountTokens(info.Type, contractAddress, tokenTx, txD.Account, MinerGRPC)
+					// Add Contract
+					contract := ns.ConvContract(txD, contractAddress)
+					ns.db.Insert(contract,ns.indexNamePrefix+"contract")
 
 					fmt.Println(">>>>>>>>>>> POLICY 1 :", encodeAccount(contractAddress))
 
@@ -233,6 +243,11 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 
 				// Add Token doc
 				if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
+
+				// Add Contract
+				contract := ns.ConvContract(txD, receipt.ContractAddress)
+				ns.db.Insert(contract,ns.indexNamePrefix+"contract")
+
 				fmt.Println(">>>>>>>>>>> POLICY 2 :", encodeAccount(receipt.ContractAddress))
 
 			default :
