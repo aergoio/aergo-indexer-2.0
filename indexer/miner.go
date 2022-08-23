@@ -116,7 +116,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 						token.Type = category.ARC2
 					}
 
-					if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
+//					if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
+					ns.db.Insert(token,ns.indexNamePrefix+"token") 
 
 					// update amount 
 					tokenTx := doc.EsTokenTransfer{
@@ -152,10 +153,9 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 
 					// update TO-Account
 					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.To, MinerGRPC)
-
-					// update NFT
+					// NEW NFT
 					if (tokenTx.TokenId != "") { // ARC2
-						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
+						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx)
 					}
 
 				case "transfer" :
@@ -189,9 +189,9 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					// update FROM-Account
 					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From, MinerGRPC)
 
-					// update NFT
-					if (tokenTx.TokenId != "") { // ARC2
-						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,tokenTx.To)
+					// update NFT on Sync
+					if (tokenTx.TokenId != "" && info.Type == 2) { // ARC2
+						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx)
 					}
 
 				case "burn" :
@@ -217,9 +217,9 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					// update FROM-Account
 					ns.UpdateAccountTokens(info.Type,event.ContractAddress,tokenTx,tokenTx.From, MinerGRPC)
 
-					// Delete NFT --> Burn
-					if (tokenTx.TokenId != "") { // ARC2
-						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx,"BURN")
+					// Delete NFT on Sync
+					if (tokenTx.TokenId != "" && info.Type == 2) { // ARC2
+						ns.UpdateNFT(info.Type,event.ContractAddress,tokenTx)
 					}
 
 				default : continue
@@ -242,7 +242,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 				}
 
 				// Add Token doc
-				if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
+//				if info.Type == 1 { ns.BChannel.Token <- ChanInfo{1, token} } else { ns.db.Insert(token,ns.indexNamePrefix+"token") }
+				ns.db.Insert(token,ns.indexNamePrefix+"token")
 
 				// Add Contract
 				contract := ns.ConvContract(txD, receipt.ContractAddress)
@@ -274,6 +275,7 @@ func (ns *Indexer) rec_Name(tx *types.Tx, txD doc.EsTx, Type uint) bool {
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
 		nameDoc := ns.ConvNameTx(tx, txD.BlockNo)
 
+		/*
 		if Type == 1 {
 			// to bulk
 			ns.BChannel.Name <- ChanInfo{1, nameDoc}
@@ -281,7 +283,9 @@ func (ns *Indexer) rec_Name(tx *types.Tx, txD doc.EsTx, Type uint) bool {
 			// to es
 			ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 		}
+		*/
 
+		ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 		return true
 
 	} else {

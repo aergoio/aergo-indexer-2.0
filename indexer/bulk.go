@@ -30,8 +30,8 @@ func (ns *Indexer) StartBulkChannel () {
 	// Open channels for each indices
 	ns.BChannel.Block = make(chan ChanInfo)
 	ns.BChannel.Tx = make(chan ChanInfo)
-	ns.BChannel.Name = make(chan ChanInfo)
-	ns.BChannel.Token = make(chan ChanInfo)
+//	ns.BChannel.Name = make(chan ChanInfo)
+//	ns.BChannel.Token = make(chan ChanInfo)
 	ns.BChannel.TokenTx = make(chan ChanInfo)
 	ns.BChannel.AccTokens = make(chan ChanInfo)
 	ns.BChannel.NFT = make(chan ChanInfo)
@@ -40,8 +40,8 @@ func (ns *Indexer) StartBulkChannel () {
 	// Start bulk indexers for each indices
 	go ns.BulkIndexer(ns.BChannel.Block, ns.indexNamePrefix+"block", ns.BulkSize, ns.BatchTime, true)
 	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.Name, ns.indexNamePrefix+"name", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.Token, ns.indexNamePrefix+"token", ns.BulkSize, ns.BatchTime, false)
+//	go ns.BulkIndexer(ns.BChannel.Name, ns.indexNamePrefix+"name", ns.BulkSize, ns.BatchTime, false)
+//	go ns.BulkIndexer(ns.BChannel.Token, ns.indexNamePrefix+"token", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.TokenTx, ns.indexNamePrefix+"token_transfer", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.BulkSize, ns.BatchTime, false)
@@ -86,8 +86,8 @@ func (ns *Indexer) StopBulkChannel () {
 	// Send stop messages to each bulk channels
 	ns.BChannel.Block <- ChanInfo{0,nil}
 	ns.BChannel.Tx <- ChanInfo{0,nil}
-	ns.BChannel.Name <- ChanInfo{0,nil}
-	ns.BChannel.Token <- ChanInfo{0,nil}
+//	ns.BChannel.Name <- ChanInfo{0,nil}
+//	ns.BChannel.Token <- ChanInfo{0,nil}
 	ns.BChannel.TokenTx <- ChanInfo{0,nil}
 	ns.BChannel.AccTokens <- ChanInfo{0,nil}
 	ns.BChannel.NFT <- ChanInfo{0,nil}
@@ -95,8 +95,8 @@ func (ns *Indexer) StopBulkChannel () {
 	// Close bulk channels
 	close(ns.BChannel.Block)
 	close(ns.BChannel.Tx)
-	close(ns.BChannel.Name)
-	close(ns.BChannel.Token)
+//	close(ns.BChannel.Name)
+//	close(ns.BChannel.Token)
 	close(ns.BChannel.TokenTx)
 	close(ns.BChannel.AccTokens)
 	close(ns.BChannel.NFT)
@@ -151,13 +151,13 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 		if isBlock {
 
 			ns.BChannel.Tx		<- ChanInfo{2,nil}
-			ns.BChannel.Token	<- ChanInfo{2,nil}
+//			ns.BChannel.Name	<- ChanInfo{2,nil}
+//			ns.BChannel.Token	<- ChanInfo{2,nil}
 			ns.BChannel.TokenTx	<- ChanInfo{2,nil}
-			ns.BChannel.Name	<- ChanInfo{2,nil}
 			ns.BChannel.AccTokens	<- ChanInfo{2,nil}
 			ns.BChannel.NFT		<- ChanInfo{2,nil}
 
-			for i := 0 ; i < 6 ; i ++ {
+			for i := 0 ; i < 4 ; i ++ {
 				<-ns.SynDone
 			}
 		}

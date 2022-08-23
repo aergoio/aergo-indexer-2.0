@@ -176,7 +176,7 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 	return document
 }
 
-func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string) {
+func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer) {
 
 	// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
 	nft := ns.ConvNFT(contractAddress,tokenTx,tokenTx.Amount)
