@@ -17,6 +17,7 @@ func (ns *Indexer) OnSync(startFrom uint64, stopAt uint64) error {
 	ns.CreateIndexIfNotExists("tx")
 	ns.CreateIndexIfNotExists("name")
 	ns.CreateIndexIfNotExists("token")
+	ns.CreateIndexIfNotExists("contract")
 	ns.CreateIndexIfNotExists("token_transfer")
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
