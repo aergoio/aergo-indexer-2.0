@@ -340,6 +340,7 @@ func (ns *Indexer) ConvContract(txDoc doc.EsTx, contractAddress []byte) doc.EsCo
 		Creator: txDoc.Account,
 		TxId:    txDoc.GetID(),
 		BlockNo: txDoc.BlockNo,
+		Timestamp: txDoc.Timestamp,
 	}
 
 	return document
