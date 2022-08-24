@@ -192,19 +192,28 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 
 func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
 
-	aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account, grpcc)
-	if Type == 1 {
-		ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-	} else {
-		ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
-	}
+        id := fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress)
+        if Type == 1 {
+                if ns.accToken[id] {
+//                      fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
+                        return
+                } else {
+//                      fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
+                        aTokens := ns.ConvAccountTokens(contractAddress,tokenTx, account, id, grpcc)
+                        ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
+                        ns.accToken[id] = true
+                }
+        } else {
+                aTokens := ns.ConvAccountTokens(contractAddress,tokenTx,account, id, grpcc)
+                ns.db.Insert(aTokens,ns.indexNamePrefix+"account_tokens")
+        }
 }
 
 
-func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) doc.EsAccountTokens {
+func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, id string, grpcc types.AergoRPCServiceClient) doc.EsAccountTokens {
 
 	document := doc.EsAccountTokens {
-		BaseEsType:	&doc.BaseEsType{fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
+		BaseEsType:	&doc.BaseEsType{id},
 		Account:	account,
 		TokenAddress:	ttDoc.TokenAddress,
 		Timestamp:	ttDoc.Timestamp,

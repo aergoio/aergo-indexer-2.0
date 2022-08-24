@@ -53,6 +53,7 @@ type Indexer struct {
 	//for performance
 	ServerAddr	string
 	GrpcNum		int
+	accToken        map[string]bool
 }
 
 // NewIndexer creates new Indexer instance
@@ -76,6 +77,7 @@ func NewIndexer(serverAddr string, logger *log.Logger, dbURL string, namePrefix 
 	}
 
 	svc.grpcClient = svc.WaitForClient(serverAddr)
+	svc.accToken = make(map[string]bool)
 
 	return svc, nil
 }
