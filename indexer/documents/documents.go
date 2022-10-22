@@ -133,21 +133,19 @@ type EsNFTUp struct {
 	Timestamp	time.Time `json:"ts" db:"ts"`
 }
 
-
 type EsContract struct {
-        *BaseEsType
-        TxId            string  `json:"tx_id" db:"tx_id"`
-        Creator         string  `json:"creator" db:"creator"`
-        BlockNo         uint64    `json:"blockno" db:"blockno"`
-        Timestamp       time.Time `json:"ts" db:"ts"`
+	*BaseEsType
+	TxId		string	`json:"tx_id" db:"tx_id"`
+	Creator 	string	`json:"creator" db:"creator"`
+	BlockNo      	uint64    `json:"blockno" db:"blockno"`
+	Timestamp	time.Time `json:"ts" db:"ts"`
 }
-
 
 var EsMappings = map[string]string{
 	"tx": `{
 		"settings" : {
 			"number_of_shards" : 50,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -187,7 +185,7 @@ var EsMappings = map[string]string{
 	"block": `{
 		"settings" : {
 			"number_of_shards" : 100,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties": {
@@ -215,7 +213,7 @@ var EsMappings = map[string]string{
 	"name": `{
 		"settings" : {
 			"number_of_shards" : 2,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties": {
@@ -237,7 +235,7 @@ var EsMappings = map[string]string{
 	"token_transfer": `{
 		"settings" : {
 			"number_of_shards" : 30,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -277,7 +275,7 @@ var EsMappings = map[string]string{
 	"token": `{
 		"settings" : {
 			"number_of_shards" : 5,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -314,7 +312,7 @@ var EsMappings = map[string]string{
 	"account_tokens": `{
 		"settings" : {
 			"number_of_shards" : 10,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -342,7 +340,7 @@ var EsMappings = map[string]string{
 	"nft": `{
 		"settings" : {
 			"number_of_shards" : 30,
-			"number_of_replicas" : 0
+			"number_of_replicas" : 1
 		},
 		"mappings":{
 			"properties":{
@@ -364,29 +362,28 @@ var EsMappings = map[string]string{
 			}
 		}
 	}`,
-        "contract": `{
-                "settings" : {
-                        "number_of_shards" : 10,
-                        "number_of_replicas" : 0
-                },
-                "mappings":{
-                        "properties":{
-                                "tx_id": {
-                                        "type": "keyword"
-                                },
-                                "creator": {
-                                        "type": "keyword"
-                                },
-                                "blockno": {
-                                        "type": "long"
-                                },
-                                "ts": {
-                                        "type": "date"
-                                }
-                        }
-                }
-        }`,
-
+	"contract": `{
+		"settings" : {
+			"number_of_shards" : 10,
+			"number_of_replicas" : 1
+		},
+		"mappings":{
+			"properties":{
+				"tx_id": {
+					"type": "keyword"
+				},
+				"creator": {
+					"type": "keyword"
+				},
+				"blockno": {
+					"type": "long"
+				},
+				"ts": {
+					"type": "date"
+				}
+			}
+		}
+	}`,
 }
 
 
