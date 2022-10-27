@@ -30,8 +30,6 @@ func (ns *Indexer) StartBulkChannel () {
 	// Open channels for each indices
 	ns.BChannel.Block = make(chan ChanInfo)
 	ns.BChannel.Tx = make(chan ChanInfo)
-//	ns.BChannel.Name = make(chan ChanInfo)
-//	ns.BChannel.Token = make(chan ChanInfo)
 	ns.BChannel.TokenTx = make(chan ChanInfo)
 	ns.BChannel.AccTokens = make(chan ChanInfo)
 	ns.BChannel.NFT = make(chan ChanInfo)
@@ -40,8 +38,6 @@ func (ns *Indexer) StartBulkChannel () {
 	// Start bulk indexers for each indices
 	go ns.BulkIndexer(ns.BChannel.Block, ns.indexNamePrefix+"block", ns.BulkSize, ns.BatchTime, true)
 	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.BulkSize, ns.BatchTime, false)
-//	go ns.BulkIndexer(ns.BChannel.Name, ns.indexNamePrefix+"name", ns.BulkSize, ns.BatchTime, false)
-//	go ns.BulkIndexer(ns.BChannel.Token, ns.indexNamePrefix+"token", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.TokenTx, ns.indexNamePrefix+"token_transfer", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.BulkSize, ns.BatchTime, false)
 	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.BulkSize, ns.BatchTime, false)
