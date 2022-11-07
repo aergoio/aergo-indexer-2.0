@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+
 	"github.com/kjunblk/aergo-indexer-2.0/types"
 )
 

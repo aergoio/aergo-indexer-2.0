@@ -2,35 +2,36 @@ package indexer
 
 import (
 	"context"
-	"time"
+	"errors"
 	"fmt"
 	"os"
-	"errors"
-	"github.com/kjunblk/aergo-indexer-2.0/indexer/db"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
-	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
+	"time"
+
 	"github.com/aergoio/aergo-lib/log"
+	"github.com/kjunblk/aergo-indexer-2.0/indexer/db"
+	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
+	"github.com/kjunblk/aergo-indexer-2.0/types"
 	"google.golang.org/grpc"
 )
 
 type ChanInfo struct {
-	Type    uint			// 0:stop_bulk, 1:add, 2:commit
-        Doc doc.DocType
+	Type uint // 0:stop_bulk, 1:add, 2:commit
+	Doc  doc.DocType
 }
 
 type ChanType struct {
-        Block   chan ChanInfo
-        Tx      chan ChanInfo
-        Name    chan ChanInfo
-        Token   chan ChanInfo
-        TokenTx chan ChanInfo
-        AccTokens chan ChanInfo
-        NFT	chan ChanInfo
+	Block     chan ChanInfo
+	Tx        chan ChanInfo
+	Name      chan ChanInfo
+	Token     chan ChanInfo
+	TokenTx   chan ChanInfo
+	AccTokens chan ChanInfo
+	NFT       chan ChanInfo
 }
 
 type BlockInfo struct {
-	Type    uint			// 0:stop_miner, 1:bulk, 2:sync			
-        Height  uint64
+	Type   uint // 0:stop_miner, 1:bulk, 2:sync
+	Height uint64
 }
 
 // Indexer hold all state information
@@ -42,25 +43,24 @@ type Indexer struct {
 	lastBlockHeight uint64
 	log             *log.Logger
 	stream          types.AergoRPCService_ListBlockStreamClient
-	MChannel	chan BlockInfo
-	BChannel	ChanType
-	RChannel	[]chan BlockInfo
-        SynDone		chan bool
-	StartHeight	uint64
-	BulkSize	int32
-	BatchTime	time.Duration
-	MinerNum	int
-	//for performance
-	ServerAddr	string
-	GrpcNum		int
-	accToken        map[string]bool
+	MChannel        chan BlockInfo
+	BChannel        ChanType
+	RChannel        []chan BlockInfo
+	SynDone         chan bool
+	StartHeight     uint64
+	BulkSize        int32
+	BatchTime       time.Duration
+	MinerNum        int
+	// for performance
+	ServerAddr string
+	GrpcNum    int
+	accToken   map[string]bool
 }
 
 // NewIndexer creates new Indexer instance
 func NewIndexer(serverAddr string, logger *log.Logger, dbURL string, namePrefix string) (*Indexer, error) {
 	aliasNamePrefix := namePrefix
 	var err error
-
 	dbController, err := db.NewElasticsearchDbController(dbURL)
 	if err != nil {
 		return nil, err
@@ -73,12 +73,11 @@ func NewIndexer(serverAddr string, logger *log.Logger, dbURL string, namePrefix 
 		indexNamePrefix: generateIndexPrefix(aliasNamePrefix),
 		lastBlockHeight: 0,
 		log:             logger,
-		ServerAddr: serverAddr,
+		ServerAddr:      serverAddr,
 	}
 
 	svc.grpcClient = svc.WaitForClient(serverAddr)
 	svc.accToken = make(map[string]bool)
-
 	return svc, nil
 }
 
@@ -102,7 +101,6 @@ func (ns *Indexer) UpdateAliasForType(documentType string) {
 // GetNodeBlockHeight updates state from db
 func (ns *Indexer) GetNodeBlockHeight() uint64 {
 	blockchain, err := ns.grpcClient.Blockchain(context.Background(), &types.Empty{})
-
 	if err != nil {
 		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
 		return 0
@@ -111,43 +109,37 @@ func (ns *Indexer) GetNodeBlockHeight() uint64 {
 	}
 }
 
-
 func (ns *Indexer) WaitForClient(serverAddr string) types.AergoRPCServiceClient {
-        var conn *grpc.ClientConn
-        var err error
+	var conn *grpc.ClientConn
+	var err error
+	for {
+		ctx := context.Background()
+		maxMsgSize := 1024 * 1024 * 10 // 10mb
+		conn, err = grpc.DialContext(ctx, serverAddr,
+			grpc.WithInsecure(),
+			grpc.WithBlock(),
+			grpc.WithTimeout(5*time.Second),
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)),
+		)
+		if err == nil && conn != nil {
+			break
+		}
 
-        for {
-                ctx := context.Background()
-                maxMsgSize := 1024 * 1024 * 10 // 10mb
-                conn, err = grpc.DialContext(ctx, serverAddr,
-                        grpc.WithInsecure(),
-                        grpc.WithBlock(),
-                        grpc.WithTimeout(5*time.Second),
-                        grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)),
-                )
+		ns.log.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
+		time.Sleep(time.Second)
+	}
 
-                if err == nil && conn != nil {
-                        break
-                }
+	ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
 
-                ns.log.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
-                time.Sleep(time.Second)
-        }
-
-        ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
-
-        return types.NewAergoRPCServiceClient(conn)
+	return types.NewAergoRPCServiceClient(conn)
 }
-
-
 
 // Stops the indexer
 func (ns *Indexer) Stop() {
-
-        if ns.stream != nil {
-               ns.stream.CloseSend()
-               ns.stream = nil
-        }
+	if ns.stream != nil {
+		ns.stream.CloseSend()
+		ns.stream = nil
+	}
 
 	ns.log.Info().Msg("Stop Indexer")
 
@@ -156,25 +148,20 @@ func (ns *Indexer) Stop() {
 
 // GetBestBlockFromDb retrieves the current best block from the db
 func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
-
-        block, err := ns.db.SelectOne(db.QueryParams {
-                IndexName: ns.indexNamePrefix + "block",
-                SortField: "no",
-                SortAsc:   false,
-        }, func() doc.DocType {
-                block := new(doc.EsBlock)
-                block.BaseEsType = new(doc.BaseEsType)
-
-                return block
-        })
-
-        if err != nil {
-                return nil, err
-        }
-        if block == nil {
-                return nil, errors.New("best block not found")
-        }
-
-        return block.(*doc.EsBlock), nil
+	block, err := ns.db.SelectOne(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "block",
+		SortField: "no",
+		SortAsc:   false,
+	}, func() doc.DocType {
+		block := new(doc.EsBlock)
+		block.BaseEsType = new(doc.BaseEsType)
+		return block
+	})
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, errors.New("best block not found")
+	}
+	return block.(*doc.EsBlock), nil
 }
-

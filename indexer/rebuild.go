@@ -1,14 +1,8 @@
 package indexer
 
-import (
-//	"github.com/kjunblk/aergo-indexer-2.0/types"
-)
-
-func (ns *Indexer) CreateIndex (documentType string) {
-
+func (ns *Indexer) CreateIndex(documentType string) {
 	indexName := ns.indexNamePrefix + documentType
 	err := ns.db.CreateIndex(indexName, documentType)
-
 	if err != nil {
 		ns.log.Error().Err(err).Str("indexName", indexName).Msg("Error when creating index")
 	} else {
@@ -16,9 +10,7 @@ func (ns *Indexer) CreateIndex (documentType string) {
 	}
 }
 
-
 func (ns *Indexer) Rebuild() error {
-
 	ns.log.Warn().Msg("Rebuild all indices. Will sync from scratch and replace index aliases when caught up")
 
 	ns.CreateIndex("tx")
@@ -48,4 +40,3 @@ func (ns *Indexer) Rebuild() error {
 
 	return nil
 }
-

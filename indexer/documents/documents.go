@@ -58,10 +58,10 @@ type EsTx struct {
 // EsName is a name-address mapping stored in the database
 type EsName struct {
 	*BaseEsType
-	Name		string `json:"name" db:"name"`
-	Address		string `json:"address" db:"address"`
-	BlockNo		uint64 `json:"blockno" db:"blockno"`
-	UpdateTx	string `json:"tx" db:"tx"`
+	Name     string `json:"name" db:"name"`
+	Address  string `json:"address" db:"address"`
+	BlockNo  uint64 `json:"blockno" db:"blockno"`
+	UpdateTx string `json:"tx" db:"tx"`
 }
 
 // EsTokenTransfer is a transfer of a token
@@ -82,63 +82,63 @@ type EsTokenTransfer struct {
 // EsToken is meta data of a token. The id is the contract address.
 type EsToken struct {
 	*BaseEsType
-	TxId		string		`json:"tx_id" db:"tx_id"`
-	BlockNo		uint64		`json:"blockno" db:"blockno"`
-	Type		category.TokenType	`json:"type" db:"type"`
-	Name		string		`json:"name" db:"name"`
-	Symbol		string		`json:"symbol" db:"symbol"`
-	TokenTransfers	uint64		`json:"token_transfers" db:"token_transfers"`
-	Decimals	uint8           `json:"decimals" db:"decimals"`
-	Supply		string          `json:"supply" db:"supply"`
-	SupplyFloat	float32         `json:"supply_float" db:"supply_float"`
+	TxId           string             `json:"tx_id" db:"tx_id"`
+	BlockNo        uint64             `json:"blockno" db:"blockno"`
+	Type           category.TokenType `json:"type" db:"type"`
+	Name           string             `json:"name" db:"name"`
+	Symbol         string             `json:"symbol" db:"symbol"`
+	TokenTransfers uint64             `json:"token_transfers" db:"token_transfers"`
+	Decimals       uint8              `json:"decimals" db:"decimals"`
+	Supply         string             `json:"supply" db:"supply"`
+	SupplyFloat    float32            `json:"supply_float" db:"supply_float"`
 }
 
 type EsTokenUp struct {
 	*BaseEsType
-	Supply		string          `json:"supply" db:"supply"`
-	SupplyFloat	float32         `json:"supply_float" db:"supply_float"`
+	Supply      string  `json:"supply" db:"supply"`
+	SupplyFloat float32 `json:"supply_float" db:"supply_float"`
 }
 
 // EsAccountTokens is meta data of a token of an account. The id is account_token address.
 type EsAccountTokens struct {
 	*BaseEsType
-	Account		string	`json:"account" db:"account"`
-	TokenAddress	string	`json:"address" db:"address"`
-	Type		category.TokenType `json:"type" db:"type"`
-	Timestamp    	time.Time `json:"ts" db:"ts"`
-	Balance		string	`json:"balance" db:"balance"`
-	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
+	Account      string             `json:"account" db:"account"`
+	TokenAddress string             `json:"address" db:"address"`
+	Type         category.TokenType `json:"type" db:"type"`
+	Timestamp    time.Time          `json:"ts" db:"ts"`
+	Balance      string             `json:"balance" db:"balance"`
+	BalanceFloat float32            `json:"balance_float" db:"balance_float"`
 }
 
 type EsAccountTokensUp struct {
 	*BaseEsType
 	Timestamp    time.Time `json:"ts" db:"ts"`
-	Balance		string	`json:"balance" db:"balance"`
-	BalanceFloat    float32	`json:"balance_float" db:"balance_float"`
+	Balance      string    `json:"balance" db:"balance"`
+	BalanceFloat float32   `json:"balance_float" db:"balance_float"`
 }
 
 type EsNFT struct {
 	*BaseEsType
-	TokenAddress string	`json:"address" db:"address"`
-	TokenId     string	`json:"token_id" db:"token_id"`
-	Account     string	`json:"account" db:"account"`
+	TokenAddress string    `json:"address" db:"address"`
+	TokenId      string    `json:"token_id" db:"token_id"`
+	Account      string    `json:"account" db:"account"`
 	BlockNo      uint64    `json:"blockno" db:"blockno"`
-	Timestamp	time.Time `json:"ts" db:"ts"`
+	Timestamp    time.Time `json:"ts" db:"ts"`
 }
 
 type EsNFTUp struct {
 	*BaseEsType
-	Account     string	`json:"account" db:"account"`
-	BlockNo      uint64    `json:"blockno" db:"blockno"`
-	Timestamp	time.Time `json:"ts" db:"ts"`
+	Account   string    `json:"account" db:"account"`
+	BlockNo   uint64    `json:"blockno" db:"blockno"`
+	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
 type EsContract struct {
 	*BaseEsType
-	TxId		string	`json:"tx_id" db:"tx_id"`
-	Creator 	string	`json:"creator" db:"creator"`
-	BlockNo      	uint64    `json:"blockno" db:"blockno"`
-	Timestamp	time.Time `json:"ts" db:"ts"`
+	TxId      string    `json:"tx_id" db:"tx_id"`
+	Creator   string    `json:"creator" db:"creator"`
+	BlockNo   uint64    `json:"blockno" db:"blockno"`
+	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
 var EsMappings = map[string]string{
@@ -386,7 +386,6 @@ var EsMappings = map[string]string{
 	}`,
 }
 
-
 func mapCategoriesToStr(categories []category.TxCategory) []string {
 	vsm := make([]string, len(categories))
 	for i, v := range categories {
@@ -396,4 +395,3 @@ func mapCategoriesToStr(categories []category.TxCategory) []string {
 }
 
 var categories = strings.Join(mapCategoriesToStr(category.TxCategories), ",")
-

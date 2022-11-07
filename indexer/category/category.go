@@ -36,7 +36,6 @@ var TxCategories = []TxCategory{None, Payload, Call, Governance, System, Staking
 
 // DetectTxCategory by performing a cascade of checks with fallbacks
 func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
-
 	txBody := tx.GetBody()
 	txType := txBody.GetType()
 	txRecipient := string(txBody.GetRecipient())
