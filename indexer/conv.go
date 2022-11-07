@@ -28,7 +28,7 @@ func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 		rewardAmount = "160000000000000000"
 	}
 	return doc.EsBlock{
-		BaseEsType:    &doc.BaseEsType{base58.Encode(block.Hash)},
+		BaseEsType:    &doc.BaseEsType{Id: base58.Encode(block.Hash)},
 		Timestamp:     time.Unix(0, block.Header.Timestamp),
 		BlockNo:       block.Header.BlockNo,
 		TxCount:       uint(len(block.Body.Txs)),
@@ -65,30 +65,30 @@ func (ns *Indexer) encodeAndResolveAccount(account []byte, blockNo uint64) strin
 	var encoded = encodeAccount(account)
 	// Seo
 	return encoded
+	/*
+		if len(encoded) > 12 || isInternalName(encoded) || encoded == "" {
+			return encoded
+		}
 
-	if len(encoded) > 12 || isInternalName(encoded) || encoded == "" {
-		return encoded
-	}
+		// Resolve name
+		var nameRequest = &types.Name{
+			Name:    encoded,
+			BlockNo: blockNo,
+		}
 
-	// Resolve name
-	var nameRequest = &types.Name{
-		Name:    encoded,
-		BlockNo: blockNo,
-	}
+		ctx := context.Background()
+		nameInfo, err := ns.grpcClient.GetNameInfo(ctx, nameRequest)
 
-	ctx := context.Background()
-	nameInfo, err := ns.grpcClient.GetNameInfo(ctx, nameRequest)
+		if err != nil {
+			return "UNRESOLVED: " + encoded
+		}
 
-	if err != nil {
-		return "UNRESOLVED: " + encoded
-	}
-
-	return encodeAccount(nameInfo.GetDestination())
+		return encodeAccount(nameInfo.GetDestination())
+	*/
 }
 
 // bigIntToFloat takes a big.Int, divides it by 10^exp and returns the resulting float
 // Note that this float is not precise. It can be used for sorting purposes
-
 func bigIntToFloat(a *big.Int, exp int64) float32 {
 	var y, e = big.NewInt(10), big.NewInt(exp)
 	y.Exp(y, e, nil)
@@ -108,7 +108,7 @@ func (ns *Indexer) ConvTx(tx *types.Tx, blockD doc.EsBlock) doc.EsTx {
 		method = method[:50]
 	}
 	document := doc.EsTx{
-		BaseEsType:     &doc.BaseEsType{base58.Encode(tx.Hash)},
+		BaseEsType:     &doc.BaseEsType{Id: base58.Encode(tx.Hash)},
 		Account:        ns.encodeAndResolveAccount(tx.Body.Account, blockD.BlockNo),
 		Recipient:      ns.encodeAndResolveAccount(tx.Body.Recipient, blockD.BlockNo),
 		Amount:         amount.String(),
@@ -141,7 +141,7 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 	hash := base58.Encode(tx.Hash)
 
 	document := doc.EsName{
-		BaseEsType: &doc.BaseEsType{fmt.Sprintf("%s-%s", name, hash)},
+		BaseEsType: &doc.BaseEsType{Id: fmt.Sprintf("%s-%s", name, hash)},
 		Name:       name,
 		Address:    address,
 		UpdateTx:   hash,
@@ -152,7 +152,7 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 
 func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsNFT {
 	document := doc.EsNFT{
-		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
+		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress: ttDoc.TokenAddress,
 		TokenId:      ttDoc.TokenId,
 		Timestamp:    ttDoc.Timestamp,
@@ -194,7 +194,7 @@ func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenT
 
 func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, id string, grpcc types.AergoRPCServiceClient) doc.EsAccountTokens {
 	document := doc.EsAccountTokens{
-		BaseEsType:   &doc.BaseEsType{id},
+		BaseEsType:   &doc.BaseEsType{Id: id},
 		Account:      account,
 		TokenAddress: ttDoc.TokenAddress,
 		Timestamp:    ttDoc.Timestamp,
@@ -232,7 +232,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 
 func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
 	document := doc.EsTokenTransfer{
-		BaseEsType:   &doc.BaseEsType{fmt.Sprintf("%s-%d", txDoc.Id, idx)},
+		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
 		BlockNo:      txDoc.BlockNo,
 		Timestamp:    txDoc.Timestamp,
@@ -309,7 +309,7 @@ func (ns *Indexer) UpdateToken(contractAddress []byte, grpcc types.AergoRPCServi
 // ConvContractCreateTx creates document for token creation
 func (ns *Indexer) ConvContract(txDoc doc.EsTx, contractAddress []byte) doc.EsContract {
 	document := doc.EsContract{
-		BaseEsType: &doc.BaseEsType{ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		BaseEsType: &doc.BaseEsType{Id: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Creator:    txDoc.Account,
 		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
@@ -321,7 +321,7 @@ func (ns *Indexer) ConvContract(txDoc doc.EsTx, contractAddress []byte) doc.EsCo
 // ConvContractCreateTx creates document for token creation
 func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc types.AergoRPCServiceClient) doc.EsToken {
 	document := doc.EsToken{
-		BaseEsType:     &doc.BaseEsType{ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		BaseEsType:     &doc.BaseEsType{Id: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		TxId:           txDoc.GetID(),
 		BlockNo:        txDoc.BlockNo,
 		TokenTransfers: uint64(0),
