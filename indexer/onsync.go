@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/kjunblk/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
 // Start setups the indexer

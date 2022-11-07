@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
-	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
 // IndexTxs indexes a list of transactions in bulk

@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
+	indx "github.com/aergoio/aergo-indexer-2.0/indexer"
 	"github.com/aergoio/aergo-lib/log"
-	indx "github.com/kjunblk/aergo-indexer-2.0/indexer"
 	"github.com/spf13/cobra"
 )
 

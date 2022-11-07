@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
-	"github.com/kjunblk/aergo-indexer-2.0/indexer/db"
-	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
 	"google.golang.org/grpc"
 )
 

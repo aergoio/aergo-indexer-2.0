@@ -1,9 +1,9 @@
 package indexer
 
 import (
-	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
-	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
 var cccv_nft_address []byte
