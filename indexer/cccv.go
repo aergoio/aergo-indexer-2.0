@@ -13,7 +13,6 @@ func (ns *Indexer) cccv_nft_mainnet() {
 
 	var err error
 	cccv_nft_address, err = types.DecodeAddress(cccv_nft_string)
-
 	if err != nil {
 		return
 	}
@@ -37,7 +36,6 @@ func (ns *Indexer) cccv_nft_testnet() {
 
 	var err error
 	cccv_nft_address, err = types.DecodeAddress(cccv_nft_string)
-
 	if err != nil {
 		return
 	}
