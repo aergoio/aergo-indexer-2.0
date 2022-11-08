@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 )
 
 // DocType is an interface for structs to be used as database documents

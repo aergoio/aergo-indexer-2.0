@@ -1,4 +1,4 @@
-module github.com/kjunblk/aergo-indexer-2.0
+module github.com/aergoio/aergo-indexer-2.0
 
 go 1.17
 

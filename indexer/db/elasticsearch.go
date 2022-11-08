@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/olivere/elastic/v7"
 )
 
@@ -47,7 +47,7 @@ type ScrollInstance interface {
 
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
-        Client *elastic.Client
+	Client  *elastic.Client
 	UpdateS *elastic.UpdateService
 	IndexS  *elastic.IndexService
 	SearchS *elastic.SearchService
@@ -79,64 +79,51 @@ func NewElasticClient(esURL string) (*elastic.Client, error) {
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
 func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, error) {
 	client, err := NewElasticClient(esURL)
-
 	if err != nil {
 		return nil, err
 	}
 
 	return &ElasticsearchDbController{
-		Client: client,
+		Client:  client,
 		UpdateS: client.Update(),
-		IndexS: client.Index(),
+		IndexS:  client.Index(),
 		SearchS: client.Search(),
 		ExistsS: client.Exists(),
 	}, nil
 }
 
-
 func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
-
 	ans, _ := esdb.ExistsS.Index(indexName).Id(id).Do(context.Background())
 	return ans
 }
 
-
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
 	_, err := esdb.UpdateS.Index(indexName).Id(id).Doc(document).Do(context.Background())
-
 	return err
 }
-
 
 // Insert inserts a single document using the updata params
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
-
-//	_, err := esdb.IndexS.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
+	//	_, err := esdb.IndexS.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	_, err := esdb.IndexS.Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
-
 	return err
 }
 
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
-
 	var query *elastic.RangeQuery
 	if params.IntegerRange != nil {
 		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
 	}
-
-
 	if params.StringMatch != nil {
 		return 0, errors.New("Delete is not imlemented for string matches")
 	}
 
 	res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(context.Background())
-
 	if err != nil {
 		return 0, err
 	}
-
 	return uint64(res.Deleted), nil
 }
 
@@ -147,14 +134,11 @@ func (esdb *ElasticsearchDbController) Count(params QueryParams) (int64, error) 
 
 // SelectOne selects a single document
 func (esdb *ElasticsearchDbController) SelectOne(params QueryParams, createDocument CreateDocFunction) (doc.DocType, error) {
-
 	query := elastic.NewMatchAllQuery()
 	res, err := esdb.Client.Search().Index(params.IndexName).Query(query).Sort(params.SortField, params.SortAsc).From(params.From).Size(1).Do(context.Background())
-
 	if err != nil {
 		return nil, err
 	}
-
 	if res == nil || res.TotalHits() == 0 || len(res.Hits.Hits) == 0 {
 		return nil, nil
 	}
@@ -162,24 +146,18 @@ func (esdb *ElasticsearchDbController) SelectOne(params QueryParams, createDocum
 	// Unmarshall document
 	hit := res.Hits.Hits[0]
 	document := createDocument()
-
 	if err := json.Unmarshal([]byte(hit.Source), document); err != nil {
 		return nil, err
 	}
-
 	document.SetID(hit.Id)
-
 	return document, nil
 }
 
 // UpdateAlias updates an alias with a new index name and delete stale indices
 func (esdb *ElasticsearchDbController) UpdateAlias(aliasName string, indexName string) error {
-
 	ctx := context.Background()
 	svc := esdb.Client.Alias()
-
 	res, err := esdb.Client.Aliases().Index("_all").Do(ctx)
-
 	if err != nil {
 		return err
 	}
@@ -196,35 +174,28 @@ func (esdb *ElasticsearchDbController) UpdateAlias(aliasName string, indexName s
 	svc.Add(indexName, aliasName)
 
 	_, err = svc.Do(ctx)
-
 	for _, indexName := range indices {
 		esdb.Client.DeleteIndex(indexName).Do(ctx)
 	}
-
 	return err
 }
 
 // GetExistingIndexPrefix checks for existing indices and returns the prefix, if any
 func (esdb *ElasticsearchDbController) GetExistingIndexPrefix(aliasName string, documentType string) (bool, string, error) {
-
 	res, err := esdb.Client.Aliases().Index("_all").Do(context.Background())
 	if err != nil {
 		return false, "", err
 	}
-
 	indices := res.IndicesByAlias(aliasName)
-
 	if len(indices) > 0 {
 		indexNamePrefix := strings.TrimSuffix(indices[0], documentType)
 		return true, indexNamePrefix, nil
 	}
-
 	return false, "", nil
 }
 
 // CreateIndex creates index according to documentType definition
 func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentType string) error {
-
 	createIndex, err := esdb.Client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(context.Background())
 	if err != nil {
 		return err
@@ -237,13 +208,11 @@ func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentTyp
 
 // Scroll creates a new scroll instance with the specified query and unmarshal function
 func (esdb *ElasticsearchDbController) Scroll(params QueryParams, createDocument CreateDocFunction) ScrollInstance {
-
 	fsc := elastic.NewFetchSourceContext(true).Include(params.SelectFields...)
 
 	// seo
 	query := elastic.NewRangeQuery(params.SortField).From(params.From).To(params.To)
 	scroll := esdb.Client.Scroll(params.IndexName).Query(query).Size(params.Size).Sort(params.SortField, params.SortAsc).FetchSourceContext(fsc)
-
 	return &EsScrollInstance{
 		scrollService:  scroll,
 		ctx:            context.Background(),
@@ -282,12 +251,11 @@ func (scroll *EsScrollInstance) Next() (doc.DocType, error) {
 		unmarshalled := scroll.createDocument()
 		// seo
 		if err := json.Unmarshal([]byte(doc.Source), unmarshalled); err != nil {
-		//if err := json.Unmarshal(*doc.Source, unmarshalled); err != nil {
+			// if err := json.Unmarshal(*doc.Source, unmarshalled); err != nil {
 			return nil, err
 		}
 		unmarshalled.SetID(doc.Id)
 		return unmarshalled, nil
 	}
-
 	return nil, io.EOF
 }

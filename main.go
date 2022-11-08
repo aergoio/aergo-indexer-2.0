@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	indx "github.com/kjunblk/aergo-indexer-2.0/indexer"
+	indx "github.com/aergoio/aergo-indexer-2.0/indexer"
 	"github.com/aergoio/aergo-lib/log"
 	"github.com/spf13/cobra"
 )
@@ -20,8 +20,8 @@ var (
 		Run:   rootRun,
 	}
 
-	checkMode	bool
-	rebuildMode	bool
+	checkMode       bool
+	rebuildMode     bool
 	host            string
 	port            int32
 	dbURL           string
@@ -31,10 +31,10 @@ var (
 	stopAt          uint64
 	batchTime       int32
 	bulkSize        int32
-	minerNum	int
-	grpcNum		int
+	minerNum        int
+	grpcNum         int
 
-	logger *log.Logger
+	logger  *log.Logger
 	indexer *indx.Indexer
 )
 
@@ -62,12 +62,10 @@ func main() {
 }
 
 func rootRun(cmd *cobra.Command, args []string) {
-
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
 	indexer, err := indx.NewIndexer(getServerAddress(), logger, dbURL, indexNamePrefix)
-
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
 		return
@@ -79,16 +77,15 @@ func rootRun(cmd *cobra.Command, args []string) {
 	indexer.MinerNum = int(minerNum)
 	indexer.GrpcNum = int(grpcNum)
 
-	if (checkMode) {
+	if checkMode {
 		err = indexer.RunCheckIndex(startFrom, stopAt)
 		return
-	} else if (rebuildMode) {
+	} else if rebuildMode {
 		err = indexer.Rebuild()
 		return
 	} else {
 		err = indexer.OnSync(startFrom, stopAt)
 	}
-
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
 		return
@@ -103,14 +100,12 @@ func rootRun(cmd *cobra.Command, args []string) {
 	}
 }
 
-
 func getServerAddress() string {
 	if len(aergoAddress) > 0 {
 		return aergoAddress
 	}
 	return fmt.Sprintf("%s:%d", host, port)
 }
-
 
 func handleKillSig(handler func(), logger *log.Logger) {
 	sigChannel := make(chan os.Signal, 1)
@@ -124,4 +119,3 @@ func handleKillSig(handler func(), logger *log.Logger) {
 		}
 	}()
 }
-
