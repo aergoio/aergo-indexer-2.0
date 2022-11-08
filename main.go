@@ -79,8 +79,10 @@ func rootRun(cmd *cobra.Command, args []string) {
 
 	if checkMode {
 		err = indexer.RunCheckIndex(startFrom, stopAt)
+		return
 	} else if rebuildMode {
 		err = indexer.Rebuild()
+		return
 	} else {
 		err = indexer.OnSync(startFrom, stopAt)
 	}
