@@ -93,8 +93,6 @@ func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 		}
 		blockNo = block.(*esBlockNo).BlockNo
 
-		// fmt.Println(blockNo)
-
 		if blockNo%100000 == 0 {
 			fmt.Println(">>> Check Block :", blockNo)
 		}

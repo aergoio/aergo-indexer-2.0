@@ -1,17 +1,13 @@
 package indexer
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
-
-	// "strings"
-	"bytes"
-	"encoding/json"
 	"strconv"
 	"time"
-
-	// "os"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
@@ -226,7 +222,6 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		document.BalanceFloat = 0
 		document.Balance = "0"
 	}
-	// fmt.Println("---- Account :", document)
 	return document
 }
 
@@ -260,7 +255,6 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 			// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
 			if owner != "" {
 				document.Amount = owner
-				// fmt.Println("SUCESS Owner:", owner)
 			} else {
 				document.Amount = "BURN"
 			}
@@ -302,8 +296,6 @@ func (ns *Indexer) UpdateToken(contractAddress []byte, grpcc types.AergoRPCServi
 	}
 
 	ns.db.Update(document, ns.indexNamePrefix+"token", encodeAccount(contractAddress))
-
-	//fmt.Println("Update Token :", encodeAccount(contractAddress))
 }
 
 // ConvContractCreateTx creates document for token creation

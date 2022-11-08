@@ -65,7 +65,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 			default:
 				goto ADD_TX
 			}
-			// fmt.Println("category :", txD.Category)
 
 			receipt, err = MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
 			if err != nil {
@@ -163,8 +162,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					if tokenTx.Amount == "" {
 						continue
 					}
-
-					// fmt.Println("tokenTx.Amount :", tokenTx.Amount)
 
 					if strings.Contains(tokenTx.From, "1111111111111111111111111") {
 						tokenTx.From = "MINT"
@@ -265,7 +262,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 			} else {
 				ns.db.Insert(txD, ns.indexNamePrefix+"tx")
 			}
-			// fmt.Println("--> Tx:", d)
 		}
 
 		// Add block doc
@@ -274,8 +270,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 		} else {
 			ns.db.Insert(blockD, ns.indexNamePrefix+"block")
 		}
-
-		// fmt.Println("--> done:", blockHeight)
 	}
 
 	return nil
