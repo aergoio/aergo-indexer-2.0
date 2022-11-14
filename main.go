@@ -83,16 +83,22 @@ func rootRun(cmd *cobra.Command, args []string) {
 
 	if checkMode {
 		err = indexer.RunCheckIndex(startFrom, stopAt)
+		if err != nil {
+			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Check failed")
+		}
 		return
 	} else if rebuildMode {
 		err = indexer.Rebuild()
+		if err != nil {
+			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Rebuild failed")
+		}
 		return
 	} else {
 		err = indexer.OnSync(startFrom, stopAt)
-	}
-	if err != nil {
-		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
-		return
+		if err != nil {
+			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
+			return
+		}
 	}
 
 	handleKillSig(func() {
