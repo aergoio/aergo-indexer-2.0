@@ -28,7 +28,7 @@ func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 		Timestamp:     time.Unix(0, block.Header.Timestamp),
 		BlockNo:       block.Header.BlockNo,
 		TxCount:       uint(len(block.Body.Txs)),
-		Size:          int64(proto.Size(block)),
+		Size:          uint64(proto.Size(block)),
 		RewardAccount: ns.encodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
 		RewardAmount:  rewardAmount,
 	}

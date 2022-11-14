@@ -35,7 +35,7 @@ type EsBlock struct {
 	Timestamp     time.Time `json:"ts" db:"ts"`
 	BlockNo       uint64    `json:"no" db:"no"`
 	TxCount       uint      `json:"txs" db:"txs"`
-	Size          int64     `json:"size" db:"size"`
+	Size          uint64    `json:"size" db:"size"`
 	RewardAccount string    `json:"reward_account" db:"reward_account"`
 	RewardAmount  string    `json:"reward_amount" db:"reward_amount"`
 }
@@ -52,7 +52,7 @@ type EsTx struct {
 	Type           string              `json:"type" db:"type"`
 	Category       category.TxCategory `json:"category" db:"category"`
 	Method         string              `json:"method" db:"method"`
-	TokenTransfers int                 `json:"token_transfers" db:"token_transfers"`
+	TokenTransfers uint64              `json:"token_transfers" db:"token_transfers"`
 }
 
 // EsName is a name-address mapping stored in the database
