@@ -13,5 +13,5 @@ RUN make bin/indexer
 
 FROM alpine
 RUN apk add libgcc
-COPY --from=builder /app/bin/* /usr/local/bin/
+COPY --from=builder /aergo-indexer/bin/* /usr/local/bin/
 CMD ["indexer"]
