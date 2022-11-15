@@ -15,4 +15,3 @@ clean:
 
 run:
 	go run main.go
-
