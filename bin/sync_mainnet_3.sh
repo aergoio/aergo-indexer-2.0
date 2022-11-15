@@ -8,4 +8,4 @@ BULK=500
 BATCH=10
 GRPC=4
 
-/home/bin/indexer_cluster  -A $AERGO_URL --dburl $ES_URL --prefix $INDEX_PREFIX --bulk $BULK --batch $BATCH --miner $MINER --grpc $GRPC 
+/home/bin/indexer  -A $AERGO_URL --dburl $ES_URL --prefix $INDEX_PREFIX --bulk $BULK --batch $BATCH --miner $MINER --grpc $GRPC --cluster true

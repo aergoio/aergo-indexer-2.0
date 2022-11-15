@@ -1,7 +1,5 @@
 /bin/clean_index
 /bin/indexer
-/bin/indexer_cluster
-/bin/indexer_single
 /bin/clean_index
 /clean_index/build
 /indexer/pkg

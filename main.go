@@ -8,6 +8,7 @@ import (
 	"time"
 
 	indx "github.com/aergoio/aergo-indexer-2.0/indexer"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-lib/log"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +23,7 @@ var (
 
 	checkMode       bool
 	rebuildMode     bool
+	clusterMode     bool
 	host            string
 	port            int32
 	dbURL           string
@@ -47,6 +49,7 @@ func init() {
 	fs.StringVarP(&indexNamePrefix, "prefix", "X", "testnet_", "prefix used for index names")
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&rebuildMode, "rebuild", false, "reindex all with batch job")
+	fs.BoolVar(&clusterMode, "cluster", false, "elasticsearch cluster mode")
 	fs.Uint64VarP(&startFrom, "from", "", 0, "start syncing from this block number")
 	fs.Uint64VarP(&stopAt, "to", "", 0, "stop syncing at this block number")
 	fs.Int32VarP(&bulkSize, "bulk", "", 0, "bulk size")
@@ -65,6 +68,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
+	doc.InitEsMappings(clusterMode)
 	indexer, err := indx.NewIndexer(getServerAddress(), logger, dbURL, indexNamePrefix)
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
@@ -79,16 +83,22 @@ func rootRun(cmd *cobra.Command, args []string) {
 
 	if checkMode {
 		err = indexer.RunCheckIndex(startFrom, stopAt)
+		if err != nil {
+			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Check failed")
+		}
 		return
 	} else if rebuildMode {
 		err = indexer.Rebuild()
+		if err != nil {
+			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Rebuild failed")
+		}
 		return
 	} else {
 		err = indexer.OnSync(startFrom, stopAt)
-	}
-	if err != nil {
-		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
-		return
+		if err != nil {
+			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
+			return
+		}
 	}
 
 	handleKillSig(func() {
