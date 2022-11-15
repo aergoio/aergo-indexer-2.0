@@ -3,9 +3,9 @@
 This is a go program that connects to aergo server over RPC and synchronizes blockchain metadata with a database. It currently supports Elasticsearch.
 
 This creates the indices,
-   1. `block`,
-   2. `tx`,
-   3. `name` (with a prefix).
+   1. `block`
+   2. `tx`
+   3. `name` (with a prefix)
    4. `token`
    5. `token_transfer`
    6. `account_tokens`
