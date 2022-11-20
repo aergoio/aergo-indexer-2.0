@@ -3,3 +3,7 @@
 /bin/clean_index
 /clean_index/build
 /indexer/pkg
+
+# test output
+coverage.out
+coverage.xml
