@@ -11,6 +11,7 @@ This creates the indices,
    6. `account_tokens`
    7. `nft`
    8. `contract`
+   
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
 When using Elasticsearch, multiple indexing instances can be run concurrently using these two mechanisms (can be used together):
