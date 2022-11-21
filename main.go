@@ -21,9 +21,10 @@ var (
 		Run:   rootRun,
 	}
 
+	runMode         string
 	checkMode       bool
 	rebuildMode     bool
-	clusterMode     bool
+	cleanMode       bool
 	host            string
 	port            int32
 	dbURL           string
@@ -31,6 +32,7 @@ var (
 	aergoAddress    string
 	startFrom       uint64
 	stopAt          uint64
+	cluster         bool
 	batchTime       int32
 	bulkSize        int32
 	minerNum        int
@@ -47,11 +49,15 @@ func init() {
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "http://localhost:9200", "Database URL")
 	fs.StringVarP(&indexNamePrefix, "prefix", "X", "testnet_", "prefix used for index names")
+
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&rebuildMode, "rebuild", false, "reindex all with batch job")
-	fs.BoolVar(&clusterMode, "cluster", false, "elasticsearch cluster mode")
+	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index ( tokens_transfer, account_tokens )")
+	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode type. Alternative to setting check, rebuild, clean, onsync separately.")
+
 	fs.Uint64VarP(&startFrom, "from", "", 0, "start syncing from this block number")
 	fs.Uint64VarP(&stopAt, "to", "", 0, "stop syncing at this block number")
+	fs.BoolVar(&cluster, "cluster", false, "cluster mode in elasticsearch")
 	fs.Int32VarP(&bulkSize, "bulk", "", 0, "bulk size")
 	fs.Int32VarP(&batchTime, "batch", "", 0, "batch duration")
 	fs.IntVarP(&minerNum, "miner", "", 0, "number of miner")
@@ -68,7 +74,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
-	doc.InitEsMappings(clusterMode)
+	doc.InitEsMappings(cluster)
 	indexer, err := indx.NewIndexer(getServerAddress(), logger, dbURL, indexNamePrefix)
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
@@ -81,24 +87,8 @@ func rootRun(cmd *cobra.Command, args []string) {
 	indexer.MinerNum = int(minerNum)
 	indexer.GrpcNum = int(grpcNum)
 
-	if checkMode {
-		err = indexer.RunCheckIndex(startFrom, stopAt)
-		if err != nil {
-			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Check failed")
-		}
+	if exitOnComplete := indexer.Start(getRunMode(), startFrom, stopAt); exitOnComplete {
 		return
-	} else if rebuildMode {
-		err = indexer.Rebuild()
-		if err != nil {
-			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Rebuild failed")
-		}
-		return
-	} else {
-		err = indexer.OnSync(startFrom, stopAt)
-		if err != nil {
-			logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
-			return
-		}
 	}
 
 	handleKillSig(func() {
@@ -115,6 +105,19 @@ func getServerAddress() string {
 		return aergoAddress
 	}
 	return fmt.Sprintf("%s:%d", host, port)
+}
+
+func getRunMode() string {
+	if len(runMode) > 0 {
+		return runMode
+	} else if checkMode {
+		return "check"
+	} else if rebuildMode {
+		return "rebuild"
+	} else if cleanMode {
+		return "clean"
+	}
+	return "onsync"
 }
 
 func handleKillSig(handler func(), logger *log.Logger) {

@@ -74,10 +74,9 @@ func NewIndexer(serverAddr string, logger *log.Logger, dbURL string, namePrefix 
 		lastBlockHeight: 0,
 		log:             logger,
 		ServerAddr:      serverAddr,
+		accToken:        make(map[string]bool),
 	}
-
 	svc.grpcClient = svc.WaitForClient(serverAddr)
-	svc.accToken = make(map[string]bool)
 	return svc, nil
 }
 
@@ -132,6 +131,41 @@ func (ns *Indexer) WaitForClient(serverAddr string) types.AergoRPCServiceClient 
 	ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
 
 	return types.NewAergoRPCServiceClient(conn)
+}
+
+// Start setups the indexer
+func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitOnComplete bool) {
+	var err error
+	switch runMode {
+	case "check":
+		err = ns.RunCheckIndex(startFrom, stopAt)
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Check failed")
+		}
+		return true
+	case "rebuild":
+		err = ns.Rebuild()
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Rebuild failed")
+		}
+		return true
+	case "clean":
+		err = ns.RunCleanIndex()
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Rebuild failed")
+		}
+		return true
+	case "onsync":
+		err = ns.OnSync(startFrom, stopAt)
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Could not start indexer")
+			return true
+		}
+		return false
+	default:
+		ns.log.Warn().Str("mode", runMode).Msg("Invalid run mode")
+		return true
+	}
 }
 
 // Stops the indexer
