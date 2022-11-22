@@ -1,9 +1,10 @@
 package types
 
 import (
-	"github.com/magiconair/properties/assert"
 	"reflect"
 	"testing"
+
+	"github.com/magiconair/properties/assert"
 )
 
 // address "AmMRo3jey9pL5qwJSNJFghe9t9J6fPEoZfNv8XjsqSrajGFuJGpi"를 디코딩한 결과
