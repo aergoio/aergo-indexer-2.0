@@ -53,7 +53,7 @@ func init() {
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&rebuildMode, "rebuild", false, "reindex all with batch job")
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index ( tokens_transfer, account_tokens )")
-	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode type. Alternative to setting check, rebuild, clean, onsync separately.")
+	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, rebuild, clean, onsync separately.")
 
 	fs.Uint64VarP(&startFrom, "from", "", 0, "start syncing from this block number")
 	fs.Uint64VarP(&stopAt, "to", "", 0, "stop syncing at this block number")
@@ -75,19 +75,26 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
 	doc.InitEsMappings(cluster)
-	indexer, err := indx.NewIndexer(getServerAddress(), logger, dbURL, indexNamePrefix)
+
+	// init indexer
+	indexer, err := indx.NewIndexer(
+		indx.SetServerAddr(getServerAddress()),
+		indx.SetDBAddr(dbURL),
+		indx.SetLogger(logger),
+		indx.SetIndexNamePrefix(indexNamePrefix),
+		indx.SetBulkSize(bulkSize),
+		indx.SetBatchTime(batchTime),
+		indx.SetMinerNum(minerNum),
+		indx.SetGrpcNum(grpcNum),
+	)
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
 		return
 	}
 
-	indexer.BulkSize = bulkSize
-	indexer.BatchTime = time.Duration(batchTime) * time.Second
-	indexer.StartHeight = startFrom
-	indexer.MinerNum = int(minerNum)
-	indexer.GrpcNum = int(grpcNum)
-
-	if exitOnComplete := indexer.Start(getRunMode(), startFrom, stopAt); exitOnComplete {
+	// start indexer
+	exitOnComplete := indexer.Start(getRunMode(), startFrom, stopAt)
+	if exitOnComplete == true {
 		return
 	}
 

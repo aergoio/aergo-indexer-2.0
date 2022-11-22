@@ -25,7 +25,7 @@ func (ns *Indexer) Rebuild() error {
 	ns.StartBulkChannel()
 
 	// Get ready to start
-	ns.InsertBlocksInRange(ns.StartHeight, uint64(ns.GetNodeBlockHeight()))
+	ns.InsertBlocksInRange(ns.startHeight, uint64(ns.GetNodeBlockHeight()))
 
 	ns.StopBulkChannel()
 
