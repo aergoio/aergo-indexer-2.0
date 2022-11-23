@@ -166,6 +166,8 @@ When reindexing, this creates new indices to sync the blockchain from scratch.
     cd $GOPATH/src/github.com/aergoio/aergo-indexer
     make
 
-## Build and run using Docker
+## Build and run using Docker Compose
+
+    docker compose -p aergo_indexer -f docker-compose.testnet.yml up
 
 [Automatic latest build from master on Docker Hub](http://hub.docker.com/r/aergo/indexer)
