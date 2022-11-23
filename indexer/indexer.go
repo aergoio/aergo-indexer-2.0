@@ -162,7 +162,7 @@ func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitO
 		}
 		return true
 	case "rebuild":
-		err = ns.Rebuild()
+		err = ns.RunRebuildIndex()
 		if err != nil {
 			ns.log.Warn().Err(err).Msg("Rebuild failed")
 		}
