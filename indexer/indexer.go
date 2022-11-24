@@ -36,48 +36,65 @@ type BlockInfo struct {
 
 // Indexer hold all state information
 type Indexer struct {
-	db              *db.ElasticsearchDbController
-	grpcClient      types.AergoRPCServiceClient
+	db         *db.ElasticsearchDbController
+	grpcClient types.AergoRPCServiceClient
+
+	stream   types.AergoRPCService_ListBlockStreamClient
+	MChannel chan BlockInfo
+	BChannel ChanType
+	RChannel []chan BlockInfo
+	SynDone  chan bool
+
+	// config
+	log             *log.Logger
 	aliasNamePrefix string
 	indexNamePrefix string
 	lastBlockHeight uint64
-	log             *log.Logger
-	stream          types.AergoRPCService_ListBlockStreamClient
-	MChannel        chan BlockInfo
-	BChannel        ChanType
-	RChannel        []chan BlockInfo
-	SynDone         chan bool
-	StartHeight     uint64
-	BulkSize        int32
-	BatchTime       time.Duration
-	MinerNum        int
-	// for performance
-	ServerAddr string
-	GrpcNum    int
-	accToken   map[string]bool
+	startHeight     uint64
+	bulkSize        int32
+	batchTime       time.Duration
+	minerNum        int
+	dbAddr          string
+	serverAddr      string
+	grpcNum         int
+	accToken        map[string]bool
 }
 
 // NewIndexer creates new Indexer instance
-func NewIndexer(serverAddr string, logger *log.Logger, dbURL string, namePrefix string) (*Indexer, error) {
-	aliasNamePrefix := namePrefix
+func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	var err error
-	dbController, err := db.NewElasticsearchDbController(dbURL)
+
+	// set default options
+	svc := &Indexer{
+		log:             log.NewLogger("indexer"),
+		aliasNamePrefix: "testnet_",
+		indexNamePrefix: generateIndexPrefix("testnet_"),
+		lastBlockHeight: 0,
+		startHeight:     0,
+		bulkSize:        0,
+		batchTime:       0,
+		minerNum:        0,
+		dbAddr:          "localhost:9200",
+		serverAddr:      "localhost:7845",
+		grpcNum:         0,
+		accToken:        make(map[string]bool),
+	}
+
+	// overwrite options on it
+	for _, option := range options {
+		if err = option(svc); err != nil {
+			return nil, err
+		}
+	}
+
+	// conn server, db
+	svc.grpcClient = svc.WaitForClient(svc.serverAddr)
+	svc.db, err = db.NewElasticsearchDbController(svc.dbAddr)
 	if err != nil {
 		return nil, err
 	}
+	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Initialized database connection")
 
-	logger.Info().Str("dbURL", dbURL).Msg("Initialized database connection")
-	svc := &Indexer{
-		db:              dbController,
-		aliasNamePrefix: aliasNamePrefix,
-		indexNamePrefix: generateIndexPrefix(aliasNamePrefix),
-		lastBlockHeight: 0,
-		log:             logger,
-		ServerAddr:      serverAddr,
-	}
-
-	svc.grpcClient = svc.WaitForClient(serverAddr)
-	svc.accToken = make(map[string]bool)
 	return svc, nil
 }
 
@@ -132,6 +149,41 @@ func (ns *Indexer) WaitForClient(serverAddr string) types.AergoRPCServiceClient 
 	ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
 
 	return types.NewAergoRPCServiceClient(conn)
+}
+
+// Start setups the indexer
+func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitOnComplete bool) {
+	var err error
+	switch runMode {
+	case "check":
+		err = ns.RunCheckIndex(startFrom, stopAt)
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Check failed")
+		}
+		return true
+	case "rebuild":
+		err = ns.RunRebuildIndex()
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Rebuild failed")
+		}
+		return true
+	case "clean":
+		err = ns.RunCleanIndex()
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Rebuild failed")
+		}
+		return true
+	case "onsync":
+		err = ns.OnSync(startFrom, stopAt)
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Could not start indexer")
+			return true
+		}
+		return false
+	default:
+		ns.log.Warn().Str("mode", runMode).Msg("Invalid run mode")
+		return true
+	}
 }
 
 // Stops the indexer

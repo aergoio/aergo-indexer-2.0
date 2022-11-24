@@ -10,7 +10,7 @@ func (ns *Indexer) CreateIndex(documentType string) {
 	}
 }
 
-func (ns *Indexer) Rebuild() error {
+func (ns *Indexer) RunRebuildIndex() error {
 	ns.log.Warn().Msg("Rebuild all indices. Will sync from scratch and replace index aliases when caught up")
 
 	ns.CreateIndex("tx")
@@ -25,7 +25,7 @@ func (ns *Indexer) Rebuild() error {
 	ns.StartBulkChannel()
 
 	// Get ready to start
-	ns.InsertBlocksInRange(ns.StartHeight, uint64(ns.GetNodeBlockHeight()))
+	ns.InsertBlocksInRange(ns.startHeight, uint64(ns.GetNodeBlockHeight()))
 
 	ns.StopBulkChannel()
 

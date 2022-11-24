@@ -17,7 +17,7 @@ func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uin
 		if blockHeight%100000 == 0 {
 			fmt.Println(">>>>> Current Reindex Height :", blockHeight)
 		}
-		ns.RChannel[blockHeight%uint64(ns.MinerNum)] <- BlockInfo{1, blockHeight}
+		ns.RChannel[blockHeight%uint64(ns.minerNum)] <- BlockInfo{1, blockHeight}
 	}
 	// last one
 	ns.RChannel[0] <- BlockInfo{1, fromBlockHeight}
@@ -34,24 +34,24 @@ func (ns *Indexer) StartBulkChannel() {
 	ns.SynDone = make(chan bool)
 
 	// Start bulk indexers for each indices
-	go ns.BulkIndexer(ns.BChannel.Block, ns.indexNamePrefix+"block", ns.BulkSize, ns.BatchTime, true)
-	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.TokenTx, ns.indexNamePrefix+"token_transfer", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.BulkSize, ns.BatchTime, false)
+	go ns.BulkIndexer(ns.BChannel.Block, ns.indexNamePrefix+"block", ns.bulkSize, ns.batchTime, true)
+	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.bulkSize, ns.batchTime, false)
+	go ns.BulkIndexer(ns.BChannel.TokenTx, ns.indexNamePrefix+"token_transfer", ns.bulkSize, ns.batchTime, false)
+	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.bulkSize, ns.batchTime, false)
+	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.bulkSize, ns.batchTime, false)
 
 	// Start multiple miners
-	GrpcClients := make([]types.AergoRPCServiceClient, ns.GrpcNum)
-	for i := 0; i < ns.GrpcNum; i++ {
-		GrpcClients[i] = ns.WaitForClient(ns.ServerAddr)
+	GrpcClients := make([]types.AergoRPCServiceClient, ns.grpcNum)
+	for i := 0; i < ns.grpcNum; i++ {
+		GrpcClients[i] = ns.WaitForClient(ns.serverAddr)
 	}
 
-	ns.RChannel = make([]chan BlockInfo, ns.MinerNum)
-	for i := 0; i < ns.MinerNum; i++ {
+	ns.RChannel = make([]chan BlockInfo, ns.minerNum)
+	for i := 0; i < ns.minerNum; i++ {
 		fmt.Println(":::::::::::::::::::::: Start Channels")
 		ns.RChannel[i] = make(chan BlockInfo)
-		if ns.GrpcNum > 0 {
-			go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.GrpcNum])
+		if ns.grpcNum > 0 {
+			go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.grpcNum])
 		} else {
 			go ns.Miner(ns.RChannel[i], ns.grpcClient)
 		}
@@ -62,7 +62,7 @@ func (ns *Indexer) StartBulkChannel() {
 func (ns *Indexer) StopBulkChannel() {
 	fmt.Println(":::::::::::::::::::::: STOP Channels")
 
-	for i := 0; i < ns.MinerNum; i++ {
+	for i := 0; i < ns.minerNum; i++ {
 		ns.RChannel[i] <- BlockInfo{0, 0}
 		close(ns.RChannel[i])
 	}

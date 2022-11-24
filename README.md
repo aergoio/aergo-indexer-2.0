@@ -11,6 +11,7 @@ This creates the indices,
    6. `account_tokens`
    7. `nft`
    8. `contract`
+   
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
 When using Elasticsearch, multiple indexing instances can be run concurrently using these two mechanisms (can be used together):
@@ -165,6 +166,8 @@ When reindexing, this creates new indices to sync the blockchain from scratch.
     cd $GOPATH/src/github.com/aergoio/aergo-indexer
     make
 
-## Build and run using Docker
+## Build and run using Docker Compose
+
+    docker compose -p aergo_indexer -f docker-compose.testnet.yml up
 
 [Automatic latest build from master on Docker Hub](http://hub.docker.com/r/aergo/indexer)

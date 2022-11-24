@@ -1,0 +1,52 @@
+version: '3.2'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+    container_name: es
+    volumes:
+      - el_data:/usr/share/elasticsearch/data
+      - el_logs:/usr/share/elasticsearch/logs
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+      bootstrap.memory_lock: true
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ulimits:
+     memlock:
+      soft: -1
+      hard: -1
+    ports:
+      - 9200:9200
+      - 9300:9300
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:7.15.2
+  #   container_name: kibana
+  #   ports:
+  #     - 5601:5601
+  #   environment: 
+  #     ELASTICSEARCH_URL: http://es:9200
+  #     ELASTICSEARCH_HOSTS: http://es:9200
+  indexer:
+    container_name: indexer
+    ports:
+     - 8000:8000
+    build:
+     context: ./
+     dockerfile: Dockerfile
+    command: indexer
+      - --aergo=testnet-api.aergo.io:7845
+      - --dburl=http://es:9200
+      - --prefix=testnet_
+      - --mode=onsync
+      - --from=0
+      - --to=0
+      - --bulk=4000
+      - --batch=60
+      - --miner=32
+      - --grpc=16
+      - --cluster=false
+volumes:
+  el_data:
+    driver: local
+  el_logs:
+    driver: local

@@ -1,7 +1,13 @@
 all: bin/indexer bin/clean_index
 
 protoc:
-	protoc -I./aergo-protobuf/proto --go_out=plugins=grpc,paths=source_relative:./types ./aergo-protobuf/proto/*.proto
+	protoc \
+	--proto_path=./aergo-protobuf/proto \
+	--go-grpc_out=./types \
+	--go-grpc_opt=paths=source_relative \
+	--go_out=./types \
+	--go_opt=paths=source_relative \
+	./aergo-protobuf/proto/*.proto
 
 bin/indexer: *.go indexer/*.go indexer/**/*.go types/*.go go.sum go.mod
 	go build -o bin/indexer main.go
