@@ -47,7 +47,7 @@ func init() {
 	fs.StringVarP(&host, "host", "H", "localhost", "host address of aergo server")
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
-	fs.StringVarP(&dbURL, "dburl", "E", "http://localhost:9200", "Database URL")
+	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
 	fs.StringVarP(&indexNamePrefix, "prefix", "X", "testnet_", "prefix used for index names")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
@@ -55,13 +55,13 @@ func init() {
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index ( tokens_transfer, account_tokens )")
 	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, rebuild, clean, onsync separately.")
 
-	fs.Uint64VarP(&startFrom, "from", "", 0, "start syncing from this block number")
-	fs.Uint64VarP(&stopAt, "to", "", 0, "stop syncing at this block number")
+	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number")
+	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number")
 	fs.BoolVar(&cluster, "cluster", false, "cluster mode in elasticsearch")
-	fs.Int32VarP(&bulkSize, "bulk", "", 0, "bulk size")
-	fs.Int32VarP(&batchTime, "batch", "", 0, "batch duration")
-	fs.IntVarP(&minerNum, "miner", "", 0, "number of miner")
-	fs.IntVarP(&grpcNum, "grpc", "", 0, "number of miner")
+	fs.Int32Var(&bulkSize, "bulk", 4000, "bulk size")
+	fs.Int32Var(&batchTime, "batch", 60, "batch duration")
+	fs.IntVar(&minerNum, "miner", 32, "number of miner")
+	fs.IntVar(&grpcNum, "grpc", 16, "number of miner")
 }
 
 func main() {
