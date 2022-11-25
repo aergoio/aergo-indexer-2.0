@@ -114,5 +114,9 @@ func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
 		return Transfer, ""
 	}
 
+	if txType == types.TxType_NORMAL && len(tx.Body.Amount) > 0 && string(tx.Body.Amount) != "0" {
+		return Transfer, ""
+	}
+
 	return None, ""
 }

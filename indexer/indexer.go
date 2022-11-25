@@ -44,6 +44,7 @@ type Indexer struct {
 	BChannel ChanType
 	RChannel []chan BlockInfo
 	SynDone  chan bool
+	accToken map[string]bool
 
 	// config
 	log             *log.Logger
@@ -57,7 +58,6 @@ type Indexer struct {
 	dbAddr          string
 	serverAddr      string
 	grpcNum         int
-	accToken        map[string]bool
 }
 
 // NewIndexer creates new Indexer instance
@@ -66,16 +66,16 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log:             log.NewLogger("indexer"),
-		aliasNamePrefix: "testnet_",
-		indexNamePrefix: generateIndexPrefix("testnet_"),
+		log:             log.NewLogger(""),
+		aliasNamePrefix: "",
+		indexNamePrefix: generateIndexPrefix(""),
 		lastBlockHeight: 0,
 		startHeight:     0,
 		bulkSize:        0,
 		batchTime:       0,
 		minerNum:        0,
-		dbAddr:          "localhost:9200",
-		serverAddr:      "localhost:7845",
+		dbAddr:          "",
+		serverAddr:      "",
 		grpcNum:         0,
 		accToken:        make(map[string]bool),
 	}

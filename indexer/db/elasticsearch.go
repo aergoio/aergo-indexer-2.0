@@ -112,12 +112,11 @@ func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName st
 
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
-	var query *elastic.RangeQuery
+	var query elastic.Query
 	if params.IntegerRange != nil {
 		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
-	}
-	if params.StringMatch != nil {
-		return 0, errors.New("Delete is not imlemented for string matches")
+	} else if params.StringMatch != nil {
+		query = elastic.NewMatchQuery(params.StringMatch.Field, params.StringMatch.Value)
 	}
 
 	res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(context.Background())

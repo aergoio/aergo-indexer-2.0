@@ -20,12 +20,12 @@ type BaseEsType struct {
 }
 
 // GetID returns the document's id
-func (m BaseEsType) GetID() string {
+func (m *BaseEsType) GetID() string {
 	return m.Id
 }
 
 // SetID sets the document's id
-func (m BaseEsType) SetID(id string) {
+func (m *BaseEsType) SetID(id string) {
 	m.Id = id
 }
 
