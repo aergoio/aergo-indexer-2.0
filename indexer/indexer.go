@@ -44,6 +44,7 @@ type Indexer struct {
 	BChannel ChanType
 	RChannel []chan BlockInfo
 	SynDone  chan bool
+	accToken map[string]bool
 
 	// config
 	log             *log.Logger
@@ -57,7 +58,6 @@ type Indexer struct {
 	dbAddr          string
 	serverAddr      string
 	grpcNum         int
-	accToken        map[string]bool
 }
 
 // NewIndexer creates new Indexer instance

@@ -28,7 +28,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 	for info := range RChannel {
 		// stop miner
 		if info.Type == 0 {
-			fmt.Println(":::::::::::::::::::::: STOP Minier")
+			fmt.Println(":::::::::::::::::::::: STOP Miner")
 			break
 		}
 
