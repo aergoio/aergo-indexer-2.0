@@ -26,7 +26,7 @@ func TestDetectTxCategory(t *testing.T) {
 		Body: &types.TxBody{
 			Type:      types.TxType_NORMAL,
 			Recipient: nil,
-			Payload:   []byte{1, 2, 3, 4}, // deploy contract
+			Payload:   []byte{1, 2, 3, 4}, // deploy contract bytecode
 		},
 	}, Deploy, "")
 
