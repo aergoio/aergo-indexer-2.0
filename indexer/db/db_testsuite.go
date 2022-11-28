@@ -81,26 +81,26 @@ func TestDatabaseSuite(t *testing.T, New func() DbController) {
 			stringRange  *StringMatchQuery
 		}{
 			{
-				"idx_block", "alias_block", "block", &doc.EsBlock{
+				"idx_count_block", "alias_count_block", "block", &doc.EsBlock{
 					BaseEsType: &doc.BaseEsType{Id: "31SwcH9K5BxahtRQt1pC4UyboaXYWvnWSovvpmeneuu3"},
 					BlockNo:    uint64(1),
 				}, &IntegerRangeQuery{Field: "no", Min: 0, Max: 1}, nil,
 			},
 			{
-				"idx_block", "alias_block", "block", &doc.EsBlock{
+				"idx_count_block", "alias_count_block", "block", &doc.EsBlock{
 					BaseEsType:    &doc.BaseEsType{Id: "31SwcH9K5BxahtRQt1pC4UyboaXYWvnWSovvpmeneuu3"},
 					BlockNo:       uint64(1),
 					RewardAccount: "AmgWzwNRgqF1vmvCyZqoR6YKNWSG2JFNHewHvb56mqhXoQcepLiy",
 				}, nil, &StringMatchQuery{Field: "reward_account", Value: "AmgWzwNRgqF1vmvCyZqoR6YKNWSG2JFNHewHvb56mqhXoQcepLiy"},
 			},
 			{
-				"idx_tx", "alias_tx", "tx", &doc.EsTx{
+				"idx_count_tx", "alias_count_tx", "tx", &doc.EsTx{
 					BaseEsType: &doc.BaseEsType{Id: "5mxrxYHkANW44jffCcwLLTUovfqjDFWBr51YgYg8meQc"},
 					BlockNo:    uint64(1),
 				}, &IntegerRangeQuery{Field: "blockno", Min: 0, Max: 1}, nil,
 			},
 			{
-				"idx_tx", "alias_tx", "tx", &doc.EsTx{
+				"idx_count_tx", "alias_count_tx", "tx", &doc.EsTx{
 					BaseEsType: &doc.BaseEsType{Id: "5mxrxYHkANW44jffCcwLLTUovfqjDFWBr51YgYg8meQc"},
 					BlockNo:    uint64(1),
 				}, nil, &StringMatchQuery{Field: "blockno", Value: "1"},
@@ -147,7 +147,7 @@ func TestDatabaseSuite(t *testing.T, New func() DbController) {
 			docUpdate doc.DocType
 		}{
 			{
-				"idx_block", "alias_block", "block", "no", false, []doc.DocType{
+				"idx_select_block", "alias_select_block", "block", "no", false, []doc.DocType{
 					&doc.EsBlock{
 						BaseEsType: &doc.BaseEsType{Id: "FpzaEXtEab9g99fhAF7C6XhUUJAc6TjJTjvpWNkdqAn1"},
 						BlockNo:    104776384,
@@ -165,7 +165,7 @@ func TestDatabaseSuite(t *testing.T, New func() DbController) {
 				},
 			},
 			{
-				"idx_block", "alias_block", "block", "no", true, []doc.DocType{
+				"idx_select_block", "alias_select_block", "block", "no", true, []doc.DocType{
 					&doc.EsBlock{
 						BaseEsType: &doc.BaseEsType{Id: "FpzaEXtEab9g99fhAF7C6XhUUJAc6TjJTjvpWNkdqAn1"},
 						BlockNo:    104776384,
@@ -230,7 +230,7 @@ func TestDatabaseSuite(t *testing.T, New func() DbController) {
 			docScroll []doc.DocType
 		}{
 			{
-				"idx_block", "alias_block", "block", "no", false, 104776385, 104776386, []doc.DocType{
+				"idx_scroll_block", "alias_scroll_block", "block", "no", false, 104776385, 104776386, []doc.DocType{
 					&doc.EsBlock{
 						BaseEsType: &doc.BaseEsType{Id: "FpzaEXtEab9g99fhAF7C6XhUUJAc6TjJTjvpWNkdqAn1"},
 						BlockNo:    104776384,
@@ -252,7 +252,7 @@ func TestDatabaseSuite(t *testing.T, New func() DbController) {
 				},
 			},
 			{
-				"idx_block", "alias_block", "block", "no", true, 104776385, 104776386, []doc.DocType{
+				"idx_scroll_block", "alias_scroll_block", "block", "no", true, 104776385, 104776386, []doc.DocType{
 					&doc.EsBlock{
 						BaseEsType: &doc.BaseEsType{Id: "FpzaEXtEab9g99fhAF7C6XhUUJAc6TjJTjvpWNkdqAn1"},
 						BlockNo:    104776384,
