@@ -16,6 +16,9 @@ bin/clean_index:
 	pyinstaller --onefile --clean --workpath ./clean_index/build/ --distpath ./clean_index/dist --specpath ./clean_index clean_index/clean_index.py
 	mv ./clean_index/dist/clean_index ./bin
 
+unittest:
+	go test ./... -short
+
 test:
 	go test ./...
 
@@ -24,7 +27,7 @@ cover-test:
 	gocover-cobertura < coverage.out > coverage.xml
 
 clean:
-	go clean
+	go clean -testcache
 
 run:
 	go run main.go

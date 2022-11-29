@@ -11,6 +11,10 @@ import (
 )
 
 func TestElastic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration tests in short mode.")
+	}
+
 	mock, err := mockupDocker()
 	require.NoError(t, err)
 	defer gnomock.Stop(mock)
