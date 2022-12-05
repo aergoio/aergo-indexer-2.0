@@ -75,10 +75,10 @@ func TestConvTx(t *testing.T) {
 	})
 }
 
-func TestConvNameTx(t *testing.T) {
+func TestConvName(t *testing.T) {
 	indexer := new(Indexer)
 	fn_test := func(aergoTx *types.Tx, blockNumber uint64, esNameExpect *documents.EsName) {
-		esNameConv := indexer.ConvNameTx(aergoTx, blockNumber)
+		esNameConv := indexer.ConvName(aergoTx, blockNumber)
 		require.Equal(t, esNameExpect, &esNameConv)
 	}
 
@@ -130,7 +130,7 @@ func TestConvContract(t *testing.T) {
 func TestConvNFT(t *testing.T) {
 	indexer := new(Indexer)
 	fn_test := func(contractAddress []byte, esTokenTransfer *documents.EsTokenTransfer, amount string, esNFTExpect *documents.EsNFT) {
-		// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
+		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 		esNFTConv := indexer.ConvNFT(contractAddress, *esTokenTransfer, amount)
 		require.Equal(t, esNFTExpect, &esNFTConv)
 	}

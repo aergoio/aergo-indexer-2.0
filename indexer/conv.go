@@ -119,8 +119,8 @@ func (ns *Indexer) ConvTx(tx *types.Tx, blockD doc.EsBlock) doc.EsTx {
 	return document
 }
 
-// ConvNameTx parses a name transaction into Elasticsearch type
-func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
+// ConvName parses a name transaction into Elasticsearch type
+func (ns *Indexer) ConvName(tx *types.Tx, blockNo uint64) doc.EsName {
 	var name = "error"
 	var address string
 
@@ -159,9 +159,9 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 	return document
 }
 
-func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer) {
-	// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
-	nft := ns.ConvNFT(contractAddress, tokenTx, tokenTx.Amount)
+func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer) {
+	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
+	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount)
 	if Type == 1 {
 		ns.BChannel.NFT <- ChanInfo{1, nft}
 	} else {
@@ -170,20 +170,20 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 
 }
 
-func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
-	id := fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress)
+func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
+	id := fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress)
 	if Type == 1 {
 		if ns.accToken[id] {
-			// fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
+			// fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
 			return
 		} else {
-			// fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
-			aTokens := ns.ConvAccountTokens(contractAddress, tokenTx, account, id, grpcc)
+			// fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
+			aTokens := ns.ConvAccountTokens(contractAddress, tokenTransfer, account, id, grpcc)
 			ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
 			ns.accToken[id] = true
 		}
 	} else {
-		aTokens := ns.ConvAccountTokens(contractAddress, tokenTx, account, id, grpcc)
+		aTokens := ns.ConvAccountTokens(contractAddress, tokenTransfer, account, id, grpcc)
 		ns.db.Insert(aTokens, ns.indexNamePrefix+"account_tokens")
 	}
 }
@@ -225,7 +225,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	return document
 }
 
-func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
+func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
 	document := doc.EsTokenTransfer{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
@@ -252,7 +252,7 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 		if err == nil {
 			document.TokenId = args.(string)
 			document.AmountFloat = 1.0
-			// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
+			// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 			if owner != "" {
 				document.Amount = owner
 			} else {
