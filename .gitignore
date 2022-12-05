@@ -1,8 +1,4 @@
-/bin/clean_index
 /bin/indexer
-/bin/clean_index
-/clean_index/build
-/indexer/pkg
 
 # test output
 coverage.out

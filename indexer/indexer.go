@@ -161,16 +161,10 @@ func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitO
 			ns.log.Warn().Err(err).Msg("Check failed")
 		}
 		return true
-	case "rebuild":
-		err = ns.RunRebuildIndex()
-		if err != nil {
-			ns.log.Warn().Err(err).Msg("Rebuild failed")
-		}
-		return true
 	case "clean":
 		err = ns.RunCleanIndex()
 		if err != nil {
-			ns.log.Warn().Err(err).Msg("Rebuild failed")
+			ns.log.Warn().Err(err).Msg("Clean failed")
 		}
 		return true
 	case "onsync":
