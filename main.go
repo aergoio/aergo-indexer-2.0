@@ -23,7 +23,6 @@ var (
 
 	runMode         string
 	checkMode       bool
-	rebuildMode     bool
 	cleanMode       bool
 	host            string
 	port            int32
@@ -51,9 +50,8 @@ func init() {
 	fs.StringVarP(&indexNamePrefix, "prefix", "X", "testnet_", "prefix used for index names")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
-	fs.BoolVar(&rebuildMode, "rebuild", false, "reindex all with batch job")
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index ( tokens_transfer, account_tokens )")
-	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, rebuild, clean, onsync separately.")
+	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, clean, onsync separately.")
 
 	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number")
 	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number")
@@ -119,8 +117,6 @@ func getRunMode() string {
 		return runMode
 	} else if checkMode {
 		return "check"
-	} else if rebuildMode {
-		return "rebuild"
 	} else if cleanMode {
 		return "clean"
 	}
