@@ -10,6 +10,7 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-lib/log"
 	"github.com/mr-tron/base58/base58"
 	"github.com/stretchr/testify/require"
 )
@@ -129,9 +130,9 @@ func TestConvContract(t *testing.T) {
 
 func TestConvNFT(t *testing.T) {
 	indexer := new(Indexer)
-	fn_test := func(contractAddress []byte, esTokenTransfer *documents.EsTokenTransfer, amount string, esNFTExpect *documents.EsNFT) {
+	fn_test := func(contractAddress []byte, esTokenTransfer *documents.EsTokenTransfer, amount string, tokenUri string, esNFTExpect *documents.EsNFT) {
 		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-		esNFTConv := indexer.ConvNFT(contractAddress, *esTokenTransfer, amount)
+		esNFTConv := indexer.ConvNFT(contractAddress, *esTokenTransfer, amount, tokenUri)
 		require.Equal(t, esNFTExpect, &esNFTConv)
 	}
 
@@ -144,6 +145,7 @@ func TestConvNFT(t *testing.T) {
 			TokenId:      "cccv_nft",
 		},
 		"1000",
+		"https://api.booost.live/nft/vehicles/OSOMDJ0SR6",
 		&documents.EsNFT{
 			BaseEsType:   &documents.BaseEsType{Id: fmt.Sprintf("%s-%s", types.EncodeAddress([]byte("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA")), "cccv_nft")},
 			TokenAddress: types.EncodeAddress([]byte("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA")),
@@ -168,4 +170,16 @@ func TestConvTokenTransfer(t *testing.T) {
 // TODO: ConvAccounTokens needs to refactor
 func TestConvAccountTokens(t *testing.T) {
 
+}
+
+func TestQueryContract(t *testing.T) {
+	indexer := new(Indexer)
+	indexer.log = log.NewLogger("indexer")
+	grpcClient := indexer.WaitForClient("testnet-api.aergo.io:7845")
+	addr, _ := types.DecodeAddress("AmgjGhDQcKWLTtk2ux6ywLftRND1Qd9jD68j3NaFhynwwPcSPDUQ")
+	res, err := indexer.queryContract(addr, "get_metadata", []string{"OSOMDJ0SR6", "token_uri"}, grpcClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(res)
 }
