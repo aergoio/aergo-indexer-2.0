@@ -53,6 +53,7 @@ type EsTx struct {
 	Category       category.TxCategory `json:"category" db:"category"`
 	Method         string              `json:"method" db:"method"`
 	TokenTransfers uint64              `json:"token_transfers" db:"token_transfers"`
+	Status         string              `json:"status" db:"status"`
 }
 
 // EsName is a name-address mapping stored in the database
@@ -86,7 +87,9 @@ type EsToken struct {
 	BlockNo        uint64             `json:"blockno" db:"blockno"`
 	Type           category.TokenType `json:"type" db:"type"`
 	Name           string             `json:"name" db:"name"`
+	Name_lower     string             `json:"name_lower" db:"name_lower"`
 	Symbol         string             `json:"symbol" db:"symbol"`
+	Symbol_lower   string             `json:"symbol_lower" db:"symbol_lower"`
 	TokenTransfers uint64             `json:"token_transfers" db:"token_transfers"`
 	Decimals       uint8              `json:"decimals" db:"decimals"`
 	Supply         string             `json:"supply" db:"supply"`
@@ -124,6 +127,7 @@ type EsNFT struct {
 	Account      string    `json:"account" db:"account"`
 	BlockNo      uint64    `json:"blockno" db:"blockno"`
 	Timestamp    time.Time `json:"ts" db:"ts"`
+	TokenUri     string    `json:"token_uri" db:"token_uri"`
 }
 
 type EsNFTUp struct {
@@ -182,6 +186,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"token_transfers": {
 							"type": "long"
+						},
+						"status": {
+							"type": "keyword"
 						}
 					}
 				}
@@ -292,7 +299,13 @@ func InitEsMappings(clusterMode bool) {
 						"name": {
 							"type": "keyword"
 						},
+						"name_lower": {
+							"type": "keyword"
+						},
 						"symbol": {
+							"type": "keyword"
+						},
+						"symbol_lower": {
 							"type": "keyword"
 						},
 						"decimals": {
@@ -361,6 +374,9 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"account": {
+							"type": "keyword"
+						},
+						"token_uri": {
 							"type": "keyword"
 						}
 					}
@@ -427,6 +443,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"token_transfers": {
 							"type": "long"
+						},
+						"status": {
+							"type": "keyword"
 						}
 					}
 				}
@@ -537,7 +556,13 @@ func InitEsMappings(clusterMode bool) {
 						"name": {
 							"type": "keyword"
 						},
+						"name_lower": {
+							"type": "keyword"
+						},
 						"symbol": {
+							"type": "keyword"
+						},
+						"symbol_lower": {
 							"type": "keyword"
 						},
 						"decimals": {
@@ -606,6 +631,9 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"account": {
+							"type": "keyword"
+						},
+						"token_uri": {
 							"type": "keyword"
 						}
 					}
