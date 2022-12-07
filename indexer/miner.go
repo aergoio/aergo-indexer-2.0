@@ -51,6 +51,17 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 			// Get Tx doc
 			txD := ns.ConvTx(tx, blockD)
 
+			receipt, err = MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
+			if err != nil {
+				txD.Status = "NO_RECEIPT"
+				ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
+				goto ADD_TX
+			}
+			txD.Status = receipt.Status
+			if receipt.Status == "ERROR" {
+				goto ADD_TX
+			}
+
 			// Process name transactions
 			if ns.rec_Name(tx, txD, info.Type) {
 				goto ADD_TX
@@ -63,15 +74,6 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 			case category.Payload:
 			case category.MultiCall:
 			default:
-				goto ADD_TX
-			}
-
-			receipt, err = MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
-			if err != nil {
-				ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
-				goto ADD_TX
-			}
-			if receipt.Status == "ERROR" {
 				goto ADD_TX
 			}
 
