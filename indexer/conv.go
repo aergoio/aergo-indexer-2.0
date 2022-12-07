@@ -146,7 +146,7 @@ func (ns *Indexer) ConvName(tx *types.Tx, blockNo uint64) doc.EsName {
 	return document
 }
 
-func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsNFT {
+func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, tokenUri string) doc.EsNFT {
 	document := doc.EsNFT{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress: ttDoc.TokenAddress,
@@ -154,14 +154,19 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 		Timestamp:    ttDoc.Timestamp,
 		BlockNo:      ttDoc.BlockNo,
 		Account:      account,
+		TokenUri:     tokenUri,
 	}
 
 	return document
 }
 
-func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer) {
+func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc types.AergoRPCServiceClient) {
+	tokenUri, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "token_uri"}, grpcc)
+	if err != nil {
+		tokenUri = ""
+	}
 	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount)
+	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount, tokenUri)
 	if Type == 1 {
 		ns.BChannel.NFT <- ChanInfo{1, nft}
 	} else {

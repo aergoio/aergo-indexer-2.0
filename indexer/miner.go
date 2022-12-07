@@ -152,7 +152,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTransfer, tokenTransfer.To, MinerGRPC)
 					// NEW NFT
 					if tokenTransfer.TokenId != "" { // ARC2
-						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer)
+						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer, MinerGRPC)
 					}
 				case "transfer":
 					json.Unmarshal([]byte(event.JsonArgs), &args)
@@ -188,7 +188,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 
 					// update NFT on Sync
 					if tokenTransfer.TokenId != "" && info.Type == 2 { // ARC2
-						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer)
+						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer, MinerGRPC)
 					}
 				case "burn":
 					json.Unmarshal([]byte(event.JsonArgs), &args)
@@ -220,7 +220,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 
 					// Delete NFT on Sync
 					if tokenTransfer.TokenId != "" && info.Type == 2 { // ARC2
-						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer)
+						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer, MinerGRPC)
 					}
 				default:
 					continue
