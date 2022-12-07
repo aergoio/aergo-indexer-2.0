@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
@@ -330,8 +331,11 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc types
 		document.Name = ""
 		return document
 	}
+	document.Name_lower = strings.ToLower(document.Name)
 
 	document.Symbol, err = ns.queryContract(contractAddress, "symbol", nil, grpcc)
+	document.Symbol_lower = strings.ToLower(document.Symbol)
+
 	decimals, err := ns.queryContract(contractAddress, "decimals", nil, grpcc)
 	if err == nil {
 		if d, err := strconv.Atoi(decimals); err == nil {
