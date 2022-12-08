@@ -39,8 +39,8 @@ func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 }
 
 func (ns *Indexer) makePeerId(pubKey []byte) string {
-	if peerId, is_ok := ns.peerId[string(pubKey)]; is_ok == true {
-		return peerId
+	if peerId, is_ok := ns.peerId.Load(string(pubKey)); is_ok == true {
+		return peerId.(string)
 	}
 	cryptoPubKey, err := crypto.UnmarshalPublicKey(pubKey)
 	if err != nil {
@@ -51,7 +51,7 @@ func (ns *Indexer) makePeerId(pubKey []byte) string {
 		return ""
 	}
 	peerId := peer.IDB58Encode(Id)
-	ns.peerId[string(pubKey)] = peerId
+	ns.peerId.Store(string(pubKey), peerId)
 	return peerId
 }
 
@@ -199,14 +199,15 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer do
 func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
 	id := fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress)
 	if Type == 1 {
-		if ns.accToken[id] {
+
+		if _, ok := ns.accToken.Load(id); ok {
 			// fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
 			return
 		} else {
 			// fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
 			aTokens := ns.ConvAccountTokens(contractAddress, tokenTransfer, account, id, grpcc)
 			ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
-			ns.accToken[id] = true
+			ns.accToken.Store(id, true)
 		}
 	} else {
 		aTokens := ns.ConvAccountTokens(contractAddress, tokenTransfer, account, id, grpcc)
