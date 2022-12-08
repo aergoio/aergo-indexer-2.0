@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
@@ -14,6 +15,8 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58/base58"
 )
 
@@ -29,9 +32,27 @@ func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 		BlockNo:       block.Header.BlockNo,
 		TxCount:       uint(len(block.Body.Txs)),
 		Size:          uint64(proto.Size(block)),
+		BlockProducer: ns.makePeerId(block.Header.PubKey),
 		RewardAccount: ns.encodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
 		RewardAmount:  rewardAmount,
 	}
+}
+
+func (ns *Indexer) makePeerId(pubKey []byte) string {
+	if peerId, is_ok := ns.peerId[string(pubKey)]; is_ok == true {
+		return peerId
+	}
+	cryptoPubKey, err := crypto.UnmarshalPublicKey(pubKey)
+	if err != nil {
+		return ""
+	}
+	Id, err := peer.IDFromPublicKey(cryptoPubKey)
+	if err != nil {
+		return ""
+	}
+	peerId := peer.IDB58Encode(Id)
+	ns.peerId[string(pubKey)] = peerId
+	return peerId
 }
 
 // Internal names refer to special accounts that don't need to be resolved
@@ -119,8 +140,8 @@ func (ns *Indexer) ConvTx(tx *types.Tx, blockD doc.EsBlock) doc.EsTx {
 	return document
 }
 
-// ConvNameTx parses a name transaction into Elasticsearch type
-func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
+// ConvName parses a name transaction into Elasticsearch type
+func (ns *Indexer) ConvName(tx *types.Tx, blockNo uint64) doc.EsName {
 	var name = "error"
 	var address string
 
@@ -146,7 +167,7 @@ func (ns *Indexer) ConvNameTx(tx *types.Tx, blockNo uint64) doc.EsName {
 	return document
 }
 
-func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string) doc.EsNFT {
+func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, tokenUri string) doc.EsNFT {
 	document := doc.EsNFT{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress: ttDoc.TokenAddress,
@@ -154,14 +175,19 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 		Timestamp:    ttDoc.Timestamp,
 		BlockNo:      ttDoc.BlockNo,
 		Account:      account,
+		TokenUri:     tokenUri,
 	}
 
 	return document
 }
 
-func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer) {
-	// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
-	nft := ns.ConvNFT(contractAddress, tokenTx, tokenTx.Amount)
+func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc types.AergoRPCServiceClient) {
+	tokenUri, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "token_uri"}, grpcc)
+	if err != nil {
+		tokenUri = ""
+	}
+	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
+	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount, tokenUri)
 	if Type == 1 {
 		ns.BChannel.NFT <- ChanInfo{1, nft}
 	} else {
@@ -170,20 +196,20 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTx doc.EsTo
 
 }
 
-func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTx doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
-	id := fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress)
+func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
+	id := fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress)
 	if Type == 1 {
 		if ns.accToken[id] {
-			// fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
+			// fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
 			return
 		} else {
-			// fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTx.TokenAddress))
-			aTokens := ns.ConvAccountTokens(contractAddress, tokenTx, account, id, grpcc)
+			// fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
+			aTokens := ns.ConvAccountTokens(contractAddress, tokenTransfer, account, id, grpcc)
 			ns.BChannel.AccTokens <- ChanInfo{1, aTokens}
 			ns.accToken[id] = true
 		}
 	} else {
-		aTokens := ns.ConvAccountTokens(contractAddress, tokenTx, account, id, grpcc)
+		aTokens := ns.ConvAccountTokens(contractAddress, tokenTransfer, account, id, grpcc)
 		ns.db.Insert(aTokens, ns.indexNamePrefix+"account_tokens")
 	}
 }
@@ -225,7 +251,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	return document
 }
 
-func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
+func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
 	document := doc.EsTokenTransfer{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
@@ -252,7 +278,7 @@ func (ns *Indexer) ConvTokenTx(contractAddress []byte, txDoc doc.EsTx, idx int, 
 		if err == nil {
 			document.TokenId = args.(string)
 			document.AmountFloat = 1.0
-			// ARC2.tokenTx.Amount --> nft.Account (ownerOf)
+			// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 			if owner != "" {
 				document.Amount = owner
 			} else {
@@ -325,8 +351,11 @@ func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc types
 		document.Name = ""
 		return document
 	}
+	document.Name_lower = strings.ToLower(document.Name)
 
 	document.Symbol, err = ns.queryContract(contractAddress, "symbol", nil, grpcc)
+	document.Symbol_lower = strings.ToLower(document.Symbol)
+
 	decimals, err := ns.queryContract(contractAddress, "decimals", nil, grpcc)
 	if err == nil {
 		if d, err := strconv.Atoi(decimals); err == nil {

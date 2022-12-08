@@ -19,7 +19,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 	blockQuery := make([]byte, 8)
 
 	var err error
-	var tokenTx doc.EsTokenTransfer
+	var tokenTransfer doc.EsTokenTransfer
 	var receipt *types.Receipt
 	var args []interface{}
 	var events []*types.Event
@@ -51,27 +51,29 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 			// Get Tx doc
 			txD := ns.ConvTx(tx, blockD)
 
+			receipt, err = MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
+			if err != nil {
+				txD.Status = "NO_RECEIPT"
+				ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
+				goto ADD_TX
+			}
+			txD.Status = receipt.Status
+			if receipt.Status == "ERROR" {
+				goto ADD_TX
+			}
+
 			// Process name transactions
 			if ns.rec_Name(tx, txD, info.Type) {
 				goto ADD_TX
 			}
 
-			// Process Token and TokenTX
+			// Process Token and TokenTransfer
 			switch txD.Category {
 			case category.Call:
 			case category.Deploy:
 			case category.Payload:
 			case category.MultiCall:
 			default:
-				goto ADD_TX
-			}
-
-			receipt, err = MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
-			if err != nil {
-				ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
-				goto ADD_TX
-			}
-			if receipt.Status == "ERROR" {
 				goto ADD_TX
 			}
 
@@ -111,11 +113,11 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					ns.db.Insert(token, ns.indexNamePrefix+"token")
 
 					// update amount
-					tokenTx := doc.EsTokenTransfer{
+					tokenTransfer := doc.EsTokenTransfer{
 						Timestamp:    txD.Timestamp,
 						TokenAddress: ns.encodeAndResolveAccount(contractAddress, txD.BlockNo),
 					}
-					ns.UpdateAccountTokens(info.Type, contractAddress, tokenTx, txD.Account, MinerGRPC)
+					ns.UpdateAccountTokens(info.Type, contractAddress, tokenTransfer, txD.Account, MinerGRPC)
 
 					// Add Contract
 					contract := ns.ConvContract(txD, contractAddress)
@@ -127,18 +129,18 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					if args[0] == nil || len(args) < 2 {
 						continue
 					}
-					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1], MinerGRPC)
-					if tokenTx.Amount == "" {
+					tokenTransfer = ns.ConvTokenTransfer(event.ContractAddress, txD, idx, "MINT", args[0].(string), args[1], MinerGRPC)
+					if tokenTransfer.Amount == "" {
 						continue
 					}
 
 					txD.TokenTransfers++
 
-					// Add tokenTx doc
+					// Add tokenTransfer doc
 					if info.Type == 1 {
-						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
+						ns.BChannel.TokenTransfer <- ChanInfo{1, tokenTransfer}
 					} else {
-						ns.db.Insert(tokenTx, ns.indexNamePrefix+"token_transfer")
+						ns.db.Insert(tokenTransfer, ns.indexNamePrefix+"token_transfer")
 					}
 
 					// update Token
@@ -147,10 +149,10 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					}
 
 					// update TO-Account
-					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTx, tokenTx.To, MinerGRPC)
+					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTransfer, tokenTransfer.To, MinerGRPC)
 					// NEW NFT
-					if tokenTx.TokenId != "" { // ARC2
-						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTx)
+					if tokenTransfer.TokenId != "" { // ARC2
+						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer, MinerGRPC)
 					}
 				case "transfer":
 					json.Unmarshal([]byte(event.JsonArgs), &args)
@@ -158,35 +160,35 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 						continue
 					}
 
-					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2], MinerGRPC)
-					if tokenTx.Amount == "" {
+					tokenTransfer = ns.ConvTokenTransfer(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), args[2], MinerGRPC)
+					if tokenTransfer.Amount == "" {
 						continue
 					}
 
-					if strings.Contains(tokenTx.From, "1111111111111111111111111") {
-						tokenTx.From = "MINT"
-					} else if strings.Contains(tokenTx.To, "1111111111111111111111111") {
-						tokenTx.To = "BURN"
+					if strings.Contains(tokenTransfer.From, "1111111111111111111111111") {
+						tokenTransfer.From = "MINT"
+					} else if strings.Contains(tokenTransfer.To, "1111111111111111111111111") {
+						tokenTransfer.To = "BURN"
 					}
 
 					txD.TokenTransfers++
 
-					// Add tokenTx doc
+					// Add tokenTransfer doc
 					if info.Type == 1 {
-						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
+						ns.BChannel.TokenTransfer <- ChanInfo{1, tokenTransfer}
 					} else {
-						ns.db.Insert(tokenTx, ns.indexNamePrefix+"token_transfer")
+						ns.db.Insert(tokenTransfer, ns.indexNamePrefix+"token_transfer")
 					}
 
 					// update TO-Account
-					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTx, tokenTx.To, MinerGRPC)
+					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTransfer, tokenTransfer.To, MinerGRPC)
 
 					// update FROM-Account
-					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTx, tokenTx.From, MinerGRPC)
+					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTransfer, tokenTransfer.From, MinerGRPC)
 
 					// update NFT on Sync
-					if tokenTx.TokenId != "" && info.Type == 2 { // ARC2
-						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTx)
+					if tokenTransfer.TokenId != "" && info.Type == 2 { // ARC2
+						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer, MinerGRPC)
 					}
 				case "burn":
 					json.Unmarshal([]byte(event.JsonArgs), &args)
@@ -194,18 +196,18 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 						continue
 					}
 
-					tokenTx = ns.ConvTokenTx(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1], MinerGRPC)
-					if tokenTx.Amount == "" {
+					tokenTransfer = ns.ConvTokenTransfer(event.ContractAddress, txD, idx, args[0].(string), "BURN", args[1], MinerGRPC)
+					if tokenTransfer.Amount == "" {
 						continue
 					}
 
 					txD.TokenTransfers++
 
-					// Add tokenTx doc
+					// Add tokenTransfer doc
 					if info.Type == 1 {
-						ns.BChannel.TokenTx <- ChanInfo{1, tokenTx}
+						ns.BChannel.TokenTransfer <- ChanInfo{1, tokenTransfer}
 					} else {
-						ns.db.Insert(tokenTx, ns.indexNamePrefix+"token_transfer")
+						ns.db.Insert(tokenTransfer, ns.indexNamePrefix+"token_transfer")
 					}
 
 					// update Token
@@ -214,11 +216,11 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 					}
 
 					// update FROM-Account
-					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTx, tokenTx.From, MinerGRPC)
+					ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTransfer, tokenTransfer.From, MinerGRPC)
 
 					// Delete NFT on Sync
-					if tokenTx.TokenId != "" && info.Type == 2 { // ARC2
-						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTx)
+					if tokenTransfer.TokenId != "" && info.Type == 2 { // ARC2
+						ns.UpdateNFT(info.Type, event.ContractAddress, tokenTransfer, MinerGRPC)
 					}
 				default:
 					continue
@@ -277,7 +279,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 
 func (ns *Indexer) rec_Name(tx *types.Tx, txD doc.EsTx, Type uint) bool {
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
-		nameDoc := ns.ConvNameTx(tx, txD.BlockNo)
+		nameDoc := ns.ConvName(tx, txD.BlockNo)
 		/*
 			if Type == 1 {
 				// to bulk

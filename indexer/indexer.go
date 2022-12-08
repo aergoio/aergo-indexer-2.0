@@ -20,13 +20,13 @@ type ChanInfo struct {
 }
 
 type ChanType struct {
-	Block     chan ChanInfo
-	Tx        chan ChanInfo
-	Name      chan ChanInfo
-	Token     chan ChanInfo
-	TokenTx   chan ChanInfo
-	AccTokens chan ChanInfo
-	NFT       chan ChanInfo
+	Block         chan ChanInfo
+	Tx            chan ChanInfo
+	Name          chan ChanInfo
+	Token         chan ChanInfo
+	TokenTransfer chan ChanInfo
+	AccTokens     chan ChanInfo
+	NFT           chan ChanInfo
 }
 
 type BlockInfo struct {
@@ -45,6 +45,7 @@ type Indexer struct {
 	RChannel []chan BlockInfo
 	SynDone  chan bool
 	accToken map[string]bool
+	peerId   map[string]string
 
 	// config
 	log             *log.Logger
@@ -78,6 +79,7 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		serverAddr:      "",
 		grpcNum:         0,
 		accToken:        make(map[string]bool),
+		peerId:          make(map[string]string),
 	}
 
 	// overwrite options on it

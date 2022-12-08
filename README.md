@@ -24,19 +24,20 @@ block
 ```
 Field           Type        Comment
 id              string      block hash
-ts              timestamp   block creation timestamp
+ts              timestamp   block creation timestamp (unixnano)
 no              uint64      block number
 txs             uint        number of transactions
 size            uint64      block size in bytes
+block_producer  string      block producer peer id
 reward_account  string      reward account
-reward_amount   string      reward amount 
+reward_amount   string      reward amount
 ```
 
 tx (transactions)
 ```
 Field           Type        Comment
 id              string      tx hash
-ts              timestamp   block creation timestamp
+ts              timestamp   block creation timestamp (unixnano)
 blockno         uint64      block number
 from            string      from address (base58check encoded)
 to              string      to address (base58check encoded)
@@ -46,6 +47,7 @@ type            string      tx type
 category        string      user-friendly category
 method          string      called function name of a contract
 token_transfers uint64      number of token transfers in this tx
+status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
 ```
 
 name
@@ -82,7 +84,9 @@ tx_id           string      tx hash
 blockno         uint64      block number
 type            string      token type (ARC1/ARC2)
 name            string      token name
-symbol          string      token symol
+name_lower      string      token name lowercase, useful to case-insensitive search
+symbol          string      token symbol
+symbol_lower    string      token symbol lowercase, useful to case-insensitive search
 token_tranefers uint64      number of token transfers
 decimals        uint8       decimals of token
 supply          string      Precise BigInt string representation of total supply 
@@ -94,9 +98,9 @@ account_tokens
 Field           Type        Comment
 id              string      account address + token address
 account         string      account address
-address         string      token address 
+address         string      token address
 type            string      token type (ARC1/ARC2)
-ts              timestamp   last updated timestamp
+ts              timestamp   last updated timestamp (unixnano)
 balance         string      Precise BigInt string representation of total supply
 balance_float   float32     Imprecise float representation of amount, useful for sorting
 ```
@@ -105,11 +109,12 @@ nft
 ```
 Field           Type        Comment
 id              string      nft id
-address         string      contract address 
+address         string      contract address
 token_id        string      nft id
 account         string      account address
 blockno         uint64      block number
-ts              timestamp   last updated timestamp
+ts              timestamp   last updated timestamp (unixnano)
+token_uri       string      token uri
 ```
 
 contract
@@ -119,7 +124,7 @@ id              string      contract address
 tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
-ts              timestamp   last updated timestamp
+ts              timestamp   last updated timestamp (unixnano)
 ```
 
 
@@ -132,18 +137,20 @@ Usage:
 Flags:
   -A, --aergo string       host and port of aergo server. Alternative to setting host and port separately.
   -E, --dburl string       Database URL (default "http://localhost:9200")
+  -M, --mode string        indexer running mode. Alternative to setting check, clean, onsync separately.
       --from int32         start syncing from this block number
       --to int32           stop syncing at this block number
   -h, --help               help for indexer
   -H, --host string        host address of aergo server (default "localhost")
   -p, --port int32         port number of aergo server (default 7845)
   -X, --prefix string      prefix used for index names (default "testnet_")
+      --check              check and fix index "--from ~ --to" blocks
+      --clean              clean unexpected data in index
+      --cluster            elasticsearch cluster mode
       --bulk               size of bulk for batch indexing
       --batch              time limit for batch indexing
       --miner              number of processes minning blocks
       --grpc               number of grpc connections to full nodes
-      --check              check and fix index "--from" blocks  
-      --cluster            elasticsearch cluster mode
 ```
 
 Example

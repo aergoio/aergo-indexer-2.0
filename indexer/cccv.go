@@ -18,14 +18,16 @@ func (ns *Indexer) cccv_nft_mainnet() {
 	}
 
 	document := doc.EsToken{
-		BaseEsType:  &doc.BaseEsType{Id: cccv_nft_string},
-		TxId:        "9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL",
-		BlockNo:     68592368,
-		Name:        "cccv_nft",
-		Symbol:      "CNFT",
-		Type:        category.ARC2,
-		Supply:      "0",
-		SupplyFloat: float32(0),
+		BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
+		TxId:         "9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL",
+		BlockNo:      68592368,
+		Name:         "cccv_nft",
+		Name_lower:   "cccv_nft",
+		Symbol:       "CNFT",
+		Symbol_lower: "cnft",
+		Type:         category.ARC2,
+		Supply:       "0",
+		SupplyFloat:  float32(0),
 	}
 
 	ns.db.Insert(document, ns.indexNamePrefix+"token")
@@ -41,14 +43,16 @@ func (ns *Indexer) cccv_nft_testnet() {
 	}
 
 	document := doc.EsToken{
-		BaseEsType:  &doc.BaseEsType{Id: cccv_nft_string},
-		TxId:        "21J8YmRt3onQYwZnCkwUEk1zV7GsvRMhfFzwdtaeWkyi",
-		BlockNo:     66638759,
-		Name:        "cccv_nft",
-		Symbol:      "CNFT",
-		Type:        category.ARC2,
-		Supply:      "0",
-		SupplyFloat: float32(0),
+		BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
+		TxId:         "21J8YmRt3onQYwZnCkwUEk1zV7GsvRMhfFzwdtaeWkyi",
+		BlockNo:      66638759,
+		Name:         "cccv_nft",
+		Name_lower:   "cccv_nft",
+		Symbol:       "CNFT",
+		Symbol_lower: "cnft",
+		Type:         category.ARC2,
+		Supply:       "0",
+		SupplyFloat:  float32(0),
 	}
 
 	ns.db.Insert(document, ns.indexNamePrefix+"token")
