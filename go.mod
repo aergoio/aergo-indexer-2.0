@@ -6,6 +6,7 @@ require (
 	github.com/aergoio/aergo-lib v1.0.2
 	github.com/anaskhan96/base58check v0.0.0-20181220122047-b05365d494c4
 	github.com/golang/protobuf v1.5.2
+	github.com/libp2p/go-libp2p-core v0.0.1
 	github.com/magiconair/properties v1.8.5
 	github.com/mr-tron/base58 v1.2.0
 	github.com/olivere/elastic/v7 v7.0.31
@@ -14,6 +15,18 @@ require (
 	github.com/stretchr/testify v1.8.1
 	google.golang.org/grpc v1.44.0
 	google.golang.org/protobuf v1.28.1
+)
+
+require (
+	github.com/btcsuite/btcd v0.0.0-20190213025234-306aecffea32 // indirect
+	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 // indirect
+	github.com/minio/sha256-simd v0.1.0 // indirect
+	github.com/multiformats/go-multiaddr v0.0.4 // indirect
+	github.com/multiformats/go-multihash v0.0.5 // indirect
+	github.com/spacemonkeygo/openssl v0.0.0-20181017203307-c2dcc5cca94a // indirect
+	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 )
 
 require (

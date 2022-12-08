@@ -15,6 +15,8 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58/base58"
 )
 
@@ -30,9 +32,27 @@ func (ns *Indexer) ConvBlock(block *types.Block) doc.EsBlock {
 		BlockNo:       block.Header.BlockNo,
 		TxCount:       uint(len(block.Body.Txs)),
 		Size:          uint64(proto.Size(block)),
+		BlockProducer: ns.makePeerId(block.Header.PubKey),
 		RewardAccount: ns.encodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
 		RewardAmount:  rewardAmount,
 	}
+}
+
+func (ns *Indexer) makePeerId(pubKey []byte) string {
+	if peerId, is_ok := ns.peerId[string(pubKey)]; is_ok == true {
+		return peerId
+	}
+	cryptoPubKey, err := crypto.UnmarshalPublicKey(pubKey)
+	if err != nil {
+		return ""
+	}
+	Id, err := peer.IDFromPublicKey(cryptoPubKey)
+	if err != nil {
+		return ""
+	}
+	peerId := peer.IDB58Encode(Id)
+	ns.peerId[string(pubKey)] = peerId
+	return peerId
 }
 
 // Internal names refer to special accounts that don't need to be resolved

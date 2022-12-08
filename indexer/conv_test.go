@@ -17,6 +17,7 @@ import (
 
 func TestConvBlock(t *testing.T) {
 	indexer := new(Indexer)
+	indexer.peerId = make(map[string]string)
 	fn_diff := func(aergoBlock *types.Block, esBlockExpect *documents.EsBlock) {
 		esBlockConv := indexer.ConvBlock(aergoBlock)
 		require.Equal(t, *esBlockExpect, esBlockConv)
@@ -30,6 +31,7 @@ func TestConvBlock(t *testing.T) {
 			Consensus:       []byte{48, 69, 2, 33, 0, 132, 143, 216, 185, 150, 194, 108, 165, 179, 18, 240},
 			PrevBlockHash:   []byte("9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga"),
 			CoinbaseAccount: []byte("AmPJRLHDKtzLpsaC8ubmPuRkxnMCyBSq5wBwYNDD6DJdgiRhAhYR"),
+			PubKey:          []byte{8, 2, 18, 33, 3, 60, 71, 121, 135, 46, 248, 160, 86, 130, 38, 224, 220, 171, 89, 62, 26, 92, 212, 6, 20, 115, 142, 157, 231, 99, 245, 60, 28, 178, 140, 168, 4},
 		},
 		Body: &types.BlockBody{
 			Txs: []*types.Tx{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}},
@@ -38,8 +40,9 @@ func TestConvBlock(t *testing.T) {
 		BaseEsType:    &documents.BaseEsType{Id: base58.Encode([]byte("AvtCKTqL3eQBCvkidbY7i4YkwbtbuResohfRKQhV5Bu"))},
 		Timestamp:     time.Unix(0, 1668652376002288214),
 		BlockNo:       104524962,
-		Size:          205,
+		Size:          244,
 		TxCount:       11,
+		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",
 		RewardAmount:  "160000000000000000",
 	})

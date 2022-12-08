@@ -36,6 +36,7 @@ type EsBlock struct {
 	BlockNo       uint64    `json:"no" db:"no"`
 	TxCount       uint      `json:"txs" db:"txs"`
 	Size          uint64    `json:"size" db:"size"`
+	BlockProducer string    `json:"block_producer" db:"block_producer"`
 	RewardAccount string    `json:"reward_account" db:"reward_account"`
 	RewardAmount  string    `json:"reward_amount" db:"reward_amount"`
 }
@@ -211,6 +212,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"size": {
 							"type": "long"
+						},
+						"block_producer": {
+							"type": "keyword"
 						},
 						"reward_account": {
 							"type": "keyword"
@@ -468,6 +472,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"size": {
 							"type": "long"
+						},
+						"block_producer": {
+							"type": "keyword"
 						},
 						"reward_account": {
 							"type": "keyword"

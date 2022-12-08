@@ -45,6 +45,7 @@ type Indexer struct {
 	RChannel []chan BlockInfo
 	SynDone  chan bool
 	accToken map[string]bool
+	peerId   map[string]string
 
 	// config
 	log             *log.Logger
@@ -78,6 +79,7 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		serverAddr:      "",
 		grpcNum:         0,
 		accToken:        make(map[string]bool),
+		peerId:          make(map[string]string),
 	}
 
 	// overwrite options on it
