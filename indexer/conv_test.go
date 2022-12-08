@@ -17,7 +17,6 @@ import (
 
 func TestConvBlock(t *testing.T) {
 	indexer := new(Indexer)
-	indexer.peerId = make(map[string]string)
 	fn_diff := func(aergoBlock *types.Block, esBlockExpect *documents.EsBlock) {
 		esBlockConv := indexer.ConvBlock(aergoBlock)
 		require.Equal(t, *esBlockExpect, esBlockConv)

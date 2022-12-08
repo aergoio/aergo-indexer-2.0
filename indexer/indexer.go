@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
@@ -44,8 +45,8 @@ type Indexer struct {
 	BChannel ChanType
 	RChannel []chan BlockInfo
 	SynDone  chan bool
-	accToken map[string]bool
-	peerId   map[string]string
+	accToken sync.Map
+	peerId   sync.Map
 
 	// config
 	log             *log.Logger
@@ -78,8 +79,6 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		dbAddr:          "",
 		serverAddr:      "",
 		grpcNum:         0,
-		accToken:        make(map[string]bool),
-		peerId:          make(map[string]string),
 	}
 
 	// overwrite options on it
