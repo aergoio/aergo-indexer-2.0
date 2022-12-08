@@ -30,7 +30,7 @@ txs             uint        number of transactions
 size            uint64      block size in bytes
 block_producer  string      block producer peer id
 reward_account  string      reward account
-reward_amount   string      reward amount 
+reward_amount   string      reward amount
 ```
 
 tx (transactions)
@@ -98,7 +98,7 @@ account_tokens
 Field           Type        Comment
 id              string      account address + token address
 account         string      account address
-address         string      token address 
+address         string      token address
 type            string      token type (ARC1/ARC2)
 ts              timestamp   last updated timestamp (unixnano)
 balance         string      Precise BigInt string representation of total supply
@@ -109,7 +109,7 @@ nft
 ```
 Field           Type        Comment
 id              string      nft id
-address         string      contract address 
+address         string      contract address
 token_id        string      nft id
 account         string      account address
 blockno         uint64      block number
