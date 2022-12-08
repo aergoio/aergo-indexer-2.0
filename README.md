@@ -28,6 +28,7 @@ ts              timestamp   block creation timestamp (unixnano)
 no              uint64      block number
 txs             uint        number of transactions
 size            uint64      block size in bytes
+block_producer  string      block producer peer id
 reward_account  string      reward account
 reward_amount   string      reward amount 
 ```
