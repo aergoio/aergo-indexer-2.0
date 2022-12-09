@@ -183,7 +183,7 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 
 func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc types.AergoRPCServiceClient) {
 	tokenUri, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "token_uri"}, grpcc)
-	if err != nil {
+	if tokenUri == "null" || err != nil {
 		tokenUri = ""
 	}
 	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
