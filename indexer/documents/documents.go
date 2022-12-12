@@ -129,6 +129,7 @@ type EsNFT struct {
 	BlockNo      uint64    `json:"blockno" db:"blockno"`
 	Timestamp    time.Time `json:"ts" db:"ts"`
 	TokenUri     string    `json:"token_uri" db:"token_uri"`
+	ImageUrl     string    `json:"image_url" db:"image_url"`
 }
 
 type EsNFTUp struct {
@@ -381,6 +382,9 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"token_uri": {
+							"type": "keyword"
+						},
+						"image_url": {
 							"type": "keyword"
 						}
 					}
@@ -641,6 +645,9 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"token_uri": {
+							"type": "keyword"
+						},
+						"image_url": {
 							"type": "keyword"
 						}
 					}
