@@ -167,7 +167,7 @@ func (ns *Indexer) ConvName(tx *types.Tx, blockNo uint64) doc.EsName {
 	return document
 }
 
-func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, tokenUri string) doc.EsNFT {
+func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, tokenUri string, imageUrl string) doc.EsNFT {
 	document := doc.EsNFT{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%s", ttDoc.TokenAddress, ttDoc.TokenId)},
 		TokenAddress: ttDoc.TokenAddress,
@@ -176,6 +176,7 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 		BlockNo:      ttDoc.BlockNo,
 		Account:      account,
 		TokenUri:     tokenUri,
+		ImageUrl:     imageUrl,
 	}
 
 	return document
@@ -186,8 +187,13 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer do
 	if tokenUri == "null" || err != nil {
 		tokenUri = ""
 	}
+	imageUrl, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "image_url"}, grpcc)
+	if imageUrl == "null" || err != nil {
+		imageUrl = ""
+	}
+
 	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount, tokenUri)
+	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount, tokenUri, imageUrl)
 	if Type == 1 {
 		ns.BChannel.NFT <- ChanInfo{1, nft}
 	} else {

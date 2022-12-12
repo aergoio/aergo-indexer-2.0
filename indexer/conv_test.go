@@ -132,9 +132,11 @@ func TestConvContract(t *testing.T) {
 
 func TestConvNFT(t *testing.T) {
 	indexer := new(Indexer)
-	fn_test := func(contractAddress []byte, esTokenTransfer *documents.EsTokenTransfer, amount string, tokenUri string, esNFTExpect *documents.EsNFT) {
+	indexer.log = log.NewLogger("indexer")
+
+	fn_test := func(contractAddress []byte, esTokenTransfer *documents.EsTokenTransfer, amount string, tokenUri string, imageUrl string, esNFTExpect *documents.EsNFT) {
 		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-		esNFTConv := indexer.ConvNFT(contractAddress, *esTokenTransfer, amount, tokenUri)
+		esNFTConv := indexer.ConvNFT(contractAddress, *esTokenTransfer, amount, tokenUri, imageUrl)
 		require.Equal(t, esNFTExpect, &esNFTConv)
 	}
 
@@ -148,6 +150,7 @@ func TestConvNFT(t *testing.T) {
 		},
 		"1000",
 		"https://api.booost.live/nft/vehicles/OSOMDJ0SR6",
+		"https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png?v=2",
 		&documents.EsNFT{
 			BaseEsType:   &documents.BaseEsType{Id: fmt.Sprintf("%s-%s", types.EncodeAddress([]byte("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA")), "cccv_nft")},
 			TokenAddress: types.EncodeAddress([]byte("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA")),
@@ -155,7 +158,8 @@ func TestConvNFT(t *testing.T) {
 			Timestamp:    time.Unix(0, 1668652376002288214),
 			BlockNo:      1,
 			Account:      "1000",
-		},
+			TokenUri:     "https://api.booost.live/nft/vehicles/OSOMDJ0SR6",
+			ImageUrl:     "https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png?v=2"},
 	)
 }
 
@@ -174,14 +178,42 @@ func TestConvAccountTokens(t *testing.T) {
 
 }
 
-func TestQueryContract(t *testing.T) {
+func TestQueryContractNFT(t *testing.T) {
 	indexer := new(Indexer)
 	indexer.log = log.NewLogger("indexer")
 	grpcClient := indexer.WaitForClient("testnet-api.aergo.io:7845")
-	addr, _ := types.DecodeAddress("AmgjGhDQcKWLTtk2ux6ywLftRND1Qd9jD68j3NaFhynwwPcSPDUQ")
-	res, err := indexer.queryContract(addr, "get_metadata", []string{"OSOMDJ0SR6", "token_uri"}, grpcClient)
-	if err != nil {
-		t.Fatal(err)
+
+	fn_test := func(contractAddress, tokenId, tokenUriExpect, imageUrlExpect string) {
+		addr, _ := types.DecodeAddress(contractAddress)
+		tokenUri, err := indexer.queryContract(addr, "get_metadata", []string{tokenId, "token_uri", "image_url"}, grpcClient)
+		require.NoError(t, err)
+		require.Equal(t, tokenUriExpect, tokenUri)
+
+		imageUrl, err := indexer.queryContract(addr, "get_metadata", []string{tokenId, "image_url"}, grpcClient)
+		require.NoError(t, err)
+		require.Equal(t, imageUrlExpect, imageUrl)
 	}
-	fmt.Println(res)
+
+	// BOOST Vehicle NFT
+	fn_test(
+		"AmgjGhDQcKWLTtk2ux6ywLftRND1Qd9jD68j3NaFhynwwPcSPDUQ",
+		"OSOMDJ0SR6",
+		"https://api.booost.live/nft/vehicles/OSOMDJ0SR6",
+		"https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png?v=2",
+	)
+
+	fn_test(
+		"AmgjGhDQcKWLTtk2ux6ywLftRND1Qd9jD68j3NaFhynwwPcSPDUQ",
+		"RECLZDDCZ3",
+		"https://api.booost.live/nft/vehicles/RECLZDDCZ3",
+		"https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png",
+	)
+
+	fn_test(
+		"AmhShWWv2qnzSXHmYHrNxb4Eh51UrGsnAfcch3MrsSJ7Acmq3F2M",
+		"FQOR48XJ9A",
+		"https://dev-api.booost.live/nft/vehicles/FQOR48XJ9A",
+		"https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png",
+	)
+
 }
