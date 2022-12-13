@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
 // IndexTxs indexes a list of transactions in bulk
-func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServiceClient) {
+func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientController) {
 	var block *types.Block
 	blockQuery := make([]byte, 8)
 
@@ -49,7 +50,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 	}
 }
 
-func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, MinerGRPC types.AergoRPCServiceClient) {
+func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
 	// Get Tx doc
 	txD := ns.ConvTx(tx, blockD)
 
@@ -121,7 +122,7 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	fmt.Println(">>>>>>>>>>> POLICY 2 :", encodeAccount(receipt.ContractAddress))
 }
 
-func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC types.AergoRPCServiceClient) {
+func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
 	var args []interface{}
 	switch event.EventName {
 	case "new_arc1_token", "new_arc2_token":

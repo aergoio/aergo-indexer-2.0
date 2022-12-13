@@ -2,15 +2,13 @@ package indexer
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -182,23 +180,15 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 	return document
 }
 
-func (ns *Indexer) UpdateNFT(Type BlockType, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc types.AergoRPCServiceClient) {
-	tokenUri, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "token_uri"}, grpcc)
-	if tokenUri == "null" || err != nil {
-		tokenUri = ""
-	}
-	imageUrl, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "image_url"}, grpcc)
-	if imageUrl == "null" || err != nil {
-		imageUrl = ""
-	}
+func (ns *Indexer) UpdateNFT(Type BlockType, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc *client.AergoClientController) {
+	tokenUri, imageUrl := grpcc.QueryNFTMetadata(contractAddress, tokenTransfer.TokenId)
 
 	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount, tokenUri, imageUrl)
 	ns.rec_NFT(Type, nft)
-
 }
 
-func (ns *Indexer) UpdateAccountTokens(Type BlockType, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
+func (ns *Indexer) UpdateAccountTokens(Type BlockType, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc *client.AergoClientController) {
 	id := fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress)
 	if Type == 1 {
 
@@ -217,7 +207,7 @@ func (ns *Indexer) UpdateAccountTokens(Type BlockType, contractAddress []byte, t
 	}
 }
 
-func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, id string, grpcc types.AergoRPCServiceClient) doc.EsAccountTokens {
+func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTransfer, account string, id string, grpcc *client.AergoClientController) doc.EsAccountTokens {
 	document := doc.EsAccountTokens{
 		BaseEsType:   &doc.BaseEsType{Id: id},
 		Account:      account,
@@ -231,30 +221,11 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 		document.Type = category.ARC2
 	}
 
-	var Balance string
-	var err error
-	if bytes.Compare(contractAddress, cccv_nft_address) == 0 {
-		Balance, err = ns.queryContract(contractAddress, "query", []string{"balanceOf", account}, grpcc)
-	} else {
-		Balance, err = ns.queryContract(contractAddress, "balanceOf", []string{account}, grpcc)
-	}
-	if err != nil {
-		document.Balance = "0"
-		document.BalanceFloat = 0
-		return document
-	}
-
-	if AmountFloat, err := strconv.ParseFloat(Balance, 32); err == nil {
-		document.BalanceFloat = float32(AmountFloat)
-		document.Balance = Balance
-	} else {
-		document.BalanceFloat = 0
-		document.Balance = "0"
-	}
+	document.Balance, document.BalanceFloat = grpcc.QueryBalanceOf(contractAddress, account, bytes.Equal(contractAddress, cccv_nft_address))
 	return document
 }
 
-func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc types.AergoRPCServiceClient) doc.EsTokenTransfer {
+func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc *client.AergoClientController) doc.EsTokenTransfer {
 	document := doc.EsTokenTransfer{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
@@ -266,62 +237,19 @@ func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx
 		To:           to,
 	}
 
-	switch args.(type) {
-	case string:
-		var err error
-		var owner string
-		// 2022/06/05 숫자인 token ID 허용
-		if bytes.Compare(contractAddress, cccv_nft_address) == 0 {
-			owner, err = ns.queryContract(contractAddress, "query", []string{"ownerOf", args.(string)}, grpcc)
-		} else {
-			owner, err = ns.queryContract(contractAddress, "ownerOf", []string{args.(string)}, grpcc)
-		}
-
-		// ARC 2
-		if err == nil {
-			document.TokenId = args.(string)
-			document.AmountFloat = 1.0
-			// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-			if owner != "" {
-				document.Amount = owner
-			} else {
-				document.Amount = "BURN"
-			}
-			// ARC 1
-		} else {
-			if AmountFloat, err := strconv.ParseFloat(args.(string), 32); err == nil {
-				document.AmountFloat = float32(AmountFloat)
-				document.Amount = args.(string)
-				document.TokenId = ""
-			} else {
-				document.Amount = ""
-			}
-		}
-	default:
+	if data, ok := args.(string); ok {
+		document.TokenId, document.Amount, document.AmountFloat = grpcc.QueryOwnerOf(contractAddress, data, bytes.Equal(contractAddress, cccv_nft_address))
+	} else {
 		document.Amount = ""
 	}
 	return document
 }
 
-func (ns *Indexer) UpdateToken(contractAddress []byte, grpcc types.AergoRPCServiceClient) {
-	document := doc.EsTokenUp{}
-
-	var err error
-	var supply string
-	if bytes.Compare(contractAddress, cccv_nft_address) == 0 {
-		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"}, grpcc)
-	} else {
-		supply, err = ns.queryContract(contractAddress, "totalSupply", nil, grpcc)
-	}
-	if err != nil {
-		document.SupplyFloat = 0
-		document.Supply = "0"
-	} else if AmountFloat, err := strconv.ParseFloat(supply, 32); err == nil {
-		document.SupplyFloat = float32(AmountFloat)
-		document.Supply = supply
-	} else {
-		document.SupplyFloat = 0
-		document.Supply = "0"
+func (ns *Indexer) UpdateToken(contractAddress []byte, grpcc *client.AergoClientController) {
+	supply, supplyFloat := grpcc.QueryTotalSupply(contractAddress, bytes.Equal(contractAddress, cccv_nft_address))
+	document := doc.EsTokenUp{
+		Supply:      supply,
+		SupplyFloat: supplyFloat,
 	}
 
 	ns.db.Update(document, ns.indexNamePrefix+"token", encodeAccount(contractAddress))
@@ -340,104 +268,22 @@ func (ns *Indexer) ConvContract(txDoc doc.EsTx, contractAddress []byte) doc.EsCo
 }
 
 // ConvContractCreateTx creates document for token creation
-func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc types.AergoRPCServiceClient) doc.EsToken {
+func (ns *Indexer) ConvToken(txDoc doc.EsTx, contractAddress []byte, grpcc *client.AergoClientController) doc.EsToken {
+	name, symbol, decimals := grpcc.QueryTokenInfo(contractAddress)
+	supply, supplyFloat := grpcc.QueryTotalSupply(contractAddress, bytes.Equal(contractAddress, cccv_nft_address))
+
 	document := doc.EsToken{
 		BaseEsType:     &doc.BaseEsType{Id: ns.encodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		TxId:           txDoc.GetID(),
 		BlockNo:        txDoc.BlockNo,
 		TokenTransfers: uint64(0),
-	}
-
-	var err error
-	document.Name, err = ns.queryContract(contractAddress, "name", nil, grpcc)
-	if document.Name == "null" || err != nil {
-		document.Name = ""
-		return document
-	}
-	document.Name_lower = strings.ToLower(document.Name)
-
-	document.Symbol, err = ns.queryContract(contractAddress, "symbol", nil, grpcc)
-	document.Symbol_lower = strings.ToLower(document.Symbol)
-
-	decimals, err := ns.queryContract(contractAddress, "decimals", nil, grpcc)
-	if err == nil {
-		if d, err := strconv.Atoi(decimals); err == nil {
-			document.Decimals = uint8(d)
-		}
-	} else {
-		document.Decimals = uint8(1)
-	}
-
-	var supply string
-	if bytes.Compare(contractAddress, cccv_nft_address) == 0 {
-		supply, err = ns.queryContract(contractAddress, "query", []string{"totalSupply"}, grpcc)
-	} else {
-		supply, err = ns.queryContract(contractAddress, "totalSupply", nil, grpcc)
-	}
-	if err != nil {
-		document.SupplyFloat = 0
-		document.Supply = "0"
-		return document
-	}
-
-	if AmountFloat, err := strconv.ParseFloat(supply, 32); err == nil {
-		document.SupplyFloat = float32(AmountFloat)
-		document.Supply = supply
-	} else {
-		document.SupplyFloat = 0
-		document.Supply = "0"
+		Name:           name,
+		Name_lower:     strings.ToLower(name),
+		Symbol:         symbol,
+		Symbol_lower:   strings.ToLower(symbol),
+		Decimals:       decimals,
+		Supply:         supply,
+		SupplyFloat:    supplyFloat,
 	}
 	return document
-}
-
-func (ns *Indexer) queryContract(address []byte, name string, args []string, grpcc types.AergoRPCServiceClient) (string, error) {
-	queryinfo := map[string]interface{}{"Name": name}
-	if args != nil {
-		queryinfo["Args"] = args
-	}
-
-	queryinfoJson, err := json.Marshal(queryinfo)
-	if err != nil {
-		return "", err
-	}
-
-	// result, err := ns.grpcClient.QueryContract(context.Background(), &types.Query{
-	result, err := grpcc.QueryContract(context.Background(), &types.Query{
-		ContractAddress: address,
-		Queryinfo:       queryinfoJson,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	var ret interface{}
-	err = json.Unmarshal([]byte(result.Value), &ret)
-	if err != nil {
-		return "", err
-	}
-
-	switch c := ret.(type) {
-	case string:
-		return c, nil
-	case map[string]interface{}:
-		am, ok := convertBignumJson(c)
-		if ok {
-			return am.String(), nil
-		}
-	case int:
-		return fmt.Sprint(c), nil
-	}
-	return string(result.Value), nil
-}
-
-func convertBignumJson(in map[string]interface{}) (*big.Int, bool) {
-	bignum, ok := in["_bignum"].(string)
-	if ok {
-		n := new(big.Int)
-		n, ok := n.SetString(bignum, 10)
-		if ok {
-			return n, true
-		}
-	}
-	return nil, false
 }

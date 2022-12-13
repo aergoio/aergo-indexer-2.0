@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	"github.com/olivere/elastic/v7"
 )
 
@@ -41,7 +41,7 @@ func (ns *Indexer) StartBulkChannel() {
 	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.bulkSize, ns.batchTime, false)
 
 	// Start multiple miners
-	GrpcClients := make([]types.AergoRPCServiceClient, ns.grpcNum)
+	GrpcClients := make([]*client.AergoClientController, ns.grpcNum)
 	for i := 0; i < ns.grpcNum; i++ {
 		GrpcClients[i] = ns.WaitForClient(ns.serverAddr)
 	}
