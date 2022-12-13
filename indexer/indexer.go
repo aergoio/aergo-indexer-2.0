@@ -15,26 +15,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-type ChanInfo struct {
-	Type uint // 0:stop_bulk, 1:add, 2:commit
-	Doc  doc.DocType
-}
-
-type ChanType struct {
-	Block         chan ChanInfo
-	Tx            chan ChanInfo
-	Name          chan ChanInfo
-	Token         chan ChanInfo
-	TokenTransfer chan ChanInfo
-	AccTokens     chan ChanInfo
-	NFT           chan ChanInfo
-}
-
-type BlockInfo struct {
-	Type   uint // 0:stop_miner, 1:bulk, 2:sync
-	Height uint64
-}
-
 // Indexer hold all state information
 type Indexer struct {
 	db         *db.ElasticsearchDbController
@@ -42,7 +22,7 @@ type Indexer struct {
 
 	stream   types.AergoRPCService_ListBlockStreamClient
 	MChannel chan BlockInfo
-	BChannel ChanType
+	BChannel ChanInfoType
 	RChannel []chan BlockInfo
 	SynDone  chan bool
 	accToken sync.Map

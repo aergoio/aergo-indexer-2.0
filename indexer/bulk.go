@@ -17,10 +17,10 @@ func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uin
 		if blockHeight%100000 == 0 {
 			fmt.Println(">>>>> Current Reindex Height :", blockHeight)
 		}
-		ns.RChannel[blockHeight%uint64(ns.minerNum)] <- BlockInfo{1, blockHeight}
+		ns.RChannel[blockHeight%uint64(ns.minerNum)] <- BlockInfo{BlockType_Bulk, blockHeight}
 	}
 	// last one
-	ns.RChannel[0] <- BlockInfo{1, fromBlockHeight}
+	ns.RChannel[0] <- BlockInfo{BlockType_Bulk, fromBlockHeight}
 }
 
 // Run Bulk Indexing
@@ -63,23 +63,23 @@ func (ns *Indexer) StopBulkChannel() {
 	fmt.Println(":::::::::::::::::::::: STOP Channels")
 
 	for i := 0; i < ns.minerNum; i++ {
-		ns.RChannel[i] <- BlockInfo{0, 0}
+		ns.RChannel[i] <- BlockInfo{BlockType_StopMiner, 0}
 		close(ns.RChannel[i])
 	}
 
 	// Force commit
 	time.Sleep(5 * time.Second)
-	ns.BChannel.Block <- ChanInfo{2, nil}
+	ns.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
 	time.Sleep(5 * time.Second)
 
 	// Send stop messages to each bulk channels
-	ns.BChannel.Block <- ChanInfo{0, nil}
-	ns.BChannel.Tx <- ChanInfo{0, nil}
-	//	ns.BChannel.Name <- ChanInfo{0,nil}
-	//	ns.BChannel.Token <- ChanInfo{0,nil}
-	ns.BChannel.TokenTransfer <- ChanInfo{0, nil}
-	ns.BChannel.AccTokens <- ChanInfo{0, nil}
-	ns.BChannel.NFT <- ChanInfo{0, nil}
+	ns.BChannel.Block <- ChanInfo{ChanType_StopBulk, nil}
+	ns.BChannel.Tx <- ChanInfo{ChanType_StopBulk, nil}
+	//	ns.BChannel.Name <- ChanInfo{ChanType_StopBulk,nil}
+	//	ns.BChannel.Token <- ChanInfo{ChanType_StopBulk,nil}
+	ns.BChannel.TokenTransfer <- ChanInfo{ChanType_StopBulk, nil}
+	ns.BChannel.AccTokens <- ChanInfo{ChanType_StopBulk, nil}
+	ns.BChannel.NFT <- ChanInfo{ChanType_StopBulk, nil}
 
 	// Close bulk channels
 	close(ns.BChannel.Block)
@@ -112,7 +112,7 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 				} else {
 					time.Sleep(batchTime)
 					if total > 0 && time.Now().Sub(begin) > batchTime {
-						ns.BChannel.Block <- ChanInfo{2, nil}
+						ns.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
 					}
 				}
 			}
@@ -131,12 +131,12 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 		// Block Channel : wait other channels
 		if isBlock {
-			ns.BChannel.Tx <- ChanInfo{2, nil}
-			// ns.BChannel.Name	<- ChanInfo{2,nil}
-			// ns.BChannel.Token	<- ChanInfo{2,nil}
-			ns.BChannel.TokenTransfer <- ChanInfo{2, nil}
-			ns.BChannel.AccTokens <- ChanInfo{2, nil}
-			ns.BChannel.NFT <- ChanInfo{2, nil}
+			ns.BChannel.Tx <- ChanInfo{ChanType_Commit, nil}
+			// ns.BChannel.Name <- ChanInfo{ChanType_Commit, nil}
+			// ns.BChannel.Token <- ChanInfo{ChanType_Commit, nil}
+			ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Commit, nil}
+			ns.BChannel.AccTokens <- ChanInfo{ChanType_Commit, nil}
+			ns.BChannel.NFT <- ChanInfo{ChanType_Commit, nil}
 
 			for i := 0; i < 4; i++ {
 				<-ns.SynDone
@@ -166,12 +166,12 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 	for I := range docChannel {
 		// stop
-		if I.Type == 0 {
+		if I.Type == ChanType_StopBulk {
 			break
 		}
 
 		// commit
-		if I.Type == 2 {
+		if I.Type == ChanType_Commit {
 			commitBulk(true)
 			continue
 		}

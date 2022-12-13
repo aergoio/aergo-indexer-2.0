@@ -21,7 +21,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 	var err error
 	for info := range RChannel {
 		// stop miner
-		if info.Type == 0 {
+		if info.Type == BlockType_StopMiner {
 			fmt.Println(":::::::::::::::::::::: STOP Miner")
 			break
 		}
@@ -45,7 +45,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC types.AergoRPCServic
 		}
 
 		// Add block doc
-		ns.rec_Block(info, blockD)
+		ns.rec_Block(info.Type, blockD)
 	}
 }
 
@@ -57,20 +57,20 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	if err != nil {
 		txD.Status = "NO_RECEIPT"
 		ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
-		ns.rec_Tx(info, txD)
+		ns.rec_Tx(info.Type, txD)
 		return
 	}
 	txD.Status = receipt.Status
 	if receipt.Status == "ERROR" {
-		ns.rec_Tx(info, txD)
+		ns.rec_Tx(info.Type, txD)
 		return
 	}
 
 	// Process name transactions
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
 		nameD := ns.ConvName(tx, txD.BlockNo)
-		ns.rec_Name(info, nameD)
-		ns.rec_Tx(info, txD)
+		ns.rec_Name(info.Type, nameD)
+		ns.rec_Tx(info.Type, txD)
 		return
 	}
 
@@ -81,14 +81,14 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	case category.Payload:
 	case category.MultiCall:
 	default:
-		ns.rec_Tx(info, txD)
+		ns.rec_Tx(info.Type, txD)
 		return
 	}
 
 	// Contract Deploy
 	if txD.Category == category.Deploy {
 		contractD := ns.ConvContract(txD, receipt.ContractAddress)
-		ns.rec_Contract(info, contractD)
+		ns.rec_Contract(info.Type, contractD)
 	}
 
 	// Process Events
@@ -97,28 +97,28 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 		ns.MinerEvent(info, blockD, txD, idx, event, MinerGRPC)
 	}
 
-	// POLICY 2 Token
-	tType := ns.MaybeTokenCreation(tx)
-	switch tType {
-	case 1, 2:
-		tokenD := ns.ConvToken(txD, receipt.ContractAddress, MinerGRPC) // Get ARC Token doc
-		if tokenD.Name == "" {
-			ns.rec_Tx(info, txD)
-			return
-		}
-		if tType == 1 {
-			tokenD.Type = category.ARC1
-		} else {
-			tokenD.Type = category.ARC2
-		}
-		ns.rec_Token(info, tokenD) // Add Token doc
-
-		contractD := ns.ConvContract(txD, receipt.ContractAddress)
-		ns.rec_Contract(info, contractD) // Add Contract
-
-		fmt.Println(">>>>>>>>>>> POLICY 2 :", encodeAccount(receipt.ContractAddress))
-	default:
+	tType := MaybeTokenCreation(tx)
+	if tType == TokenCreationType_None {
+		return
 	}
+
+	// POLICY 2 Token
+	tokenD := ns.ConvToken(txD, receipt.ContractAddress, MinerGRPC) // Get ARC Token doc
+	if tokenD.Name == "" {
+		ns.rec_Tx(info.Type, txD)
+		return
+	}
+	if tType == TokenCreationType_ARC1 {
+		tokenD.Type = category.ARC1
+	} else {
+		tokenD.Type = category.ARC2
+	}
+	ns.rec_Token(info.Type, tokenD) // Add Token doc
+
+	contractD := ns.ConvContract(txD, receipt.ContractAddress)
+	ns.rec_Contract(info.Type, contractD) // Add Contract
+
+	fmt.Println(">>>>>>>>>>> POLICY 2 :", encodeAccount(receipt.ContractAddress))
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC types.AergoRPCServiceClient) {
@@ -144,7 +144,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		} else {
 			tokenD.Type = category.ARC2
 		}
-		ns.rec_Token(info, tokenD)
+		ns.rec_Token(info.Type, tokenD)
 
 		// TokenTransfer Doc
 		tokenTransferD := doc.EsTokenTransfer{
@@ -155,7 +155,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 
 		// Contract Doc
 		contractD := ns.ConvContract(txD, contractAddress)
-		ns.rec_Contract(info, contractD)
+		ns.rec_Contract(info.Type, contractD)
 
 		fmt.Println(">>>>>>>>>>> POLICY 1 :", encodeAccount(contractAddress))
 	case "mint":
@@ -170,10 +170,10 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 			return
 		}
 		txD.TokenTransfers++
-		ns.rec_TokenTransfer(info, tokenTransferD) // Add tokenTransfer doc
+		ns.rec_TokenTransfer(info.Type, tokenTransferD) // Add tokenTransfer doc
 
 		// update Token
-		if info.Type == 2 {
+		if info.Type == BlockType_Sync {
 			ns.UpdateToken(event.ContractAddress, MinerGRPC)
 		}
 
@@ -203,7 +203,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		txD.TokenTransfers++
 
 		// Add tokenTransfer doc
-		ns.rec_TokenTransfer(info, tokenTransferD)
+		ns.rec_TokenTransfer(info.Type, tokenTransferD)
 
 		// update TO-Account
 		ns.UpdateAccountTokens(info.Type, event.ContractAddress, tokenTransferD, tokenTransferD.To, MinerGRPC)
@@ -229,10 +229,10 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		txD.TokenTransfers++
 
 		// Add tokenTransfer doc
-		ns.rec_TokenTransfer(info, tokenTransferD)
+		ns.rec_TokenTransfer(info.Type, tokenTransferD)
 
 		// update Token
-		if info.Type == 2 {
+		if info.Type == BlockType_Sync {
 			ns.UpdateToken(event.ContractAddress, MinerGRPC)
 		}
 
@@ -249,13 +249,13 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 }
 
 // MaybeTokenCreation runs a heuristic to determine if tx might be creating a token
-func (ns *Indexer) MaybeTokenCreation(tx *types.Tx) int {
+func MaybeTokenCreation(tx *types.Tx) TokenCreationType {
 	txBody := tx.GetBody()
 
 	// We treat the payload (which is part bytecode, part ABI) as text
 	// and check that ALL the ARC1/2 keywords are included
 	if !(txBody.GetType() == types.TxType_DEPLOY && len(txBody.Payload) > 30) {
-		return 0
+		return TokenCreationType_None
 	}
 
 	payload := string(txBody.GetPayload())
@@ -263,7 +263,7 @@ func (ns *Indexer) MaybeTokenCreation(tx *types.Tx) int {
 	keywords := [...]string{"name", "balanceOf", "transfer", "symbol", "totalSupply"}
 	for _, keyword := range keywords {
 		if !strings.Contains(payload, keyword) {
-			return 0
+			return TokenCreationType_None
 		}
 	}
 
@@ -276,7 +276,7 @@ func (ns *Indexer) MaybeTokenCreation(tx *types.Tx) int {
 		}
 	}
 	if suc {
-		return 1
+		return TokenCreationType_ARC1
 	}
 
 	suc = true
@@ -288,32 +288,32 @@ func (ns *Indexer) MaybeTokenCreation(tx *types.Tx) int {
 		}
 	}
 	if suc {
-		return 2
+		return TokenCreationType_ARC2
 	}
-	return 0
+	return TokenCreationType_None
 }
 
-func (ns *Indexer) rec_Block(info BlockInfo, blockD doc.EsBlock) {
-	if info.Type == 1 {
-		ns.BChannel.Block <- ChanInfo{1, blockD}
+func (ns *Indexer) rec_Block(blockType BlockType, blockD doc.EsBlock) {
+	if blockType == BlockType_Bulk {
+		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockD}
 	} else {
 		ns.db.Insert(blockD, ns.indexNamePrefix+"block")
 	}
 }
 
-func (ns *Indexer) rec_Tx(info BlockInfo, txD doc.EsTx) {
-	if info.Type == 1 {
-		ns.BChannel.Tx <- ChanInfo{1, txD}
+func (ns *Indexer) rec_Tx(blockType BlockType, txD doc.EsTx) {
+	if blockType == BlockType_Bulk {
+		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txD}
 	} else {
 		ns.db.Insert(txD, ns.indexNamePrefix+"tx")
 	}
 }
 
-func (ns *Indexer) rec_Contract(info BlockInfo, contractD doc.EsContract) {
+func (ns *Indexer) rec_Contract(blockType BlockType, contractD doc.EsContract) {
 	/*
-		if info.Type == 1 {
+		if blockType == BlockType_Bulk {
 			// to bulk
-			ns.BChannel.Contract <- ChanInfo{1, contractD}
+			ns.BChannel.Contract <- ChanInfo{ChanType_Add, contractD}
 		} else {
 			// to es
 			ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
@@ -322,11 +322,11 @@ func (ns *Indexer) rec_Contract(info BlockInfo, contractD doc.EsContract) {
 	ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
 }
 
-func (ns *Indexer) rec_Name(info BlockInfo, nameD doc.EsName) {
+func (ns *Indexer) rec_Name(blockType BlockType, nameD doc.EsName) {
 	/*
-		if info.Type == 1 {
+		if blockType == BlockType_Bulk {
 			// to bulk
-			ns.BChannel.Name <- ChanInfo{1, nameD}
+			ns.BChannel.Name <- ChanInfo{ChanType_Add, nameD}
 		} else {
 			// to es
 			ns.db.Insert(nameD, ns.indexNamePrefix+"name")
@@ -335,10 +335,10 @@ func (ns *Indexer) rec_Name(info BlockInfo, nameD doc.EsName) {
 	ns.db.Insert(nameD, ns.indexNamePrefix+"name")
 }
 
-func (ns *Indexer) rec_Token(info BlockInfo, tokenD doc.EsToken) {
+func (ns *Indexer) rec_Token(blockType BlockType, tokenD doc.EsToken) {
 	/*
-		if info.Type == 1 {
-			ns.BChannel.Token <- ChanInfo{1, tokenD}
+		if blockType == BlockType_Bulk {
+			ns.BChannel.Token <- ChanInfo{ChanType_Add, tokenD}
 		} else {
 			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 		}
@@ -346,18 +346,18 @@ func (ns *Indexer) rec_Token(info BlockInfo, tokenD doc.EsToken) {
 	ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 }
 
-func (ns *Indexer) rec_TokenTransfer(info BlockInfo, tokenTransferD doc.EsTokenTransfer) {
-	if info.Type == 1 {
-		ns.BChannel.TokenTransfer <- ChanInfo{1, tokenTransferD}
+func (ns *Indexer) rec_TokenTransfer(blockType BlockType, tokenTransferD doc.EsTokenTransfer) {
+	if blockType == BlockType_Bulk {
+		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferD}
 	} else {
 		ns.db.Insert(tokenTransferD, ns.indexNamePrefix+"token_transfer")
 	}
 }
 
-func (ns *Indexer) rec_NFT(info BlockInfo, nftD doc.EsNFT) {
-	if info.Type == 1 {
-		ns.BChannel.TokenTransfer <- ChanInfo{1, nftD}
+func (ns *Indexer) rec_NFT(blockType BlockType, nftD doc.EsNFT) {
+	if blockType == BlockType_Bulk {
+		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, nftD}
 	} else {
-		ns.db.Insert(nftD, ns.indexNamePrefix+"token_transfer")
+		ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
 	}
 }

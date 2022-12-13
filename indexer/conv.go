@@ -182,7 +182,7 @@ func (ns *Indexer) ConvNFT(contractAddress []byte, ttDoc doc.EsTokenTransfer, ac
 	return document
 }
 
-func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc types.AergoRPCServiceClient) {
+func (ns *Indexer) UpdateNFT(Type BlockType, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, grpcc types.AergoRPCServiceClient) {
 	tokenUri, err := ns.queryContract(contractAddress, "get_metadata", []string{tokenTransfer.TokenId, "token_uri"}, grpcc)
 	if tokenUri == "null" || err != nil {
 		tokenUri = ""
@@ -194,15 +194,11 @@ func (ns *Indexer) UpdateNFT(Type uint, contractAddress []byte, tokenTransfer do
 
 	// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 	nft := ns.ConvNFT(contractAddress, tokenTransfer, tokenTransfer.Amount, tokenUri, imageUrl)
-	if Type == 1 {
-		ns.BChannel.NFT <- ChanInfo{1, nft}
-	} else {
-		ns.db.Insert(nft, ns.indexNamePrefix+"nft")
-	}
+	ns.rec_NFT(Type, nft)
 
 }
 
-func (ns *Indexer) UpdateAccountTokens(Type uint, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
+func (ns *Indexer) UpdateAccountTokens(Type BlockType, contractAddress []byte, tokenTransfer doc.EsTokenTransfer, account string, grpcc types.AergoRPCServiceClient) {
 	id := fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress)
 	if Type == 1 {
 
