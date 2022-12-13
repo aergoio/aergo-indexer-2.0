@@ -225,7 +225,7 @@ func (ns *Indexer) ConvAccountTokens(contractAddress []byte, ttDoc doc.EsTokenTr
 	return document
 }
 
-func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, args interface{}, grpcc *client.AergoClientController) doc.EsTokenTransfer {
+func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx int, from string, to string, arg interface{}, grpcc *client.AergoClientController) doc.EsTokenTransfer {
 	document := doc.EsTokenTransfer{
 		BaseEsType:   &doc.BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
@@ -237,8 +237,8 @@ func (ns *Indexer) ConvTokenTransfer(contractAddress []byte, txDoc doc.EsTx, idx
 		To:           to,
 	}
 
-	if data, ok := args.(string); ok {
-		document.TokenId, document.Amount, document.AmountFloat = grpcc.QueryOwnerOf(contractAddress, data, bytes.Equal(contractAddress, cccv_nft_address))
+	if argStr, ok := arg.(string); ok {
+		document.TokenId, document.Amount, document.AmountFloat = grpcc.QueryOwnerOf(contractAddress, argStr, bytes.Equal(contractAddress, cccv_nft_address))
 	} else {
 		document.Amount = ""
 	}

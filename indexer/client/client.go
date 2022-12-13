@@ -29,6 +29,8 @@ func NewAergoClient(serverAddr string, ctx context.Context) (*AergoClientControl
 	)
 	if err != nil {
 		return nil, err
+	} else if conn == nil {
+		return nil, fmt.Errorf("failed to connect to server: %s", serverAddr)
 	}
 
 	return &AergoClientController{types.NewAergoRPCServiceClient(conn)}, nil
@@ -37,9 +39,9 @@ func NewAergoClient(serverAddr string, ctx context.Context) (*AergoClientControl
 func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account string, isCccvNft bool) (balance string, balanceFloat float32) {
 	var err error
 	if isCccvNft == true {
-		balance, err = t.queryContract(contractAddress, "query", []string{"balanceOf", account})
+		balance, err = t.queryContract(contractAddress, "query", "balanceOf", account)
 	} else {
-		balance, err = t.queryContract(contractAddress, "balanceOf", []string{account})
+		balance, err = t.queryContract(contractAddress, "balanceOf", account)
 	}
 	if err != nil {
 		return "0", 0
@@ -54,18 +56,18 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 	return balance, balanceFloat
 }
 
-func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, args string, isCccvNft bool) (tokenId, amount string, amountFloat float32) {
+func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, arg string, isCccvNft bool) (tokenId, amount string, amountFloat float32) {
 	var err error
 	var owner string
 	// 2022/06/05 숫자인 token ID 허용
 	if isCccvNft == true {
-		owner, err = t.queryContract(contractAddress, "query", []string{"ownerOf", args})
+		owner, err = t.queryContract(contractAddress, "query", "ownerOf", arg)
 	} else {
-		owner, err = t.queryContract(contractAddress, "ownerOf", []string{args})
+		owner, err = t.queryContract(contractAddress, "ownerOf", arg)
 	}
 
 	if err == nil { // ARC 2
-		tokenId = args
+		tokenId = arg
 		amountFloat = 1.0
 		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 		if owner != "" {
@@ -74,9 +76,9 @@ func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, args string
 			amount = "BURN"
 		}
 	} else { // ARC 1
-		if AmountFloat, err := strconv.ParseFloat(args, 32); err == nil {
+		if AmountFloat, err := strconv.ParseFloat(arg, 32); err == nil {
 			amountFloat = float32(AmountFloat)
-			amount = args
+			amount = arg
 			tokenId = ""
 		} else {
 			amount = ""
@@ -87,10 +89,10 @@ func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, args string
 
 func (t *AergoClientController) QueryTotalSupply(contractAddress []byte, isCccvNft bool) (supply string, supplyFloat float32) {
 	var err error
-	if isCccvNft {
-		supply, err = t.queryContract(contractAddress, "query", []string{"totalSupply"})
+	if isCccvNft == true {
+		supply, err = t.queryContract(contractAddress, "query", "totalSupply")
 	} else {
-		supply, err = t.queryContract(contractAddress, "totalSupply", nil)
+		supply, err = t.queryContract(contractAddress, "totalSupply")
 	}
 	if err != nil {
 		return "0", 0
@@ -106,17 +108,17 @@ func (t *AergoClientController) QueryTotalSupply(contractAddress []byte, isCccvN
 
 func (t *AergoClientController) QueryTokenInfo(contractAddress []byte) (name, symbol string, decimals uint8) {
 	var err error
-	name, err = t.queryContract(contractAddress, "name", nil)
+	name, err = t.queryContract(contractAddress, "name")
 	if name == "null" || err != nil {
 		return "", "", 0
 	}
 
-	symbol, err = t.queryContract(contractAddress, "symbol", nil)
+	symbol, err = t.queryContract(contractAddress, "symbol")
 	if symbol == "null" || err != nil {
-		return "", "", 0
+		symbol = ""
 	}
 
-	strDecimals, err := t.queryContract(contractAddress, "decimals", nil)
+	strDecimals, err := t.queryContract(contractAddress, "decimals")
 	if err == nil {
 		if d, err := strconv.Atoi(strDecimals); err == nil {
 			decimals = uint8(d)
@@ -124,23 +126,23 @@ func (t *AergoClientController) QueryTokenInfo(contractAddress []byte) (name, sy
 	} else {
 		decimals = uint8(1)
 	}
-
 	return name, symbol, decimals
 }
+
 func (t *AergoClientController) QueryNFTMetadata(contractAddress []byte, tokenId string) (tokenUri, imageUrl string) {
 	var err error
-	tokenUri, err = t.queryContract(contractAddress, "get_metadata", []string{tokenId, "token_uri"})
+	tokenUri, err = t.queryContract(contractAddress, "get_metadata", tokenId, "token_uri")
 	if tokenUri == "null" || err != nil {
 		tokenUri = ""
 	}
-	imageUrl, err = t.queryContract(contractAddress, "get_metadata", []string{tokenId, "image_url"})
+	imageUrl, err = t.queryContract(contractAddress, "get_metadata", tokenId, "image_url")
 	if imageUrl == "null" || err != nil {
 		imageUrl = ""
 	}
 	return tokenUri, imageUrl
 }
 
-func (t *AergoClientController) queryContract(address []byte, name string, args []string) (string, error) {
+func (t *AergoClientController) queryContract(address []byte, name string, args ...string) (string, error) {
 	queryinfo := map[string]interface{}{"Name": name}
 	if args != nil {
 		queryinfo["Args"] = args
