@@ -115,6 +115,7 @@ account         string      account address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
 token_uri       string      token uri
+image_url       string      image url
 ```
 
 contract
