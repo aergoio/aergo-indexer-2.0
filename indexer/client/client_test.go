@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -45,44 +44,6 @@ func TestQuery_TokenInfo(t *testing.T) {
 	fn_test("Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF", "", "", 0)
 }
 
-func TestQuery_TotalSupply(t *testing.T) {
-	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
-	require.NoError(t, err)
-
-	fn_test := func(contractAddress string, isCCCVNft bool, supplyExpect string) {
-		contract, _ := types.DecodeAddress(contractAddress)
-		supply, supplyFloat := grpcClient.QueryTotalSupply(contract, isCCCVNft)
-		require.Equal(t, supplyExpect, supply)
-		supplyFloatExpect, _ := strconv.ParseFloat(supply, 32)
-		require.Equal(t, float32(supplyFloatExpect), supplyFloat)
-	}
-
-	// PBLKA
-	fn_test("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", false, "100000000000000000000000000")
-	// Tname2
-	fn_test("AmhnHbTejbuLNzDCKFcnXrTBhXr3eyrt2tqPb8Vn2QCeTEjYx9Xc", false, "100000000199919999999995000")
-	// BOOOST Your Life
-	fn_test("AmhWqG43WoT7J7X7cQNChBBLfD4PPGavgGEhAjtEtTuZCUhAGYK7", false, "107952688817999999997342")
-	// Live In Value
-	fn_test("AmgnriATUjtsFqsP9sLdxo6xVvYotYeE3Af7EJwc7LjNT6yb5Tzt", false, "0")
-	// Bigdeal Point
-	fn_test("Amg7VYQXznevyMjW2S1tdefEjSUCEB3bQvjEXme6rA75wai7L7YP", false, "1000001000000000000000000000")
-	// AERGO v2
-	fn_test("Amhpi4LgVS74YJoZAWXsVgkJfEztYe5KkV3tY7sYtCgXchcKQeCQ", false, "1000019970000000000000000000")
-	// TWILim
-	fn_test("AmgV6Z9Pju5u9dShE4KUtFeBEoauq1n9bM96Mm42AsLut1ucGo5u", false, "100000000000000000000000000")
-	// KSLee Token
-	fn_test("Amhk6ZYDPrdx5nTRevvgznPYpH39LaGcPnaK7kqS3E6uSR5GXxBY", false, "1000000000000000")
-	// BOOOST Vehicle NFT
-	fn_test("AmgjGhDQcKWLTtk2ux6ywLftRND1Qd9jD68j3NaFhynwwPcSPDUQ", false, "87")
-	// test_nft
-	fn_test("AmgL1oYGgNWhrCc337xefNekr5qE7UfyzSNChrgWCobJCNkjWi2S", false, "3")
-	// cccv_nft
-	fn_test("Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF", true, "0")
-	// NWlLim
-	fn_test("AmfyF7jvn5t2JEaUJaLFrmrWYSiJWz4fXGYjVFbTZofSWFThj1UQ", false, "40")
-}
-
 func TestQuery_NFTMetadata(t *testing.T) {
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 	require.NoError(t, err)
@@ -119,6 +80,44 @@ func TestQuery_NFTMetadata(t *testing.T) {
 
 // TODO: Not able to test Changing Value ( amount, balance, owner, etc. )
 /*
+	func TestQuery_TotalSupply(t *testing.T) {
+		grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
+		require.NoError(t, err)
+
+		fn_test := func(contractAddress string, isCCCVNft bool, supplyExpect string) {
+			contract, _ := types.DecodeAddress(contractAddress)
+			supply, supplyFloat := grpcClient.QueryTotalSupply(contract, isCCCVNft)
+			require.Equal(t, supplyExpect, supply)
+			supplyFloatExpect, _ := strconv.ParseFloat(supply, 32)
+			require.Equal(t, float32(supplyFloatExpect), supplyFloat)
+		}
+
+		// PBLKA
+		fn_test("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", false, "100000000000000000000000000")
+		// Tname2
+		fn_test("AmhnHbTejbuLNzDCKFcnXrTBhXr3eyrt2tqPb8Vn2QCeTEjYx9Xc", false, "100000000199919999999995000")
+		// BOOOST Your Life
+		fn_test("AmhWqG43WoT7J7X7cQNChBBLfD4PPGavgGEhAjtEtTuZCUhAGYK7", false, "108012073894999999997342")
+		// Live In Value
+		fn_test("AmgnriATUjtsFqsP9sLdxo6xVvYotYeE3Af7EJwc7LjNT6yb5Tzt", false, "0")
+		// Bigdeal Point
+		fn_test("Amg7VYQXznevyMjW2S1tdefEjSUCEB3bQvjEXme6rA75wai7L7YP", false, "1000001000000000000000000000")
+		// AERGO v2
+		fn_test("Amhpi4LgVS74YJoZAWXsVgkJfEztYe5KkV3tY7sYtCgXchcKQeCQ", false, "1000019970000000000000000000")
+		// TWILim
+		fn_test("AmgV6Z9Pju5u9dShE4KUtFeBEoauq1n9bM96Mm42AsLut1ucGo5u", false, "100000000000000000000000000")
+		// KSLee Token
+		fn_test("Amhk6ZYDPrdx5nTRevvgznPYpH39LaGcPnaK7kqS3E6uSR5GXxBY", false, "1000000000000000")
+		// BOOOST Vehicle NFT
+		fn_test("AmgjGhDQcKWLTtk2ux6ywLftRND1Qd9jD68j3NaFhynwwPcSPDUQ", false, "87")
+		// test_nft
+		fn_test("AmgL1oYGgNWhrCc337xefNekr5qE7UfyzSNChrgWCobJCNkjWi2S", false, "3")
+		// cccv_nft
+		fn_test("Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF", true, "0")
+		// NWlLim
+		fn_test("AmfyF7jvn5t2JEaUJaLFrmrWYSiJWz4fXGYjVFbTZofSWFThj1UQ", false, "40")
+	}
+
 	func TestQuery_BalanceOf(t *testing.T) {
 		grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 		require.NoError(t, err)

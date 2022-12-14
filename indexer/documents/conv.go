@@ -127,26 +127,6 @@ func ConvNFT(contractAddress []byte, ttDoc EsTokenTransfer, account string, toke
 		TokenUri:     tokenUri,
 		ImageUrl:     imageUrl,
 	}
-
-}
-
-func ConvAccountTokens(contractAddress []byte, ttDoc EsTokenTransfer, account string, balance string, balanceFloat float32) EsAccountTokens {
-	var tokenType category.TokenType
-	if ttDoc.TokenId == "" {
-		tokenType = category.ARC1
-	} else {
-		tokenType = category.ARC2
-	}
-
-	return EsAccountTokens{
-		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
-		Account:      account,
-		TokenAddress: ttDoc.TokenAddress,
-		Timestamp:    ttDoc.Timestamp,
-		Type:         tokenType,
-		Balance:      balance,
-		BalanceFloat: balanceFloat,
-	}
 }
 
 func ConvTokenTransfer(contractAddress []byte, txDoc EsTx, idx int, from string, to string, tokenId string, amount string, amountFloat float32) EsTokenTransfer {
@@ -162,6 +142,25 @@ func ConvTokenTransfer(contractAddress []byte, txDoc EsTx, idx int, from string,
 		TokenId:      tokenId,
 		Amount:       amount,
 		AmountFloat:  amountFloat,
+	}
+}
+
+func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, balanceFloat float32) EsAccountTokens {
+	var tokenType category.TokenType
+	if ttDoc.TokenId == "" {
+		tokenType = category.ARC1
+	} else {
+		tokenType = category.ARC2
+	}
+
+	return EsAccountTokens{
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
+		Account:      account,
+		TokenAddress: ttDoc.TokenAddress,
+		Timestamp:    ttDoc.Timestamp,
+		Type:         tokenType,
+		Balance:      balance,
+		BalanceFloat: balanceFloat,
 	}
 }
 
