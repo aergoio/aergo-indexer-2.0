@@ -56,34 +56,39 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 	return balance, balanceFloat
 }
 
-func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, arg string, isCccvNft bool) (tokenId, amount string, amountFloat float32) {
+func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, arg interface{}, isCccvNft bool) (tokenId, amount string, amountFloat float32) {
 	var err error
 	var owner string
-	// 2022/06/05 숫자인 token ID 허용
-	if isCccvNft == true {
-		owner, err = t.queryContract(contractAddress, "query", "ownerOf", arg)
+
+	if argStr, ok := arg.(string); ok {
+		// 2022/06/05 숫자인 token ID 허용
+		if isCccvNft == true {
+			owner, err = t.queryContract(contractAddress, "query", "ownerOf", argStr)
+		} else {
+			owner, err = t.queryContract(contractAddress, "ownerOf", argStr)
+		}
+		if err == nil { // ARC 2
+			tokenId = argStr
+			amountFloat = 1.0
+			// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
+			if owner != "" {
+				amount = owner
+			} else {
+				amount = "BURN"
+			}
+		} else { // ARC 1
+			if AmountFloat, err := strconv.ParseFloat(argStr, 32); err == nil {
+				amountFloat = float32(AmountFloat)
+				amount = argStr
+				tokenId = ""
+			} else {
+				amount = ""
+			}
+		}
 	} else {
-		owner, err = t.queryContract(contractAddress, "ownerOf", arg)
+		amount = ""
 	}
 
-	if err == nil { // ARC 2
-		tokenId = arg
-		amountFloat = 1.0
-		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-		if owner != "" {
-			amount = owner
-		} else {
-			amount = "BURN"
-		}
-	} else { // ARC 1
-		if AmountFloat, err := strconv.ParseFloat(arg, 32); err == nil {
-			amountFloat = float32(AmountFloat)
-			amount = arg
-			tokenId = ""
-		} else {
-			amount = ""
-		}
-	}
 	return tokenId, amount, amountFloat
 }
 

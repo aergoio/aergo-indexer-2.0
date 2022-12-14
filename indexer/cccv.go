@@ -1,6 +1,8 @@
 package indexer
 
 import (
+	"bytes"
+
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -8,7 +10,11 @@ import (
 
 var cccv_nft_address []byte
 
-func (ns *Indexer) cccv_nft_mainnet() {
+func (ns *Indexer) is_cccv_nft(contractAddress []byte) bool {
+	return bytes.Equal(contractAddress, cccv_nft_address)
+}
+
+func (ns *Indexer) init_cccv_nft_mainnet() {
 	cccv_nft_string := "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
 
 	var err error
@@ -33,7 +39,7 @@ func (ns *Indexer) cccv_nft_mainnet() {
 	ns.db.Insert(document, ns.indexNamePrefix+"token")
 }
 
-func (ns *Indexer) cccv_nft_testnet() {
+func (ns *Indexer) init_cccv_nft_testnet() {
 	cccv_nft_string := "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF"
 
 	var err error
