@@ -10,11 +10,6 @@ import (
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 )
 
-type esBlockNo struct {
-	*doc.BaseEsType
-	BlockNo uint64 `json:"no" db:"no"`
-}
-
 // Start setups the indexer
 func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) error {
 	fmt.Println("=======> Start Check index ..")
@@ -73,7 +68,7 @@ func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 		From:         int(Start_Pos),
 		To:           int(End_Pos),
 	}, func() doc.DocType {
-		block := new(esBlockNo)
+		block := new(doc.EsBlock)
 		block.BaseEsType = new(doc.BaseEsType)
 
 		return block
@@ -91,7 +86,7 @@ func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 			ns.log.Warn().Err(err).Msg("Failed to query block numbers")
 			continue
 		}
-		blockNo = block.(*esBlockNo).BlockNo
+		blockNo = block.(*doc.EsBlock).BlockNo
 
 		if blockNo%100000 == 0 {
 			fmt.Println(">>> Check Block :", blockNo)
