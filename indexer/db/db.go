@@ -50,5 +50,4 @@ type ScrollInstance interface {
 type BulkInstance interface {
 	Add(document doc.DocType)
 	Commit() error
-	Rollback()
 }

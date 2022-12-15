@@ -239,7 +239,3 @@ func (bulk *EsBulkInstance) Commit() error {
 	_, err := bulk.bulk.Do(bulk.ctx)
 	return err
 }
-
-func (bulk *EsBulkInstance) Rollback() {
-	bulk.bulk.Reset()
-}

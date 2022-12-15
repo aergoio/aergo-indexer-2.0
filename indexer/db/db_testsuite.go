@@ -15,6 +15,7 @@ import (
 //	test 2. Count  = Insert - Count - Delete - Count
 //	test 3. Select = Insert - SelectOne - Update - SelectOne
 //	test 4. Scroll = Insert - Scroll
+//	test 5. Bulk   = Bulk - Count
 func TestDatabaseSuite(t *testing.T, New func() DbController) {
 	t.Run("Index", func(t *testing.T) {
 		tests := []struct {
@@ -288,6 +289,72 @@ func TestDatabaseSuite(t *testing.T, New func() DbController) {
 			}
 		}
 	})
+
+	t.Run("Bulk", func(t *testing.T) {
+		tests := []struct {
+			idxName   string
+			aliasName string
+			docType   string
+			sortField string
+			sortAsc   bool
+			from      int
+			to        int
+
+			docInsert []doc.DocType
+			count     int
+		}{
+			{
+				"idx_bulk_block", "alias_bulk_block", "block", "no", false, 104776385, 104776386, []doc.DocType{
+					&doc.EsBlock{
+						BaseEsType: &doc.BaseEsType{Id: "FpzaEXtEab9g99fhAF7C6XhUUJAc6TjJTjvpWNkdqAn1"},
+						BlockNo:    104776384,
+					}, &doc.EsBlock{
+						BaseEsType: &doc.BaseEsType{Id: "E8Lbg1B6QRa8VfFLPLrsW99vrTs1fYW5VhQaPQAFrT3R"},
+						BlockNo:    104776385,
+					}, &doc.EsBlock{
+						BaseEsType: &doc.BaseEsType{Id: "9o5C5ukWrXiNCFSU2Y1XQwcqY1fgTimrnTpnYu2CsG1h"},
+						BlockNo:    104776386,
+					},
+				}, 3,
+			},
+			{
+				"idx_bulk_block", "alias_bulk_block", "block", "no", true, 104776385, 104776386, []doc.DocType{
+					&doc.EsBlock{
+						BaseEsType: &doc.BaseEsType{Id: "FpzaEXtEab9g99fhAF7C6XhUUJAc6TjJTjvpWNkdqAn1"},
+						BlockNo:    104776384,
+					}, &doc.EsBlock{
+						BaseEsType: &doc.BaseEsType{Id: "E8Lbg1B6QRa8VfFLPLrsW99vrTs1fYW5VhQaPQAFrT3R"},
+						BlockNo:    104776385,
+					}, &doc.EsBlock{
+						BaseEsType: &doc.BaseEsType{Id: "9o5C5ukWrXiNCFSU2Y1XQwcqY1fgTimrnTpnYu2CsG1h"},
+						BlockNo:    104776386,
+					},
+				}, 3,
+			},
+		}
+
+		for i, test := range tests {
+			db := New()
+			err := db.CreateIndex(test.idxName, test.docType)
+			require.NoErrorf(t, err, "error in [Bulk] [test %d]", i)
+
+			err = db.UpdateAlias(test.aliasName, test.idxName)
+			require.NoErrorf(t, err, "error in [Bulk] [test %d]", i)
+
+			bulk := db.InsertBulk(test.idxName)
+			for _, data := range test.docInsert {
+				bulk.Add(data)
+			}
+			err = bulk.Commit()
+			require.NoErrorf(t, err, "error in [Bulk] [test %d]", i)
+
+			time.Sleep(time.Second * 1) // sleep 1 sec to refresh index
+			count, err := db.Count(QueryParams{IndexName: test.idxName})
+			require.NoErrorf(t, err, "error in [Bulk] [test %d]", i)
+			require.EqualValuesf(t, test.count, count, "error in [Bulk] [test %d]", i)
+		}
+	})
+
 }
 
 func getDocType(docType string) doc.DocType {
