@@ -17,7 +17,7 @@ import (
 
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
-	Client *elastic.Client
+	client *elastic.Client
 }
 
 // NewElasticClient creates a new instance of elastic.Client
@@ -48,23 +48,23 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 	if err != nil {
 		return nil, err
 	}
-	return &ElasticsearchDbController{Client: client}, nil
+	return &ElasticsearchDbController{client: client}, nil
 }
 
 func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
-	ans, _ := esdb.Client.Exists().Index(indexName).Id(id).Do(context.Background())
+	ans, _ := esdb.client.Exists().Index(indexName).Id(id).Do(context.Background())
 	return ans
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
-	_, err := esdb.Client.Update().Index(indexName).Id(id).Doc(document).Do(context.Background())
+	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Do(context.Background())
 	return err
 }
 
 // Insert inserts a single document using the updata params
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
-	_, err := esdb.Client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
+	_, err := esdb.client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	return err
 }
 
@@ -77,7 +77,7 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 		query = elastic.NewMatchQuery(params.StringMatch.Field, params.StringMatch.Value)
 	}
 
-	res, err := esdb.Client.DeleteByQuery().Index(params.IndexName).Query(query).Do(context.Background())
+	res, err := esdb.client.DeleteByQuery().Index(params.IndexName).Query(query).Do(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -86,13 +86,13 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 
 // Count returns the number of indexed documents
 func (esdb *ElasticsearchDbController) Count(params QueryParams) (int64, error) {
-	return esdb.Client.Count(params.IndexName).Do(context.Background())
+	return esdb.client.Count(params.IndexName).Do(context.Background())
 }
 
 // SelectOne selects a single document
 func (esdb *ElasticsearchDbController) SelectOne(params QueryParams, createDocument CreateDocFunction) (doc.DocType, error) {
 	query := elastic.NewMatchAllQuery()
-	res, err := esdb.Client.Search().Index(params.IndexName).Query(query).Sort(params.SortField, params.SortAsc).From(params.From).Size(1).Do(context.Background())
+	res, err := esdb.client.Search().Index(params.IndexName).Query(query).Sort(params.SortField, params.SortAsc).From(params.From).Size(1).Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +113,8 @@ func (esdb *ElasticsearchDbController) SelectOne(params QueryParams, createDocum
 // UpdateAlias updates an alias with a new index name and delete stale indices
 func (esdb *ElasticsearchDbController) UpdateAlias(aliasName string, indexName string) error {
 	ctx := context.Background()
-	svc := esdb.Client.Alias()
-	res, err := esdb.Client.Aliases().Index("_all").Do(ctx)
+	svc := esdb.client.Alias()
+	res, err := esdb.client.Aliases().Index("_all").Do(ctx)
 	if err != nil {
 		return err
 	}
@@ -132,14 +132,14 @@ func (esdb *ElasticsearchDbController) UpdateAlias(aliasName string, indexName s
 
 	_, err = svc.Do(ctx)
 	for _, indexName := range indices {
-		esdb.Client.DeleteIndex(indexName).Do(ctx)
+		esdb.client.DeleteIndex(indexName).Do(ctx)
 	}
 	return err
 }
 
 // GetExistingIndexPrefix checks for existing indices and returns the prefix, if any
 func (esdb *ElasticsearchDbController) GetExistingIndexPrefix(aliasName string, documentType string) (bool, string, error) {
-	res, err := esdb.Client.Aliases().Index("_all").Do(context.Background())
+	res, err := esdb.client.Aliases().Index("_all").Do(context.Background())
 	if err != nil {
 		return false, "", err
 	}
@@ -153,7 +153,7 @@ func (esdb *ElasticsearchDbController) GetExistingIndexPrefix(aliasName string, 
 
 // CreateIndex creates index according to documentType definition
 func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentType string) error {
-	createIndex, err := esdb.Client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(context.Background())
+	createIndex, err := esdb.client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (esdb *ElasticsearchDbController) Scroll(params QueryParams, createDocument
 
 	// seo
 	query := elastic.NewRangeQuery(params.SortField).From(params.From).To(params.To)
-	scroll := esdb.Client.Scroll(params.IndexName).Query(query).Size(params.Size).Sort(params.SortField, params.SortAsc).FetchSourceContext(fsc)
+	scroll := esdb.client.Scroll(params.IndexName).Query(query).Size(params.Size).Sort(params.SortField, params.SortAsc).FetchSourceContext(fsc)
 	return &EsScrollInstance{
 		scrollService:  scroll,
 		ctx:            context.Background(),
@@ -219,7 +219,7 @@ func (scroll *EsScrollInstance) Next() (doc.DocType, error) {
 
 func (esdb *ElasticsearchDbController) InsertBulk(indexName string) BulkInstance {
 	return &EsBulkInstance{
-		bulk: esdb.Client.Bulk().Index(indexName),
+		bulk: esdb.client.Bulk().Index(indexName),
 		ctx:  context.Background(),
 	}
 }

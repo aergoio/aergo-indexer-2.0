@@ -23,7 +23,7 @@ func TestElastic(t *testing.T) {
 	TestDatabaseSuite(t, func() DbController {
 		dbController, err := NewElasticsearchDbController(mock.DefaultAddress())
 		require.NoError(t, err)
-		_, err = dbController.Client.DeleteIndex("*").Do(context.Background())
+		_, err = dbController.client.DeleteIndex("*").Do(context.Background())
 		require.NoError(t, err)
 		return dbController
 	})
