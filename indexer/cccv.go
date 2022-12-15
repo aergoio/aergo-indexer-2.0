@@ -36,7 +36,7 @@ func (ns *Indexer) init_cccv_nft_mainnet() {
 		SupplyFloat:  float32(0),
 	}
 
-	ns.db.Insert(document, ns.indexNamePrefix+"token")
+	ns.insertToken(BlockType_Sync, document)
 }
 
 func (ns *Indexer) init_cccv_nft_testnet() {
@@ -61,5 +61,5 @@ func (ns *Indexer) init_cccv_nft_testnet() {
 		SupplyFloat:  float32(0),
 	}
 
-	ns.db.Insert(document, ns.indexNamePrefix+"token")
+	ns.insertToken(BlockType_Sync, document)
 }
