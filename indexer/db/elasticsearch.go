@@ -15,43 +15,9 @@ import (
 	"github.com/olivere/elastic/v7"
 )
 
-type IntegerRangeQuery struct {
-	Field string
-	Min   uint64
-	Max   uint64
-}
-
-type StringMatchQuery struct {
-	Field string
-	Value string
-}
-
-type QueryParams struct {
-	IndexName    string
-	TypeName     string
-	From         int
-	To           int
-	Size         int
-	SortField    string
-	SortAsc      bool
-	SelectFields []string
-	IntegerRange *IntegerRangeQuery
-	StringMatch  *StringMatchQuery
-}
-
-type CreateDocFunction = func() doc.DocType
-
-type ScrollInstance interface {
-	Next() (doc.DocType, error)
-}
-
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
-	Client  *elastic.Client
-	UpdateS *elastic.UpdateService
-	IndexS  *elastic.IndexService
-	SearchS *elastic.SearchService
-	ExistsS *elastic.ExistsService
+	Client *elastic.Client
 }
 
 // NewElasticClient creates a new instance of elastic.Client
@@ -82,31 +48,23 @@ func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, err
 	if err != nil {
 		return nil, err
 	}
-
-	return &ElasticsearchDbController{
-		Client:  client,
-		UpdateS: client.Update(),
-		IndexS:  client.Index(),
-		SearchS: client.Search(),
-		ExistsS: client.Exists(),
-	}, nil
+	return &ElasticsearchDbController{Client: client}, nil
 }
 
 func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {
-	ans, _ := esdb.ExistsS.Index(indexName).Id(id).Do(context.Background())
+	ans, _ := esdb.Client.Exists().Index(indexName).Id(id).Do(context.Background())
 	return ans
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
-	_, err := esdb.UpdateS.Index(indexName).Id(id).Doc(document).Do(context.Background())
+	_, err := esdb.Client.Update().Index(indexName).Id(id).Doc(document).Do(context.Background())
 	return err
 }
 
 // Insert inserts a single document using the updata params
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
-	//	_, err := esdb.IndexS.Index(indexName).OpType("create").Id(document.GetID()).BodyJson(document).Do(context.Background())
-	_, err := esdb.IndexS.Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
+	_, err := esdb.Client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	return err
 }
 
@@ -257,4 +215,31 @@ func (scroll *EsScrollInstance) Next() (doc.DocType, error) {
 		return unmarshalled, nil
 	}
 	return nil, io.EOF
+}
+
+func (esdb *ElasticsearchDbController) InsertBulk(indexName string) BulkInstance {
+	return &EsBulkInstance{
+		bulk: esdb.Client.Bulk().Index(indexName),
+		ctx:  context.Background(),
+	}
+}
+
+type EsBulkInstance struct {
+	bulk *elastic.BulkService
+	ctx  context.Context
+}
+
+func (bulk *EsBulkInstance) Add(document doc.DocType) {
+	req := elastic.NewBulkIndexRequest().OpType("create").Id(document.GetID()).Doc(document)
+	// req := elastic.NewBulkUpdateRequest().Id(document.GetID()).Doc(document).DocAsUpsert(true)
+	bulk.bulk.Add(req)
+}
+
+func (bulk *EsBulkInstance) Commit() error {
+	_, err := bulk.bulk.Do(bulk.ctx)
+	return err
+}
+
+func (bulk *EsBulkInstance) Rollback() {
+	bulk.bulk.Reset()
 }

@@ -9,18 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type DbController interface {
-	Insert(document doc.DocType, indexName string) error
-	Update(document doc.DocType, indexName string, id string) error
-	Delete(params QueryParams) (uint64, error)
-	Count(params QueryParams) (int64, error)
-	SelectOne(params QueryParams, createDocument CreateDocFunction) (doc.DocType, error)
-	Scroll(params QueryParams, createDocument CreateDocFunction) ScrollInstance
-	GetExistingIndexPrefix(aliasName string, documentType string) (bool, string, error)
-	CreateIndex(indexName string, documentType string) error
-	UpdateAlias(aliasName string, indexName string) error
-}
-
 // there are common tests for all db implementations:
 //
 //	test 1. Index  = CreateIndexOld - UpdateAlias - GetExistingIndexPrefix - CreateIndexNew - UpdateAlias - GetExistingIndexPrefix(old -> new)

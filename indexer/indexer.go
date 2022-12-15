@@ -17,7 +17,7 @@ import (
 
 // Indexer hold all state information
 type Indexer struct {
-	db         *db.ElasticsearchDbController
+	db         db.DbController
 	grpcClient *client.AergoClientController
 
 	stream   types.AergoRPCService_ListBlockStreamClient

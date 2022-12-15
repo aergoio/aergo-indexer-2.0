@@ -1,12 +1,10 @@
 package indexer
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
-	"github.com/olivere/elastic/v7"
 )
 
 // FOR BULK INSERT
@@ -96,8 +94,7 @@ func (ns *Indexer) StopBulkChannel() {
 
 // Do Bulk Indexing
 func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize int32, batchTime time.Duration, isBlock bool) {
-	ctx := context.Background()
-	bulk := ns.db.Client.Bulk().Index(indexName)
+	bulk := ns.db.InsertBulk(indexName)
 	total := int32(0)
 	begin := time.Now()
 
@@ -143,7 +140,7 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 			}
 		}
 
-		_, err := bulk.Do(ctx)
+		err := bulk.Commit()
 
 		if sync && !isBlock {
 			ns.SynDone <- true
@@ -183,7 +180,6 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 		total++
 
 		// Only Create Indexing
-		bulk.Add(elastic.NewBulkIndexRequest().OpType("create").Id(I.Doc.GetID()).Doc(I.Doc))
-		// bulk.Add(elastic.NewBulkUpdateRequest().Id(I.Doc.GetID()).Doc(I.Doc).DocAsUpsert(true))
+		bulk.Add(I.Doc)
 	}
 }
