@@ -234,8 +234,8 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		accountTokensD = doc.ConvAccountTokens(tokenTransferD, tokenTransferD.From, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
-		// Add NFT Doc ( update NFT on Sync )
-		if tokenTransferD.TokenId != "" && info.Type == 2 { // ARC2
+		// Add NFT Doc ( update NFT on Sync only )
+		if tokenTransferD.TokenId != "" && info.Type == BlockType_Sync { // ARC2
 			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferD.TokenId)
 			// ARC2.tokenTransfer.Amount --> nftD.Account (ownerOf)
 			nftD := doc.ConvNFT(event.ContractAddress, tokenTransferD, tokenTransferD.Amount, tokenUri, imageUrl)
@@ -268,8 +268,8 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.From, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
-		// Add NFT Doc ( delete NFT on Sync )
-		if tokenTransferD.TokenId != "" && info.Type == 2 { // ARC2
+		// Add NFT Doc ( delete NFT on Sync only )
+		if tokenTransferD.TokenId != "" && info.Type == BlockType_Sync { // ARC2
 			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferD.TokenId)
 			// ARC2.tokenTransfer.Amount --> nftD.Account (ownerOf)
 			nftD := doc.ConvNFT(event.ContractAddress, tokenTransferD, tokenTransferD.Amount, tokenUri, imageUrl)
