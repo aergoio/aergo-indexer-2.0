@@ -1,7 +1,6 @@
 package indexer
 
 import (
-	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -33,7 +32,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		binary.LittleEndian.PutUint64(blockQuery, uint64(blockHeight))
 
 		for {
-			block, err = MinerGRPC.GetBlock(context.Background(), &types.SingleBytes{Value: blockQuery})
+			block, err = MinerGRPC.GetBlock(blockQuery)
 			if err != nil {
 				ns.log.Warn().Uint64("blockHeight", blockHeight).Err(err).Msg("Failed to get block")
 				time.Sleep(100 * time.Millisecond)
@@ -56,7 +55,7 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	// Get Tx doc
 	txD := doc.ConvTx(tx, blockD)
 
-	receipt, err := MinerGRPC.GetReceipt(context.Background(), &types.SingleBytes{Value: tx.GetHash()})
+	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
 	if err != nil {
 		txD.Status = "NO_RECEIPT"
 		ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")

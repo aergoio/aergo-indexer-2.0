@@ -13,7 +13,7 @@ import (
 )
 
 type AergoClientController struct {
-	types.AergoRPCServiceClient
+	client types.AergoRPCServiceClient
 }
 
 func NewAergoClient(serverAddr string, ctx context.Context) (*AergoClientController, error) {
@@ -34,6 +34,38 @@ func NewAergoClient(serverAddr string, ctx context.Context) (*AergoClientControl
 	}
 
 	return &AergoClientController{types.NewAergoRPCServiceClient(conn)}, nil
+}
+
+func (t *AergoClientController) GetBestBlock() (uint64, error) {
+	blockchain, err := t.client.Blockchain(context.Background(), &types.Empty{})
+	if err != nil {
+		return 0, err
+	}
+	return blockchain.BestHeight, nil
+}
+
+func (t *AergoClientController) GetBlock(blockQuery []byte) (*types.Block, error) {
+	block, err := t.client.GetBlock(context.Background(), &types.SingleBytes{Value: blockQuery})
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+func (t *AergoClientController) GetReceipt(txHash []byte) (*types.Receipt, error) {
+	receipt, err := t.client.GetReceipt(context.Background(), &types.SingleBytes{Value: txHash})
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
+}
+
+func (t *AergoClientController) ListBlockStream() (types.AergoRPCService_ListBlockStreamClient, error) {
+	stream, err := t.client.ListBlockStream(context.Background(), &types.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
 }
 
 func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account string, isCccvNft bool) (balance string, balanceFloat float32) {
@@ -158,7 +190,7 @@ func (t *AergoClientController) queryContract(address []byte, name string, args 
 		return "", err
 	}
 
-	result, err := t.QueryContract(context.Background(), &types.Query{
+	result, err := t.client.QueryContract(context.Background(), &types.Query{
 		ContractAddress: address,
 		Queryinfo:       queryinfoJson,
 	})

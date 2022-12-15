@@ -1,7 +1,6 @@
 package indexer
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"time"
@@ -21,20 +20,20 @@ func (ns *Indexer) OnSync(startFrom uint64, stopAt uint64) error {
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 
-	ns.lastBlockHeight = uint64(ns.GetNodeBlockHeight()) - 1
+	ns.lastBlockHeight = uint64(ns.GetBestBlockFromClient()) - 1
 
-	BestBlock, err := ns.GetBestBlockFromDb()
+	BestBlockNo, err := ns.GetBestBlockFromDb()
 	if err == nil {
-		bulk_size := int(ns.lastBlockHeight - BestBlock.BlockNo)
+		bulk_size := int(ns.lastBlockHeight - BestBlockNo)
 		switch {
 		case bulk_size <= 100:
 			// small size -> direct insert
-			ns.lastBlockHeight = BestBlock.BlockNo
+			ns.lastBlockHeight = BestBlockNo
 		case 100 < bulk_size && bulk_size < 10000:
 			// middle size -> bulk insert
 			go func() {
 				ns.StartBulkChannel()
-				ns.InsertBlocksInRange(BestBlock.BlockNo, ns.lastBlockHeight)
+				ns.InsertBlocksInRange(BestBlockNo, ns.lastBlockHeight)
 				ns.StopBulkChannel()
 			}()
 		default:
@@ -74,15 +73,15 @@ func (ns *Indexer) SleepIndexer(BlockNo uint64) {
 	for {
 		time.Sleep(5 * time.Second)
 
-		BestBlock, err := ns.GetBestBlockFromDb()
+		BestBlockNo, err := ns.GetBestBlockFromDb()
 		if err == nil {
-			if CBlockNo >= BestBlock.BlockNo {
-				ns.lastBlockHeight = BestBlock.BlockNo
+			if CBlockNo >= BestBlockNo {
+				ns.lastBlockHeight = BestBlockNo
 				fmt.Println("<------ WAKE UP ------> ", ns.lastBlockHeight)
 				return_tag = true
 				return
 			} else {
-				CBlockNo = BestBlock.BlockNo
+				CBlockNo = BestBlockNo
 			}
 		}
 		fmt.Println("X CB : ", CBlockNo)
@@ -117,8 +116,8 @@ func (ns *Indexer) StartStream() {
 
 		if time.Now().UnixNano()%10 == 0 {
 			time.Sleep(1 * time.Second)
-			BestBlock, err := ns.GetBestBlockFromDb()
-			if err == nil && BestBlock.BlockNo >= newHeight {
+			BestBlockNo, err := ns.GetBestBlockFromDb()
+			if err == nil && BestBlockNo >= newHeight {
 				ns.SleepIndexer(newHeight)
 			} else {
 				MChannel <- BlockInfo{2, newHeight}
@@ -158,7 +157,7 @@ func (ns *Indexer) StartStream() {
 func (ns *Indexer) openBlockStream() {
 	var err error
 	for {
-		ns.stream, err = ns.grpcClient.ListBlockStream(context.Background(), &types.Empty{})
+		ns.stream, err = ns.grpcClient.ListBlockStream()
 		if err != nil || ns.stream == nil {
 			ns.log.Info().Msg("Waiting open stream in 6 seconds")
 			time.Sleep(6 * time.Second)

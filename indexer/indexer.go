@@ -154,19 +154,19 @@ func (ns *Indexer) UpdateAliasForType(documentType string) {
 	}
 }
 
-// GetNodeBlockHeight updates state from db
-func (ns *Indexer) GetNodeBlockHeight() uint64 {
-	blockchain, err := ns.grpcClient.Blockchain(context.Background(), &types.Empty{})
+// GetBestBlockFromClient retrieves the current best block from the aergo client
+func (ns *Indexer) GetBestBlockFromClient() uint64 {
+	blockNo, err := ns.grpcClient.GetBestBlock()
 	if err != nil {
 		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
 		return 0
 	} else {
-		return blockchain.BestHeight
+		return blockNo
 	}
 }
 
 // GetBestBlockFromDb retrieves the current best block from the db
-func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
+func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 	block, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "block",
 		SortField: "no",
@@ -177,10 +177,10 @@ func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
 		return block
 	})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	if block == nil {
-		return nil, errors.New("best block not found")
+		return 0, errors.New("best block not found")
 	}
-	return block.(*doc.EsBlock), nil
+	return block.(*doc.EsBlock).BlockNo, nil
 }

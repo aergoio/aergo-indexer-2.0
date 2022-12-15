@@ -45,7 +45,7 @@ func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) error {
 	}
 
 	if stopAt == 0 {
-		ns.lastBlockHeight = uint64(ns.GetNodeBlockHeight()) - 1
+		ns.lastBlockHeight = ns.GetBestBlockFromClient() - 1
 	} else {
 		ns.lastBlockHeight = stopAt
 	}
