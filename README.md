@@ -139,15 +139,14 @@ Flags:
   -A, --aergo string       host and port of aergo server. Alternative to setting host and port separately.
   -E, --dburl string       Database URL (default "http://localhost:9200")
   -M, --mode string        indexer running mode. Alternative to setting check, clean, onsync separately.
-      --from int32         start syncing from this block number
-      --to int32           stop syncing at this block number
   -h, --help               help for indexer
   -H, --host string        host address of aergo server (default "localhost")
   -p, --port int32         port number of aergo server (default 7845)
-  -X, --prefix string      prefix used for index names (default "testnet_")
+  -N, --network string     network type. mainnet or testnet (default "testnet")
       --check              check and fix index "--from ~ --to" blocks
       --clean              clean unexpected data in index
-      --cluster            elasticsearch cluster mode
+      --from int32         start syncing from this block number
+      --to int32           stop syncing at this block number
       --bulk               size of bulk for batch indexing
       --batch              time limit for batch indexing
       --miner              number of processes minning blocks

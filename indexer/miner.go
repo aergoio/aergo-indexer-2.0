@@ -101,31 +101,35 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 
 	// POLICY 2 Token
 	tType := MaybeTokenCreation(tx)
-	var tokenType category.TokenType
 	switch tType {
-	case TokenCreationType_ARC1:
-		tokenType = category.ARC1
-	case TokenCreationType_ARC2:
-		tokenType = category.ARC2
-	default:
-		return
-	}
+	case TokenCreationType_ARC1, TokenCreationType_ARC2:
+		// Add Token doc
+		var tokenType category.TokenType
+		if tType == TokenCreationType_ARC1 {
+			tokenType = category.ARC1
+		} else {
+			tokenType = category.ARC2
+		}
+		name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
+		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.is_cccv_nft(receipt.ContractAddress))
+		tokenD := doc.ConvToken(txD, receipt.ContractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
+		if tokenD.Name == "" {
+			ns.insertTx(info.Type, txD)
+			return
+		}
 
-	// Add Token doc
-	name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
-	supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.is_cccv_nft(receipt.ContractAddress))
-	tokenD := doc.ConvToken(txD, receipt.ContractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
-	if tokenD.Name == "" {
+		// Add Token doc
+		ns.insertToken(info.Type, tokenD)
+
+		// Add Contract doc
+		contractD := doc.ConvContract(txD, receipt.ContractAddress)
+		ns.insertContract(info.Type, contractD)
+
+		fmt.Println(">>>>>>>>>>> POLICY 2 :", doc.EncodeAccount(receipt.ContractAddress))
+	default:
 		ns.insertTx(info.Type, txD)
 		return
 	}
-	ns.insertToken(info.Type, tokenD)
-
-	// Add Contract doc
-	contractD := doc.ConvContract(txD, receipt.ContractAddress)
-	ns.insertContract(info.Type, contractD)
-
-	fmt.Println(">>>>>>>>>>> POLICY 2 :", doc.EncodeAccount(receipt.ContractAddress))
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {

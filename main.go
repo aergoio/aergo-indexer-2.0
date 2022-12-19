@@ -21,21 +21,20 @@ var (
 		Run:   rootRun,
 	}
 
-	runMode         string
-	checkMode       bool
-	cleanMode       bool
-	host            string
-	port            int32
-	dbURL           string
-	indexNamePrefix string
-	aergoAddress    string
-	startFrom       uint64
-	stopAt          uint64
-	cluster         bool
-	batchTime       int32
-	bulkSize        int32
-	minerNum        int
-	grpcNum         int
+	runMode      string
+	checkMode    bool
+	cleanMode    bool
+	host         string
+	port         int32
+	dbURL        string
+	networkType  string
+	aergoAddress string
+	startFrom    uint64
+	stopAt       uint64
+	batchTime    int32
+	bulkSize     int32
+	minerNum     int
+	grpcNum      int
 
 	logger  *log.Logger
 	indexer *indx.Indexer
@@ -47,7 +46,7 @@ func init() {
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
-	fs.StringVarP(&indexNamePrefix, "prefix", "X", "testnet_", "prefix used for index names")
+	fs.StringVarP(&networkType, "network", "N", "testnet", "network type. mainnet or testnet")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index")
@@ -55,7 +54,6 @@ func init() {
 
 	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number")
 	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number")
-	fs.BoolVar(&cluster, "cluster", false, "cluster mode in elasticsearch")
 	fs.Int32Var(&bulkSize, "bulk", 4000, "bulk size")
 	fs.Int32Var(&batchTime, "batch", 60, "batch duration")
 	fs.IntVar(&minerNum, "miner", 32, "number of miner")
@@ -72,14 +70,19 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
-	doc.InitEsMappings(cluster)
+	var clusterMode bool
+	if networkType == "mainnet" {
+		clusterMode = true // init es mappings with cluster mode ( mainnet only )
+	}
+	doc.InitEsMappings(clusterMode)
 
 	// init indexer
 	indexer, err := indx.NewIndexer(
 		indx.SetServerAddr(getServerAddress()),
 		indx.SetDBAddr(dbURL),
+		indx.SetNetworkType(networkType),
+		indx.SetRunMode(getRunMode()),
 		indx.SetLogger(logger),
-		indx.SetIndexNamePrefix(indexNamePrefix),
 		indx.SetBulkSize(bulkSize),
 		indx.SetBatchTime(batchTime),
 		indx.SetMinerNum(minerNum),
@@ -91,7 +94,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	}
 
 	// start indexer
-	exitOnComplete := indexer.Start(getRunMode(), startFrom, stopAt)
+	exitOnComplete := indexer.Start(startFrom, stopAt)
 	if exitOnComplete == true {
 		return
 	}

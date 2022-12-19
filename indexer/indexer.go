@@ -30,6 +30,8 @@ type Indexer struct {
 
 	// config
 	log             *log.Logger
+	networkType     string
+	runMode         string
 	aliasNamePrefix string
 	indexNamePrefix string
 	lastBlockHeight uint64
@@ -49,8 +51,9 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	// set default options
 	svc := &Indexer{
 		log:             log.NewLogger(""),
+		networkType:     "",
 		aliasNamePrefix: "",
-		indexNamePrefix: generateIndexPrefix(""),
+		indexNamePrefix: "",
 		lastBlockHeight: 0,
 		startHeight:     0,
 		bulkSize:        0,
@@ -76,13 +79,17 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Initialized database connection")
 
+	// init index prefix, cccv
+	svc.initIndexPrefix()
+	svc.init_cccv_nft()
+
 	return svc, nil
 }
 
 // Start setups the indexer
-func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitOnComplete bool) {
+func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
 	var err error
-	switch runMode {
+	switch ns.runMode {
 	case "check":
 		err = ns.RunCheckIndex(startFrom, stopAt)
 		if err != nil {
@@ -96,14 +103,14 @@ func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitO
 		}
 		return true
 	case "onsync":
-		err = ns.OnSync(startFrom, stopAt)
+		err = ns.OnSync()
 		if err != nil {
 			ns.log.Warn().Err(err).Msg("Could not start indexer")
 			return true
 		}
 		return false
 	default:
-		ns.log.Warn().Str("mode", runMode).Msg("Invalid run mode")
+		ns.log.Warn().Str("mode", ns.runMode).Msg("Invalid run mode")
 		return true
 	}
 }
@@ -137,9 +144,9 @@ func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientControlle
 	return aergoClient
 }
 
-// Generate aliases of index name
-func generateIndexPrefix(aliasNamePrefix string) string {
-	return fmt.Sprintf("%s%s_", aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
+func (ns *Indexer) initIndexPrefix() {
+	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.networkType)
+	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 }
 
 // UpdateAliasForType updates aliases
