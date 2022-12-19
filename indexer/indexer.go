@@ -8,41 +8,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
-	"google.golang.org/grpc"
 )
-
-type ChanInfo struct {
-	Type uint // 0:stop_bulk, 1:add, 2:commit
-	Doc  doc.DocType
-}
-
-type ChanType struct {
-	Block         chan ChanInfo
-	Tx            chan ChanInfo
-	Name          chan ChanInfo
-	Token         chan ChanInfo
-	TokenTransfer chan ChanInfo
-	AccTokens     chan ChanInfo
-	NFT           chan ChanInfo
-}
-
-type BlockInfo struct {
-	Type   uint // 0:stop_miner, 1:bulk, 2:sync
-	Height uint64
-}
 
 // Indexer hold all state information
 type Indexer struct {
-	db         *db.ElasticsearchDbController
-	grpcClient types.AergoRPCServiceClient
+	db         db.DbController
+	grpcClient *client.AergoClientController
 
 	stream   types.AergoRPCService_ListBlockStreamClient
 	MChannel chan BlockInfo
-	BChannel ChanType
+	BChannel ChanInfoType
 	RChannel []chan BlockInfo
 	SynDone  chan bool
 	accToken sync.Map
@@ -99,59 +79,6 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	return svc, nil
 }
 
-// Generate aliases of index name
-func generateIndexPrefix(aliasNamePrefix string) string {
-	return fmt.Sprintf("%s%s_", aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
-}
-
-// UpdateAliasForType updates aliases
-func (ns *Indexer) UpdateAliasForType(documentType string) {
-	aliasName := ns.aliasNamePrefix + documentType
-	indexName := ns.indexNamePrefix + documentType
-	err := ns.db.UpdateAlias(aliasName, indexName)
-	if err != nil {
-		ns.log.Warn().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
-	} else {
-		ns.log.Info().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
-	}
-}
-
-// GetNodeBlockHeight updates state from db
-func (ns *Indexer) GetNodeBlockHeight() uint64 {
-	blockchain, err := ns.grpcClient.Blockchain(context.Background(), &types.Empty{})
-	if err != nil {
-		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
-		return 0
-	} else {
-		return blockchain.BestHeight
-	}
-}
-
-func (ns *Indexer) WaitForClient(serverAddr string) types.AergoRPCServiceClient {
-	var conn *grpc.ClientConn
-	var err error
-	for {
-		ctx := context.Background()
-		maxMsgSize := 1024 * 1024 * 10 // 10mb
-		conn, err = grpc.DialContext(ctx, serverAddr,
-			grpc.WithInsecure(),
-			grpc.WithBlock(),
-			grpc.WithTimeout(5*time.Second),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)),
-		)
-		if err == nil && conn != nil {
-			break
-		}
-
-		ns.log.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
-		time.Sleep(time.Second)
-	}
-
-	ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
-
-	return types.NewAergoRPCServiceClient(conn)
-}
-
 // Start setups the indexer
 func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitOnComplete bool) {
 	var err error
@@ -193,8 +120,53 @@ func (ns *Indexer) Stop() {
 	os.Exit(0)
 }
 
+func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientController {
+	var err error
+	ctx := context.Background()
+	var aergoClient *client.AergoClientController
+	for {
+		aergoClient, err = client.NewAergoClient(serverAddr, ctx)
+		if err == nil && aergoClient != nil {
+			break
+		}
+		ns.log.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
+		time.Sleep(time.Second)
+	}
+	ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
+
+	return aergoClient
+}
+
+// Generate aliases of index name
+func generateIndexPrefix(aliasNamePrefix string) string {
+	return fmt.Sprintf("%s%s_", aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
+}
+
+// UpdateAliasForType updates aliases
+func (ns *Indexer) UpdateAliasForType(documentType string) {
+	aliasName := ns.aliasNamePrefix + documentType
+	indexName := ns.indexNamePrefix + documentType
+	err := ns.db.UpdateAlias(aliasName, indexName)
+	if err != nil {
+		ns.log.Warn().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
+	} else {
+		ns.log.Info().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
+	}
+}
+
+// GetBestBlockFromClient retrieves the current best block from the aergo client
+func (ns *Indexer) GetBestBlockFromClient() uint64 {
+	blockNo, err := ns.grpcClient.GetBestBlock()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
+		return 0
+	} else {
+		return blockNo
+	}
+}
+
 // GetBestBlockFromDb retrieves the current best block from the db
-func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
+func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 	block, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "block",
 		SortField: "no",
@@ -205,10 +177,10 @@ func (ns *Indexer) GetBestBlockFromDb() (*doc.EsBlock, error) {
 		return block
 	})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	if block == nil {
-		return nil, errors.New("best block not found")
+		return 0, errors.New("best block not found")
 	}
-	return block.(*doc.EsBlock), nil
+	return block.(*doc.EsBlock).BlockNo, nil
 }
