@@ -79,7 +79,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Initialized database connection")
 
-	// init cccv
+	// init index prefix, cccv
+	svc.initIndexPrefix()
 	svc.init_cccv_nft()
 
 	return svc, nil
