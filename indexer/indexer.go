@@ -42,7 +42,6 @@ type Indexer struct {
 	dbAddr          string
 	serverAddr      string
 	grpcNum         int
-	cccvNFTAddress  []byte
 }
 
 // NewIndexer creates new Indexer instance
