@@ -80,6 +80,9 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Initialized database connection")
 
+	// init cccv
+	svc.init_cccv_nft()
+
 	return svc, nil
 }
 
@@ -100,7 +103,7 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 		}
 		return true
 	case "onsync":
-		err = ns.OnSync(startFrom, stopAt)
+		err = ns.OnSync()
 		if err != nil {
 			ns.log.Warn().Err(err).Msg("Could not start indexer")
 			return true

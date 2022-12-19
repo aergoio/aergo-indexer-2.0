@@ -10,7 +10,7 @@ import (
 )
 
 // Start setups the indexer
-func (ns *Indexer) OnSync(startFrom uint64, stopAt uint64) error {
+func (ns *Indexer) OnSync() error {
 	ns.CreateIndexIfNotExists("block")
 	ns.CreateIndexIfNotExists("tx")
 	ns.CreateIndexIfNotExists("name")
