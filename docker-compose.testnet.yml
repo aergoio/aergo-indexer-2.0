@@ -36,7 +36,7 @@ services:
     command: indexer
       - --aergo=testnet-api.aergo.io:7845
       - --dburl=http://es:9200
-      - --prefix=testnet_
+      - --network=testnet
       - --mode=onsync
       - --from=0
       - --to=0
@@ -44,7 +44,6 @@ services:
       - --batch=60
       - --miner=32
       - --grpc=16
-      - --cluster=false
 volumes:
   el_data:
     driver: local

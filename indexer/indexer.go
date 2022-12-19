@@ -30,6 +30,8 @@ type Indexer struct {
 
 	// config
 	log             *log.Logger
+	networkType     string
+	runMode         string
 	aliasNamePrefix string
 	indexNamePrefix string
 	lastBlockHeight uint64
@@ -40,6 +42,7 @@ type Indexer struct {
 	dbAddr          string
 	serverAddr      string
 	grpcNum         int
+	cccvNFTAddress  []byte
 }
 
 // NewIndexer creates new Indexer instance
@@ -49,8 +52,9 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	// set default options
 	svc := &Indexer{
 		log:             log.NewLogger(""),
+		networkType:     "",
 		aliasNamePrefix: "",
-		indexNamePrefix: generateIndexPrefix(""),
+		indexNamePrefix: "",
 		lastBlockHeight: 0,
 		startHeight:     0,
 		bulkSize:        0,
@@ -80,9 +84,9 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 }
 
 // Start setups the indexer
-func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitOnComplete bool) {
+func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
 	var err error
-	switch runMode {
+	switch ns.runMode {
 	case "check":
 		err = ns.RunCheckIndex(startFrom, stopAt)
 		if err != nil {
@@ -103,7 +107,7 @@ func (ns *Indexer) Start(runMode string, startFrom uint64, stopAt uint64) (exitO
 		}
 		return false
 	default:
-		ns.log.Warn().Str("mode", runMode).Msg("Invalid run mode")
+		ns.log.Warn().Str("mode", ns.runMode).Msg("Invalid run mode")
 		return true
 	}
 }
@@ -137,9 +141,9 @@ func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientControlle
 	return aergoClient
 }
 
-// Generate aliases of index name
-func generateIndexPrefix(aliasNamePrefix string) string {
-	return fmt.Sprintf("%s%s_", aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
+func (ns *Indexer) initIndexPrefix() {
+	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.networkType)
+	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 }
 
 // UpdateAliasForType updates aliases

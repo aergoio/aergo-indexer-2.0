@@ -29,10 +29,16 @@ func SetDBAddr(dbAddr string) IndexerOptionFunc {
 	}
 }
 
-func SetIndexNamePrefix(namePrefix string) IndexerOptionFunc {
+func SetNetworkType(networkType string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.aliasNamePrefix = namePrefix
-		indexer.indexNamePrefix = generateIndexPrefix(namePrefix)
+		indexer.networkType = networkType
+		return nil
+	}
+}
+
+func SetRunMode(runMode string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.runMode = runMode
 		return nil
 	}
 }
