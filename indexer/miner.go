@@ -113,23 +113,20 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.is_cccv_nft(receipt.ContractAddress))
 		tokenD := doc.ConvToken(txD, receipt.ContractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
-		if tokenD.Name == "" {
-			ns.insertTx(info.Type, txD)
-			return
+		if tokenD.Name != "" {
+			// Add Token doc
+			ns.insertToken(info.Type, tokenD)
+
+			// Add Contract doc
+			contractD := doc.ConvContract(txD, receipt.ContractAddress)
+			ns.insertContract(info.Type, contractD)
+
+			fmt.Println(">>>>>>>>>>> POLICY 2 :", doc.EncodeAccount(receipt.ContractAddress))
 		}
-
-		// Add Token doc
-		ns.insertToken(info.Type, tokenD)
-
-		// Add Contract doc
-		contractD := doc.ConvContract(txD, receipt.ContractAddress)
-		ns.insertContract(info.Type, contractD)
-
-		fmt.Println(">>>>>>>>>>> POLICY 2 :", doc.EncodeAccount(receipt.ContractAddress))
 	default:
-		ns.insertTx(info.Type, txD)
-		return
 	}
+	ns.insertTx(info.Type, txD)
+	return
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
@@ -350,7 +347,10 @@ func (ns *Indexer) insertBlock(blockType BlockType, blockD doc.EsBlock) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockD}
 	} else {
-		ns.db.Insert(blockD, ns.indexNamePrefix+"block")
+		err := ns.db.Insert(blockD, ns.indexNamePrefix+"block")
+		if err != nil {
+			ns.log.Error().Err(err).Msg("insertBlock")
+		}
 	}
 }
 
@@ -358,7 +358,10 @@ func (ns *Indexer) insertTx(blockType BlockType, txD doc.EsTx) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txD}
 	} else {
-		ns.db.Insert(txD, ns.indexNamePrefix+"tx")
+		err := ns.db.Insert(txD, ns.indexNamePrefix+"tx")
+		if err != nil {
+			ns.log.Error().Err(err).Msg("insertTx")
+		}
 	}
 }
 
@@ -372,7 +375,10 @@ func (ns *Indexer) insertContract(blockType BlockType, contractD doc.EsContract)
 			ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
 		}
 	*/
-	ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
+	err := ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
+	if err != nil {
+		ns.log.Error().Err(err).Msg("insertContract")
+	}
 }
 
 func (ns *Indexer) insertName(blockType BlockType, nameD doc.EsName) {
@@ -385,7 +391,10 @@ func (ns *Indexer) insertName(blockType BlockType, nameD doc.EsName) {
 			ns.db.Insert(nameD, ns.indexNamePrefix+"name")
 		}
 	*/
-	ns.db.Insert(nameD, ns.indexNamePrefix+"name")
+	err := ns.db.Insert(nameD, ns.indexNamePrefix+"name")
+	if err != nil {
+		ns.log.Error().Err(err).Msg("insertName")
+	}
 }
 
 func (ns *Indexer) insertToken(blockType BlockType, tokenD doc.EsToken) {
@@ -396,7 +405,10 @@ func (ns *Indexer) insertToken(blockType BlockType, tokenD doc.EsToken) {
 			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 		}
 	*/
-	ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
+	err := ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
+	if err != nil {
+		ns.log.Error().Err(err).Msg("insertToken")
+	}
 }
 
 func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.EsAccountTokens) {
@@ -410,7 +422,10 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.E
 			ns.accToken.Store(accountTokensD.Id, true)
 		}
 	} else {
-		ns.db.Insert(accountTokensD, ns.indexNamePrefix+"account_tokens")
+		err := ns.db.Insert(accountTokensD, ns.indexNamePrefix+"account_tokens")
+		if err != nil {
+			ns.log.Error().Err(err).Msg("insertAccountTokens")
+		}
 	}
 }
 
@@ -418,7 +433,10 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferD doc.E
 	if blockType == BlockType_Bulk {
 		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferD}
 	} else {
-		ns.db.Insert(tokenTransferD, ns.indexNamePrefix+"token_transfer")
+		err := ns.db.Insert(tokenTransferD, ns.indexNamePrefix+"token_transfer")
+		if err != nil {
+			ns.log.Error().Err(err).Msg("insertTokenTransfer")
+		}
 	}
 }
 
@@ -426,7 +444,10 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftD doc.EsNFT) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, nftD}
 	} else {
-		ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
+		err := ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
+		if err != nil {
+			ns.log.Error().Err(err).Msg("insertNFT")
+		}
 	}
 }
 
@@ -438,5 +459,8 @@ func (ns *Indexer) updateToken(tokenD doc.EsTokenUp, contractAddress []byte) {
 			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 		}
 	*/
-	ns.db.Update(tokenD, ns.indexNamePrefix+"token", doc.EncodeAccount(contractAddress))
+	err := ns.db.Update(tokenD, ns.indexNamePrefix+"token", doc.EncodeAccount(contractAddress))
+	if err != nil {
+		ns.log.Error().Err(err).Msg("updateToken")
+	}
 }

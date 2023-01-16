@@ -21,6 +21,8 @@ func (ns *Indexer) RunCleanIndex() error {
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 
+	ns.init_cccv_nft()
+
 	// 1. get token list
 	scrollToken := ns.db.Scroll(db.QueryParams{
 		IndexName:    ns.indexNamePrefix + "token",

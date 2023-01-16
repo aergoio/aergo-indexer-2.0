@@ -20,6 +20,8 @@ func (ns *Indexer) OnSync() error {
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 
+	ns.init_cccv_nft()
+
 	ns.lastBlockHeight = uint64(ns.GetBestBlockFromClient()) - 1
 
 	BestBlockNo, err := ns.GetBestBlockFromDb()

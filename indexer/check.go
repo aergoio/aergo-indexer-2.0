@@ -33,6 +33,8 @@ func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) error {
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 
+	ns.init_cccv_nft()
+
 	if stopAt == 0 {
 		ns.lastBlockHeight = ns.GetBestBlockFromClient() - 1
 	} else {
