@@ -442,7 +442,7 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferD doc.E
 
 func (ns *Indexer) insertNFT(blockType BlockType, nftD doc.EsNFT) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, nftD}
+		ns.BChannel.NFT <- ChanInfo{ChanType_Add, nftD}
 	} else {
 		err := ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
 		if err != nil {
