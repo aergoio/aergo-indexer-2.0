@@ -57,7 +57,7 @@ func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool 
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
-	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Do(context.Background())
+	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Upsert(document).Do(context.Background())
 	return err
 }
 
