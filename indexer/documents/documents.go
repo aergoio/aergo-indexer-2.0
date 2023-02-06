@@ -147,6 +147,16 @@ type EsContract struct {
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
+// EsAccountTokens is meta data of a token of an account. The id is account_token address.
+type EsAccountBalance struct {
+	*BaseEsType
+	BlockNo      uint64  `json:"blockno" db:"blockno"`
+	Balance      string  `json:"balance" db:"balance"`
+	BalanceFloat float32 `json:"balance_float" db:"balance_float"`
+	Staking      string  `json:"staking" db:"staking"`
+	StakingFloat float32 `json:"staking_float" db:"staking_float"`
+}
+
 var EsMappings map[string]string
 
 func InitEsMappings(clusterMode bool) {
@@ -412,6 +422,34 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
+			"account_balance": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"id": {
+							"type": "keyword"
+						},
+						"blockno": {
+							"type": "long"
+						},
+						"balance": {
+							"type": "keyword"
+						},
+						"balance_float": {
+							"type": "float"
+						},
+						"staking": {
+							"type": "keyword"
+						},
+						"staking_float": {
+							"type": "float"
+						}
+					}
+				}
+			}`,
 		}
 	} else {
 		EsMappings = map[string]string{
@@ -671,6 +709,34 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"ts": {
 							"type": "date"
+						}
+					}
+				}
+			}`,
+			"account_balance": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"id": {
+							"type": "keyword"
+						},
+						"blockno": {
+							"type": "long"
+						},
+						"balance": {
+							"type": "keyword"
+						},
+						"balance_float": {
+							"type": "float"
+						},
+						"staking": {
+							"type": "keyword"
+						},
+						"staking_float": {
+							"type": "float"
 						}
 					}
 				}

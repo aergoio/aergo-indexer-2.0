@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -87,6 +88,12 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 		return
 	}
 
+	// Balance from, to
+	ns.MinerBalance(info, tx.Body.Account, MinerGRPC)
+	if bytes.Equal(tx.Body.Account, tx.Body.Recipient) != true {
+		ns.MinerBalance(info, tx.Body.Recipient, MinerGRPC)
+	}
+
 	// Contract Deploy
 	if txD.Category == category.Deploy {
 		contractD := doc.ConvContract(txD, receipt.ContractAddress)
@@ -127,6 +134,13 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	}
 	ns.insertTx(info.Type, txD)
 	return
+}
+
+func (ns *Indexer) MinerBalance(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
+	if balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address); balanceFloat > 0 {
+		balanceFromD := doc.ConvAccountBalance(info.Height, address, balance, balanceFloat, staking, stakingFloat)
+		ns.insertAccountBalance(info.Type, balanceFromD)
+	}
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
@@ -189,8 +203,8 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync {
 			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.is_cccv_nft(event.ContractAddress))
-			tokenUpD := doc.ConvTokenUp(supply, supplyFloat)
-			ns.updateToken(tokenUpD, event.ContractAddress)
+			tokenUpD := doc.ConvTokenUp(txD, event.ContractAddress, supply, supplyFloat)
+			ns.updateToken(tokenUpD)
 		}
 
 		// Add AccountTokens Doc ( update TO-Account )
@@ -260,8 +274,8 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync {
 			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.is_cccv_nft(event.ContractAddress))
-			tokenUpD := doc.ConvTokenUp(supply, supplyFloat)
-			ns.updateToken(tokenUpD, event.ContractAddress)
+			tokenUpD := doc.ConvTokenUp(txD, event.ContractAddress, supply, supplyFloat)
+			ns.updateToken(tokenUpD)
 		}
 
 		// Add AccountTokens Doc ( update FROM-Account )
@@ -429,6 +443,20 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.E
 	}
 }
 
+func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceD doc.EsAccountBalance) {
+	/*
+		if blockType == BlockType_Bulk {
+			ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, balanceD}
+		} else {
+			ns.db.Insert(balanceD, ns.indexNamePrefix+"account_balance")
+		}
+	*/
+	err := ns.db.Update(balanceD, ns.indexNamePrefix+"account_balance", balanceD.Id)
+	if err != nil {
+		ns.log.Error().Err(err).Msg("insertAccountBalance")
+	}
+}
+
 func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferD doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferD}
@@ -451,7 +479,7 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftD doc.EsNFT) {
 	}
 }
 
-func (ns *Indexer) updateToken(tokenD doc.EsTokenUp, contractAddress []byte) {
+func (ns *Indexer) updateToken(tokenD doc.EsTokenUp) {
 	/*
 		if blockType == BlockType_Bulk {
 			ns.BChannel.Token <- ChanInfo{ChanType_Add, tokenD}
@@ -459,7 +487,7 @@ func (ns *Indexer) updateToken(tokenD doc.EsTokenUp, contractAddress []byte) {
 			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 		}
 	*/
-	err := ns.db.Update(tokenD, ns.indexNamePrefix+"token", doc.EncodeAccount(contractAddress))
+	err := ns.db.Update(tokenD, ns.indexNamePrefix+"token", tokenD.Id)
 	if err != nil {
 		ns.log.Error().Err(err).Msg("updateToken")
 	}

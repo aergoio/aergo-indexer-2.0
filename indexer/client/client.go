@@ -68,6 +68,42 @@ func (t *AergoClientController) ListBlockStream() (types.AergoRPCService_ListBlo
 	return stream, nil
 }
 
+func (t *AergoClientController) BalanceOf(address []byte) (balance string, balanceFloat float32, stake string, stakeFloat float32) {
+	// get unstake balance
+	unstaking, err := t.client.GetState(context.Background(), &types.SingleBytes{Value: address})
+	if err != nil {
+		return "0", 0, "0", 0
+	}
+	bigUnstaking := big.NewInt(0).SetBytes(unstaking.GetBalance())
+
+	// get stake balance
+	staking, err := t.client.GetStaking(context.Background(), &types.AccountAddress{Value: address})
+	if err != nil {
+		return "0", 0, "0", 0
+	}
+	bigStaking := big.NewInt(0).SetBytes(staking.GetAmount())
+	stake = bigStaking.String()
+
+	// make total balance
+	bigTotal := big.NewInt(0).Add(bigUnstaking, bigStaking)
+	balance = bigTotal.String()
+
+	// make float
+	if BalanceFloat, err := strconv.ParseFloat(balance, 32); err == nil {
+		balanceFloat = float32(BalanceFloat)
+	} else {
+		balanceFloat = 0
+		balance = "0"
+	}
+	if StakeFloat, err := strconv.ParseFloat(stake, 32); err == nil {
+		stakeFloat = float32(StakeFloat)
+	} else {
+		stakeFloat = 0
+		stake = "0"
+	}
+	return balance, balanceFloat, stake, stakeFloat
+}
+
 func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account string, isCccvNft bool) (balance string, balanceFloat float32) {
 	var err error
 	if isCccvNft == true {

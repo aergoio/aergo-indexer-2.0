@@ -19,6 +19,7 @@ func (ns *Indexer) OnSync() error {
 	ns.CreateIndexIfNotExists("token_transfer")
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
+	ns.CreateIndexIfNotExists("account_balance")
 
 	ns.init_cccv_nft()
 

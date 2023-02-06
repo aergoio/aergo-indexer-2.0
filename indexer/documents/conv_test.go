@@ -97,16 +97,31 @@ func TestConvContract(t *testing.T) {
 }
 
 func TestConvTokenUp(t *testing.T) {
-	fn_test := func(supply string, supplyFloat float32, esTokenUpExpect EsTokenUp) {
-		esTokenUpConv := ConvTokenUp(supply, supplyFloat)
+	fn_test := func(esTx EsTx, contractAddress string, supply string, supplyFloat float32, esTokenUpExpect EsTokenUp) {
+		address, _ := types.DecodeAddress(contractAddress)
+		esTokenUpConv := ConvTokenUp(esTx, address, supply, supplyFloat)
 		require.Equal(t, esTokenUpExpect, esTokenUpConv)
 	}
 
-	fn_test("1", 1, EsTokenUp{
+	fn_test(EsTx{
+		BaseEsType: &BaseEsType{Id: base58.Encode([]byte("5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u"))},
+		Timestamp:  time.Unix(0, 1668652376002288214),
+		BlockNo:    95022525,
+		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
+		Category:   category.Call,
+	}, "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", "1", 1, EsTokenUp{
+		BaseEsType:  &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
 		Supply:      "1",
 		SupplyFloat: 1,
 	})
-	fn_test("100000000000000", 100000000000000, EsTokenUp{
+	fn_test(EsTx{
+		BaseEsType: &BaseEsType{Id: base58.Encode([]byte("5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u"))},
+		Timestamp:  time.Unix(0, 1668652376002288214),
+		BlockNo:    95022525,
+		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
+		Category:   category.Call,
+	}, "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", "100000000000000", 100000000000000, EsTokenUp{
+		BaseEsType:  &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
 		Supply:      "100000000000000",
 		SupplyFloat: 100000000000000,
 	})
