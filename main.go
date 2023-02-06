@@ -21,20 +21,21 @@ var (
 		Run:   rootRun,
 	}
 
-	runMode      string
-	checkMode    bool
-	cleanMode    bool
-	host         string
-	port         int32
-	dbURL        string
-	networkType  string
-	aergoAddress string
-	startFrom    uint64
-	stopAt       uint64
-	batchTime    int32
-	bulkSize     int32
-	minerNum     int
-	grpcNum      int
+	runMode          string
+	checkMode        bool
+	cleanMode        bool
+	host             string
+	port             int32
+	dbURL            string
+	networkType      string
+	aergoAddress     string
+	startFrom        uint64
+	stopAt           uint64
+	batchTime        int32
+	bulkSize         int32
+	minerNum         int
+	grpcNum          int
+	addressWhiteList []string
 
 	logger  *log.Logger
 	indexer *indx.Indexer
@@ -51,13 +52,14 @@ func init() {
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index")
 	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, clean, onsync separately.")
-
 	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number")
 	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number")
 	fs.Int32Var(&bulkSize, "bulk", 4000, "bulk size")
 	fs.Int32Var(&batchTime, "batch", 60, "batch duration")
 	fs.IntVar(&minerNum, "miner", 32, "number of miner")
 	fs.IntVar(&grpcNum, "grpc", 16, "number of miner")
+
+	fs.StringArrayVarP(&addressWhiteList, "whitelist", "W", []string{}, "address whitelist for indexing balance")
 }
 
 func main() {
@@ -87,6 +89,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indx.SetBatchTime(batchTime),
 		indx.SetMinerNum(minerNum),
 		indx.SetGrpcNum(grpcNum),
+		indx.SetWhiteList(addressWhiteList),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
