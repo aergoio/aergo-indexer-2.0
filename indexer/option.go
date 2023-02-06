@@ -77,3 +77,10 @@ func SetGrpcNum(grpcNum int) IndexerOptionFunc {
 		return nil
 	}
 }
+
+func SetWhiteList(whiteList []string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.whiteList = whiteList
+		return nil
+	}
+}

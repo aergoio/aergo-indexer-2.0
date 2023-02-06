@@ -42,6 +42,7 @@ type Indexer struct {
 	dbAddr          string
 	serverAddr      string
 	grpcNum         int
+	whiteList       []string
 }
 
 // NewIndexer creates new Indexer instance
