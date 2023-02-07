@@ -2,9 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/binary"
-	"fmt"
-	"math/big"
 	"testing"
 
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -14,36 +11,6 @@ import (
 const (
 	AergoServerAddress = "testnet-api.aergo.io:7845" // testnet
 )
-
-func TestQuery_AccountInfo(t *testing.T) {
-	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
-	require.NoError(t, err)
-
-	blockHeight, _ := grpcClient.GetBestBlock()
-
-	blockQuery := make([]byte, 8)
-	binary.LittleEndian.PutUint64(blockQuery, uint64(blockHeight))
-
-	// balance, balanceFloat := grpcClient.client.QueryContract(nil, "AmPUAZw3omgiA8gQHFceFUusfj4M9eVwAtRXQShbQThvF5KDN4Ej", false)
-	// fmt.Println(balance, balanceFloat)
-
-	decodedAddr, _ := types.DecodeAddress("AmQLSEi7oeW9LztxGa8pXKQDrenzK2JdDrXsJoCAh6PXyzdBtnVJ")
-	state, err := grpcClient.client.GetState(context.Background(), &types.SingleBytes{Value: decodedAddr})
-	require.NoError(t, err)
-
-	// grpcClient.client.GetBlockMetadata()
-	fmt.Println(state.String())
-	bigBalance := big.NewInt(0).SetBytes(state.Balance)
-	fmt.Println("unstake :", bigBalance.String())
-
-	staking, err := grpcClient.client.GetStaking(context.Background(), &types.AccountAddress{Value: decodedAddr})
-	require.NoError(t, err)
-
-	bigStake := big.NewInt(0).SetBytes(staking.Amount)
-	fmt.Println("stake :", bigStake.String())
-
-	fmt.Println("total :", big.NewInt(0).Add(bigBalance, bigStake).String())
-}
 
 func TestQuery_TokenInfo(t *testing.T) {
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
@@ -113,6 +80,36 @@ func TestQuery_NFTMetadata(t *testing.T) {
 
 // TODO: Not able to test Changing Value ( amount, balance, owner, etc. )
 /*
+	func TestQuery_AccountInfo(t *testing.T) {
+		grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
+		require.NoError(t, err)
+
+		blockHeight, _ := grpcClient.GetBestBlock()
+
+		blockQuery := make([]byte, 8)
+		binary.LittleEndian.PutUint64(blockQuery, uint64(blockHeight))
+
+		// balance, balanceFloat := grpcClient.client.QueryContract(nil, "AmPUAZw3omgiA8gQHFceFUusfj4M9eVwAtRXQShbQThvF5KDN4Ej", false)
+		// fmt.Println(balance, balanceFloat)
+
+		decodedAddr, _ := types.DecodeAddress("AmQLSEi7oeW9LztxGa8pXKQDrenzK2JdDrXsJoCAh6PXyzdBtnVJ")
+		state, err := grpcClient.client.GetState(context.Background(), &types.SingleBytes{Value: decodedAddr})
+		require.NoError(t, err)
+
+		// grpcClient.client.GetBlockMetadata()
+		fmt.Println(state.String())
+		bigBalance := big.NewInt(0).SetBytes(state.Balance)
+		fmt.Println("unstake :", bigBalance.String())
+
+		staking, err := grpcClient.client.GetStaking(context.Background(), &types.AccountAddress{Value: decodedAddr})
+		require.NoError(t, err)
+
+		bigStake := big.NewInt(0).SetBytes(staking.Amount)
+		fmt.Println("stake :", bigStake.String())
+
+		fmt.Println("total :", big.NewInt(0).Add(bigBalance, bigStake).String())
+	}
+
 	func TestQuery_TotalSupply(t *testing.T) {
 		grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 		require.NoError(t, err)
