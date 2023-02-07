@@ -189,4 +189,4 @@ When reindexing, this creates new indices to sync the blockchain from scratch.
 
     docker compose -p aergo_indexer -f docker-compose.testnet.yml up
 
-[Automatic latest build from master on Docker Hub](http://hub.docker.com/r/aergo/indexer)
+[Automatic latest build from master on Docker Hub](https://hub.docker.com/r/aergo/indexer2)
