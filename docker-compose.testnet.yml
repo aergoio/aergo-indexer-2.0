@@ -18,21 +18,41 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
-  # kibana:
-  #   image: docker.elastic.co/kibana/kibana:7.15.2
-  #   container_name: kibana
-  #   ports:
-  #     - 5601:5601
-  #   environment: 
-  #     ELASTICSEARCH_URL: http://es:9200
-  #     ELASTICSEARCH_HOSTS: http://es:9200
-  indexer:
-    container_name: indexer
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.15.2
+    container_name: kibana
+    ports:
+       - 5601:5601
+    environment: 
+      ELASTICSEARCH_URL: http://es:9200
+      ELASTICSEARCH_HOSTS: http://es:9200
+  indexer_check:
+    container_name: indexer_check
+    ports:
+     - 8001:8001
+    build:
+     context: ./
+     dockerfile: Dockerfile
+    image: indexer
+    command: indexer
+      - --aergo=testnet-api.aergo.io:7845
+      - --dburl=http://es:9200
+      - --network=testnet
+      - --mode=check
+      - --from=0
+      - --to=0
+      - --bulk=4000
+      - --batch=60
+      - --miner=32
+      - --grpc=16
+  indexer_onsync:
+    container_name: indexer_onsync
     ports:
      - 8000:8000
     build:
      context: ./
      dockerfile: Dockerfile
+    image: indexer
     command: indexer
       - --aergo=testnet-api.aergo.io:7845
       - --dburl=http://es:9200
@@ -40,7 +60,7 @@ services:
       - --mode=onsync
       - --from=0
       - --to=0
-      - --bulk=4000
+      - --bulk=800
       - --batch=60
       - --miner=32
       - --grpc=16
