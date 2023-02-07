@@ -35,6 +35,7 @@ var (
 	bulkSize               int32
 	minerNum               int
 	grpcNum                int
+	whiteLists             string
 	whiteListAddress       []string
 	whiteListBlockInterval uint64
 
@@ -60,7 +61,7 @@ func init() {
 	fs.IntVar(&minerNum, "miner", 32, "number of miner")
 	fs.IntVar(&grpcNum, "grpc", 16, "number of miner")
 
-	fs.StringArrayVarP(&whiteListAddress, "whitelist_address", "W", []string{}, "address for indexing whitelist balance, onsync only")
+	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for indexing whitelist balance, onsync only")
 	fs.Uint64VarP(&whiteListBlockInterval, "whitelist_block_interval", "B", 1000, "block interval for indexing whitelist balance, onsync only")
 }
 
@@ -79,6 +80,12 @@ func rootRun(cmd *cobra.Command, args []string) {
 		clusterMode = true // init es mappings with cluster mode ( mainnet only )
 	}
 	doc.InitEsMappings(clusterMode)
+
+	fmt.Println(whiteLists)
+	fmt.Println(whiteListAddress)
+	for _, a := range whiteListAddress {
+		fmt.Printf("addresses : [%v]\n", a)
+	}
 
 	// init indexer
 	indexer, err := indx.NewIndexer(
