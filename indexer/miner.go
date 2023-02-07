@@ -86,6 +86,12 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 		return
 	}
 
+	// Balance from, to
+	ns.MinerBalance(info, tx.Body.Account, MinerGRPC)
+	if bytes.Equal(tx.Body.Account, tx.Body.Recipient) != true {
+		ns.MinerBalance(info, tx.Body.Recipient, MinerGRPC)
+	}
+
 	// Process Token and TokenTransfer
 	switch txD.Category {
 	case category.Call:
@@ -95,12 +101,6 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	default:
 		ns.insertTx(info.Type, txD)
 		return
-	}
-
-	// Balance from, to
-	ns.MinerBalance(info, tx.Body.Account, MinerGRPC)
-	if bytes.Equal(tx.Body.Account, tx.Body.Recipient) != true {
-		ns.MinerBalance(info, tx.Body.Recipient, MinerGRPC)
 	}
 
 	// Contract Deploy
