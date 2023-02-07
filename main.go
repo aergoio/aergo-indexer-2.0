@@ -21,21 +21,22 @@ var (
 		Run:   rootRun,
 	}
 
-	runMode          string
-	checkMode        bool
-	cleanMode        bool
-	host             string
-	port             int32
-	dbURL            string
-	networkType      string
-	aergoAddress     string
-	startFrom        uint64
-	stopAt           uint64
-	batchTime        int32
-	bulkSize         int32
-	minerNum         int
-	grpcNum          int
-	addressWhiteList []string
+	runMode                string
+	checkMode              bool
+	cleanMode              bool
+	host                   string
+	port                   int32
+	dbURL                  string
+	networkType            string
+	aergoAddress           string
+	startFrom              uint64
+	stopAt                 uint64
+	batchTime              int32
+	bulkSize               int32
+	minerNum               int
+	grpcNum                int
+	whiteListAddress       []string
+	whiteListBlockInterval uint64
 
 	logger  *log.Logger
 	indexer *indx.Indexer
@@ -59,7 +60,8 @@ func init() {
 	fs.IntVar(&minerNum, "miner", 32, "number of miner")
 	fs.IntVar(&grpcNum, "grpc", 16, "number of miner")
 
-	fs.StringArrayVarP(&addressWhiteList, "whitelist", "W", []string{}, "address whitelist for indexing balance")
+	fs.StringArrayVarP(&whiteListAddress, "whitelist_address", "W", []string{}, "address for indexing whitelist balance, onsync only")
+	fs.Uint64VarP(&whiteListBlockInterval, "whitelist_block_interval", "B", 1000, "block interval for indexing whitelist balance, onsync only")
 }
 
 func main() {
@@ -89,7 +91,8 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indx.SetBatchTime(batchTime),
 		indx.SetMinerNum(minerNum),
 		indx.SetGrpcNum(grpcNum),
-		indx.SetWhiteList(addressWhiteList),
+		indx.SetWhiteListAddresses(whiteListAddress),
+		indx.SetWhiteListBlockInterval(whiteListBlockInterval),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")

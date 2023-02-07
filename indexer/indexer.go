@@ -29,20 +29,21 @@ type Indexer struct {
 	peerId   sync.Map
 
 	// config
-	log             *log.Logger
-	networkType     string
-	runMode         string
-	aliasNamePrefix string
-	indexNamePrefix string
-	lastBlockHeight uint64
-	startHeight     uint64
-	bulkSize        int32
-	batchTime       time.Duration
-	minerNum        int
-	dbAddr          string
-	serverAddr      string
-	grpcNum         int
-	whiteList       []string
+	log                    *log.Logger
+	networkType            string
+	runMode                string
+	aliasNamePrefix        string
+	indexNamePrefix        string
+	lastBlockHeight        uint64
+	startHeight            uint64
+	bulkSize               int32
+	batchTime              time.Duration
+	minerNum               int
+	dbAddr                 string
+	serverAddr             string
+	grpcNum                int
+	whiteListAddresses     []string
+	whiteListBlockInterval uint64
 }
 
 // NewIndexer creates new Indexer instance

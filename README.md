@@ -101,8 +101,8 @@ id              string      account address
 blockno         uint64      last updated block number
 balance         string      Precise BigInt string representation of aergo total balance
 balance_float   float32     Imprecise float representation of aergo total balance, useful for sorting
-staking           string      Precise BigInt string representation of aergo staking
-staking_float     float32     Imprecise float representation of aergo staking, useful for sorting
+staking         string      Precise BigInt string representation of aergo staking
+staking_float   float32     Imprecise float representation of aergo staking, useful for sorting
 ```
 
 account_tokens
