@@ -35,7 +35,6 @@ var (
 	bulkSize               int32
 	minerNum               int
 	grpcNum                int
-	whiteLists             string
 	whiteListAddress       []string
 	whiteListBlockInterval uint64
 
@@ -80,12 +79,6 @@ func rootRun(cmd *cobra.Command, args []string) {
 		clusterMode = true // init es mappings with cluster mode ( mainnet only )
 	}
 	doc.InitEsMappings(clusterMode)
-
-	fmt.Println(whiteLists)
-	fmt.Println(whiteListAddress)
-	for _, a := range whiteListAddress {
-		fmt.Printf("addresses : [%v]\n", a)
-	}
 
 	// init indexer
 	indexer, err := indx.NewIndexer(
