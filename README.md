@@ -8,9 +8,10 @@ This creates the indices,
    3. `name` (with a prefix)
    4. `token`
    5. `token_transfer`
-   6. `account_tokens`
-   7. `nft`
-   8. `contract`
+   6. `account_balance`
+   7. `account_tokens`
+   8. `nft`
+   9. `contract`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -87,10 +88,21 @@ name            string      token name
 name_lower      string      token name lowercase, useful to case-insensitive search
 symbol          string      token symbol
 symbol_lower    string      token symbol lowercase, useful to case-insensitive search
-token_tranefers uint64      number of token transfers
+token_transfers uint64      number of token transfers
 decimals        uint8       decimals of token
 supply          string      Precise BigInt string representation of total supply 
 supply_float    float32     Imprecise float representation of amount, useful for sorting
+```
+
+account_balance
+```
+Field           Type        Comment
+id              string      account address
+blockno         uint64      last updated block number
+balance         string      Precise BigInt string representation of aergo total balance
+balance_float   float32     Imprecise float representation of aergo total balance, useful for sorting
+staking         string      Precise BigInt string representation of aergo staking
+staking_float   float32     Imprecise float representation of aergo staking, useful for sorting
 ```
 
 account_tokens

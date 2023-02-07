@@ -77,3 +77,17 @@ func SetGrpcNum(grpcNum int) IndexerOptionFunc {
 		return nil
 	}
 }
+
+func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.whiteListAddresses = whiteListAddresses
+		return nil
+	}
+}
+
+func SetWhiteListBlockInterval(whiteListBlockInterval uint64) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.whiteListBlockInterval = whiteListBlockInterval
+		return nil
+	}
+}

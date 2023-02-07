@@ -65,8 +65,9 @@ func ConvContract(txDoc EsTx, contractAddress []byte) EsContract {
 }
 
 // ConvContractCreateTx creates document for token creation
-func ConvTokenUp(supply string, supplyFloat float32) EsTokenUp {
+func ConvTokenUp(txDoc EsTx, contractAddress []byte, supply string, supplyFloat float32) EsTokenUp {
 	return EsTokenUp{
+		BaseEsType:  &BaseEsType{Id: EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Supply:      supply,
 		SupplyFloat: supplyFloat,
 	}
@@ -161,6 +162,17 @@ func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, ba
 		Type:         tokenType,
 		Balance:      balance,
 		BalanceFloat: balanceFloat,
+	}
+}
+
+func ConvAccountBalance(blockNo uint64, address []byte, balance string, balanceFloat float32, staking string, stakingFloat float32) EsAccountBalance {
+	return EsAccountBalance{
+		BaseEsType:   &BaseEsType{Id: EncodeAndResolveAccount(address, blockNo)},
+		BlockNo:      blockNo,
+		Balance:      balance,
+		BalanceFloat: balanceFloat,
+		Staking:      staking,
+		StakingFloat: stakingFloat,
 	}
 }
 
