@@ -146,10 +146,9 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 }
 
 func (ns *Indexer) MinerBalance(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
-	if balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address); balanceFloat > 0 {
-		balanceFromD := doc.ConvAccountBalance(info.Height, address, balance, balanceFloat, staking, stakingFloat)
-		ns.insertAccountBalance(info.Type, balanceFromD)
-	}
+	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
+	balanceFromD := doc.ConvAccountBalance(info.Height, address, balance, balanceFloat, staking, stakingFloat)
+	ns.insertAccountBalance(info.Type, balanceFromD)
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
@@ -453,14 +452,13 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.E
 }
 
 func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceD doc.EsAccountBalance) {
-	/*
-		if blockType == BlockType_Bulk {
-			ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, balanceD}
-		} else {
-			ns.db.Insert(balanceD, ns.indexNamePrefix+"account_balance")
-		}
-	*/
-	err := ns.db.Update(balanceD, ns.indexNamePrefix+"account_balance", balanceD.Id)
+	var err error
+	exist := ns.db.Exists(ns.indexNamePrefix+"account_balance", balanceD.Id)
+	if exist { // 기존에 존재하는 주소라면 잔고에 상관없이 update
+		err = ns.db.Update(balanceD, ns.indexNamePrefix+"account_balance", balanceD.Id)
+	} else if balanceD.BalanceFloat > 0 { // 처음 발견된 주소라면 잔고 > 0 일 때만 insert
+		err = ns.db.Insert(balanceD, ns.indexNamePrefix+"account_balance")
+	}
 	if err != nil {
 		ns.log.Error().Err(err).Msg("insertAccountBalance")
 	}
