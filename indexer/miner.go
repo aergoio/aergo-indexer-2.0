@@ -10,6 +10,7 @@ import (
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -452,9 +453,27 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.E
 }
 
 func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceD doc.EsAccountBalance) {
-	var err error
-	exist := ns.db.Exists(ns.indexNamePrefix+"account_balance", balanceD.Id)
-	if exist { // 기존에 존재하는 주소라면 잔고에 상관없이 update
+	document, err := ns.db.SelectOne(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_balance",
+		StringMatch: &db.StringMatchQuery{
+			Field: "_id",
+			Value: balanceD.Id,
+		},
+	}, func() doc.DocType {
+		balance := new(doc.EsAccountBalance)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	if err != nil {
+		ns.log.Error().Err(err).Msg("insertAccountBalance")
+	}
+
+	if document != nil { // 기존에 존재하는 주소라면 잔고에 상관없이 update
+		accountBalance := document.(*doc.EsAccountBalance)
+		if balanceD.BlockNo < accountBalance.BlockNo { // blockNo, timeStamp 는 최신으로 저장
+			balanceD.BlockNo = accountBalance.BlockNo
+			balanceD.Timestamp = accountBalance.Timestamp
+		}
 		err = ns.db.Update(balanceD, ns.indexNamePrefix+"account_balance", balanceD.Id)
 	} else if balanceD.BalanceFloat > 0 { // 처음 발견된 주소라면 잔고 > 0 일 때만 insert
 		err = ns.db.Insert(balanceD, ns.indexNamePrefix+"account_balance")

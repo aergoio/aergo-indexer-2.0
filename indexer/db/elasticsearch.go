@@ -94,8 +94,20 @@ func (esdb *ElasticsearchDbController) Count(params QueryParams) (int64, error) 
 
 // SelectOne selects a single document
 func (esdb *ElasticsearchDbController) SelectOne(params QueryParams, createDocument CreateDocFunction) (doc.DocType, error) {
-	query := elastic.NewMatchAllQuery()
-	res, err := esdb.client.Search().Index(params.IndexName).Query(query).Sort(params.SortField, params.SortAsc).From(params.From).Size(1).Do(context.Background())
+	service := esdb.client.Search().Index(params.IndexName)
+	if params.IntegerRange != nil {
+		query := elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
+		service = service.Query(query)
+	}
+	if params.StringMatch != nil {
+		query := elastic.NewMatchQuery(params.StringMatch.Field, params.StringMatch.Value)
+		service = service.Query(query)
+	}
+	if params.SortField != "" {
+		service = service.Sort(params.SortField, params.SortAsc).From(params.From)
+	}
+
+	res, err := service.Size(1).Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
