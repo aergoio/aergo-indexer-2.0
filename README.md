@@ -98,6 +98,7 @@ account_balance
 ```
 Field           Type        Comment
 id              string      account address
+ts              timestamp   last updated timestamp (unixnano)
 blockno         uint64      last updated block number
 balance         string      Precise BigInt string representation of aergo total balance
 balance_float   float32     Imprecise float representation of aergo total balance, useful for sorting

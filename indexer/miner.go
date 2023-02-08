@@ -54,7 +54,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		if ns.runMode == "onsync" && blockHeight%ns.whiteListBlockInterval == 0 {
 			for _, w := range ns.whiteListAddresses {
 				if addr, err := types.DecodeAddress(w); err == nil {
-					ns.MinerBalance(info, addr, MinerGRPC)
+					ns.MinerBalance(info, blockD, addr, MinerGRPC)
 				}
 			}
 		}
@@ -87,9 +87,9 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	}
 
 	// Balance from, to
-	ns.MinerBalance(info, tx.Body.Account, MinerGRPC)
+	ns.MinerBalance(info, blockD, tx.Body.Account, MinerGRPC)
 	if bytes.Equal(tx.Body.Account, tx.Body.Recipient) != true {
-		ns.MinerBalance(info, tx.Body.Recipient, MinerGRPC)
+		ns.MinerBalance(info, blockD, tx.Body.Recipient, MinerGRPC)
 	}
 
 	// Process Token and TokenTransfer
@@ -145,9 +145,9 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	return
 }
 
-func (ns *Indexer) MinerBalance(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerBalance(info BlockInfo, blockD doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
 	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
-	balanceFromD := doc.ConvAccountBalance(info.Height, address, balance, balanceFloat, staking, stakingFloat)
+	balanceFromD := doc.ConvAccountBalance(info.Height, address, blockD.Timestamp, balance, balanceFloat, staking, stakingFloat)
 	ns.insertAccountBalance(info.Type, balanceFromD)
 }
 
