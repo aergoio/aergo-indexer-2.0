@@ -165,9 +165,10 @@ func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, ba
 	}
 }
 
-func ConvAccountBalance(blockNo uint64, address []byte, balance string, balanceFloat float32, staking string, stakingFloat float32) EsAccountBalance {
+func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance string, balanceFloat float32, staking string, stakingFloat float32) EsAccountBalance {
 	return EsAccountBalance{
 		BaseEsType:   &BaseEsType{Id: EncodeAndResolveAccount(address, blockNo)},
+		Timestamp:    ts,
 		BlockNo:      blockNo,
 		Balance:      balance,
 		BalanceFloat: balanceFloat,

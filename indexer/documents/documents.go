@@ -147,14 +147,15 @@ type EsContract struct {
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
-// EsAccountTokens is meta data of a token of an account. The id is account_token address.
+// EsAccountBalance is meta data of a balance of an account. The id is account_balance address.
 type EsAccountBalance struct {
 	*BaseEsType
-	BlockNo      uint64  `json:"blockno" db:"blockno"`
-	Balance      string  `json:"balance" db:"balance"`
-	BalanceFloat float32 `json:"balance_float" db:"balance_float"`
-	Staking      string  `json:"staking" db:"staking"`
-	StakingFloat float32 `json:"staking_float" db:"staking_float"`
+	BlockNo      uint64    `json:"blockno" db:"blockno"`
+	Timestamp    time.Time `json:"ts" db:"ts"`
+	Balance      string    `json:"balance" db:"balance"`
+	BalanceFloat float32   `json:"balance_float" db:"balance_float"`
+	Staking      string    `json:"staking" db:"staking"`
+	StakingFloat float32   `json:"staking_float" db:"staking_float"`
 }
 
 var EsMappings map[string]string
@@ -434,6 +435,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"blockno": {
 							"type": "long"
+						},
+						"ts": {
+							"type": "date"
 						},
 						"balance": {
 							"type": "keyword"
@@ -725,6 +729,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"blockno": {
 							"type": "long"
+						},
+						"ts": {
+							"type": "date"
 						},
 						"balance": {
 							"type": "keyword"

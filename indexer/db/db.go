@@ -5,6 +5,7 @@ import (
 )
 
 type DbController interface {
+	Exists(indexName string, id string) bool
 	Insert(document doc.DocType, indexName string) error
 	InsertBulk(indexName string) BulkInstance
 	Update(document doc.DocType, indexName string, id string) error
