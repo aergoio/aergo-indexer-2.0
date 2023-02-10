@@ -178,8 +178,13 @@ func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance st
 	}
 }
 
+// Aergo system refer to special accounts that don't need to be resolved
+func isAergoSystem(address string) bool {
+	return address == "aergo.system"
+}
+
 // Alias refer to special accounts that don't need to be resolved
-func IsAlias(address string) bool {
+func isAlias(address string) bool {
 	if len(address) != 12 {
 		return false
 	}
@@ -204,11 +209,27 @@ func isInternalName(name string) bool {
 	return false
 }
 
+// Refer to special accounts that don't need to be resolved - alias or aergo.system
+func IsBalanceNotResolved(name string) bool {
+	return isAlias(name) || isAergoSystem(name)
+}
+
+func DecodeAccount(account string) []byte {
+	if account == "" {
+		return nil
+	}
+	if isAlias(account) || isInternalName(account) {
+		return []byte(account)
+	}
+	dec, _ := types.DecodeAddress(account)
+	return dec
+}
+
 func EncodeAccount(account []byte) string {
 	if account == nil {
 		return ""
 	}
-	if IsAlias(string(account)) || isInternalName(string(account)) {
+	if isAlias(string(account)) || isInternalName(string(account)) {
 		return string(account)
 	}
 	return types.EncodeAddress(account)

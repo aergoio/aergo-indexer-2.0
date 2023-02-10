@@ -53,6 +53,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 
 		// indexing whitelist balance
 		if ns.runMode == "onsync" && blockHeight%ns.whiteListBlockInterval == 0 {
+			info.Height = 0 // set height 0 ( not update height in whitelist )
 			for _, w := range ns.whiteListAddresses {
 				if addr, err := types.DecodeAddress(w); err == nil {
 					ns.MinerBalance(info, blockD, addr, MinerGRPC)
@@ -146,12 +147,12 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 	return
 }
 
-func (ns *Indexer) MinerBalance(info BlockInfo, blockD doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
-	if doc.IsAlias(string(address)) {
+func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
+	if doc.IsBalanceNotResolved(string(address)) {
 		return
 	}
 	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
-	balanceFromD := doc.ConvAccountBalance(info.Height, address, blockD.Timestamp, balance, balanceFloat, staking, stakingFloat)
+	balanceFromD := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
 	ns.insertAccountBalance(info.Type, balanceFromD)
 }
 
