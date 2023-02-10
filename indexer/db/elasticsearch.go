@@ -183,8 +183,11 @@ func (esdb *ElasticsearchDbController) Scroll(params QueryParams, createDocument
 	fsc := elastic.NewFetchSourceContext(true).Include(params.SelectFields...)
 
 	// seo
-	query := elastic.NewRangeQuery(params.SortField).From(params.From).To(params.To)
-	scroll := esdb.client.Scroll(params.IndexName).Query(query).Size(params.Size).Sort(params.SortField, params.SortAsc).FetchSourceContext(fsc)
+	scroll := esdb.client.Scroll(params.IndexName)
+	if params.From != 0 || params.To != 0 {
+		scroll = scroll.Query(elastic.NewRangeQuery(params.SortField).From(params.From).To(params.To))
+	}
+	scroll = scroll.Size(params.Size).Sort(params.SortField, params.SortAsc).FetchSourceContext(fsc)
 	return &EsScrollInstance{
 		scrollService:  scroll,
 		ctx:            context.Background(),
