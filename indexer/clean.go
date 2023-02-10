@@ -96,7 +96,7 @@ func (ns *Indexer) RunCleanIndex() error {
 		SortField:    "blockno",
 		SortAsc:      true,
 	}, func() doc.DocType {
-		transfer := new(doc.EsTokenTransfer)
+		transfer := new(doc.EsAccountTokens)
 		transfer.BaseEsType = new(doc.BaseEsType)
 		return transfer
 	})
@@ -110,18 +110,59 @@ func (ns *Indexer) RunCleanIndex() error {
 			ns.log.Warn().Err(err).Msg("Failed to get account token")
 			return err
 		}
-		if _, ok := tokens[transfer.(*doc.EsTokenTransfer).TokenAddress]; !ok {
-			ns.log.Info().Str("token", transfer.(*doc.EsTokenTransfer).TokenAddress).Msg("Delete account token")
+		if _, ok := tokens[transfer.(*doc.EsAccountTokens).TokenAddress]; !ok {
+			ns.log.Info().Str("token", transfer.(*doc.EsAccountTokens).TokenAddress).Msg("Delete account token")
 			_, err := ns.db.Delete(db.QueryParams{
 				IndexName: ns.indexNamePrefix + "account_tokens",
 				StringMatch: &db.StringMatchQuery{
 					Field: "address",
-					Value: transfer.(*doc.EsTokenTransfer).TokenAddress,
+					Value: transfer.(*doc.EsAccountTokens).TokenAddress,
 				},
 			})
 			if err != nil {
 				ns.log.Warn().Err(err).Msg("Failed to delete account token")
 				return err
+			}
+		}
+	}
+
+	// 4. get account_balance
+	scrollBalance := ns.db.Scroll(db.QueryParams{
+		IndexName:    ns.indexNamePrefix + "account_balance",
+		Size:         10000,
+		SelectFields: []string{"_id"},
+		SortField:    "_id",
+		SortAsc:      true,
+	}, func() doc.DocType {
+		transfer := new(doc.EsAccountBalance)
+		transfer.BaseEsType = new(doc.BaseEsType)
+		return transfer
+	})
+
+	for {
+		balance, err := scrollBalance.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			ns.log.Warn().Err(err).Msg("Failed to get account balance")
+			return err
+		}
+		if _, ok := tokens[balance.(*doc.EsAccountBalance).Id]; !ok {
+			ns.log.Info().Str("id", balance.(*doc.EsAccountBalance).Id).Msg("Delete account balance")
+			// delete alias account balance only
+			if doc.IsAlias(balance.(*doc.EsAccountBalance).Id) == true {
+				_, err := ns.db.Delete(db.QueryParams{
+					IndexName: ns.indexNamePrefix + "account_balance",
+					StringMatch: &db.StringMatchQuery{
+						Field: "_id",
+						Value: balance.(*doc.EsAccountBalance).Id,
+					},
+				})
+				if err != nil {
+					ns.log.Warn().Err(err).Msg("Failed to delete account token")
+					return err
+				}
 			}
 		}
 	}

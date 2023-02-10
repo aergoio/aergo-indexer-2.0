@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
@@ -177,6 +178,19 @@ func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance st
 	}
 }
 
+// Alias refer to special accounts that don't need to be resolved
+func IsAlias(address string) bool {
+	if len(address) != 12 {
+		return false
+	}
+	for _, c := range address {
+		if !unicode.IsUpper(c) && !unicode.IsLower(c) && !unicode.IsNumber(c) {
+			return false
+		}
+	}
+	return true
+}
+
 // Internal names refer to special accounts that don't need to be resolved
 func isInternalName(name string) bool {
 	switch name {
@@ -194,7 +208,7 @@ func EncodeAccount(account []byte) string {
 	if account == nil {
 		return ""
 	}
-	if len(account) <= 12 || isInternalName(string(account)) {
+	if IsAlias(string(account)) || isInternalName(string(account)) {
 		return string(account)
 	}
 	return types.EncodeAddress(account)

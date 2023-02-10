@@ -147,6 +147,9 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 }
 
 func (ns *Indexer) MinerBalance(info BlockInfo, blockD doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
+	if doc.IsAlias(string(address)) {
+		return
+	}
 	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
 	balanceFromD := doc.ConvAccountBalance(info.Height, address, blockD.Timestamp, balance, balanceFloat, staking, stakingFloat)
 	ns.insertAccountBalance(info.Type, balanceFromD)
