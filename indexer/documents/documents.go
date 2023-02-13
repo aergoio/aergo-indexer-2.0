@@ -429,6 +429,7 @@ func InitEsMappings(clusterMode bool) {
 					"number_of_replicas": 1
 				},
 				"mappings": {
+					"dynamic": false,
 					"properties": {
 						"id": {
 							"type": "keyword"
@@ -440,15 +441,13 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"balance": {
-							"type": "keyword",
-							"enabled": false
+							"type": "keyword"
 						},
 						"balance_float": {
 							"type": "float"
 						},
 						"staking": {
-							"type": "keyword",
-							"enabled": false
+							"type": "keyword"
 						},
 						"staking_float": {
 							"type": "float"
@@ -725,6 +724,7 @@ func InitEsMappings(clusterMode bool) {
 					"number_of_replicas": 1
 				},
 				"mappings": {
+					"dynamic": false,
 					"properties": {
 						"id": {
 							"type": "keyword"
@@ -736,15 +736,13 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"balance": {
-							"type": "keyword",
-							"enabled": false
+							"type": "keyword"
 						},
 						"balance_float": {
 							"type": "float"
 						},
 						"staking": {
-							"type": "keyword",
-							"enabled": false
+							"type": "keyword"
 						},
 						"staking_float": {
 							"type": "float"
