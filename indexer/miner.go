@@ -53,12 +53,14 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 
 		// indexing whitelist balance
 		if ns.runMode == "onsync" && blockHeight%ns.whiteListBlockInterval == 0 {
-			info.Height = 0 // set height 0 ( not update height in whitelist )
-			for _, w := range ns.whiteListAddresses {
-				if addr, err := types.DecodeAddress(w); err == nil {
-					ns.MinerBalance(info, blockD, addr, MinerGRPC)
+			ns.whiteListAddresses.Range(func(k, v interface{}) bool {
+				if addr, ok := k.(string); ok {
+					if addr, err := types.DecodeAddress(addr); err == nil {
+						ns.MinerBalance(info, blockD, addr, MinerGRPC)
+					}
 				}
-			}
+				return true
+			})
 		}
 	}
 }
@@ -484,6 +486,11 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceD doc.EsAcco
 	}
 	if err != nil {
 		ns.log.Error().Err(err).Msg("insertAccountBalance")
+	}
+
+	// stake 주소는 whitelist 에 추가
+	if balanceD.StakingFloat > 0 {
+		ns.whiteListAddresses.Store(balanceD.Id, true)
 	}
 }
 

@@ -80,7 +80,9 @@ func SetGrpcNum(grpcNum int) IndexerOptionFunc {
 
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.whiteListAddresses = whiteListAddresses
+		for _, addr := range whiteListAddresses {
+			indexer.whiteListAddresses.Store(addr, true)
+		}
 		return nil
 	}
 }
