@@ -42,7 +42,7 @@ type Indexer struct {
 	dbAddr                 string
 	serverAddr             string
 	grpcNum                int
-	whiteListAddresses     []string
+	whiteListAddresses     sync.Map
 	whiteListBlockInterval uint64
 }
 

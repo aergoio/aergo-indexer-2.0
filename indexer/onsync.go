@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -22,6 +23,7 @@ func (ns *Indexer) OnSync() error {
 	ns.CreateIndexIfNotExists("account_balance")
 
 	ns.init_cccv_nft()
+	ns.registerStakingWhiteList()
 
 	ns.lastBlockHeight = uint64(ns.GetBestBlockFromClient()) - 1
 
@@ -206,18 +208,6 @@ func (ns *Indexer) CreateIndexIfNotExists(documentType string) {
 	return
 }
 
-func (ns *Indexer) deleteTypeByQuery(typeName string, rangeQuery db.IntegerRangeQuery) {
-	deleted, err := ns.db.Delete(db.QueryParams{
-		IndexName:    ns.indexNamePrefix + typeName,
-		IntegerRange: &rangeQuery,
-	})
-	if err != nil {
-		ns.log.Warn().Err(err).Str("typeName", typeName).Msg("Failed to delete documents")
-	} else {
-		ns.log.Info().Uint64("deleted", deleted).Str("typeName", typeName).Msg("Deleted documents")
-	}
-}
-
 // DeleteBlocksInRange deletes previously synced blocks and their txs and names in the range of [fromBlockheight, toBlockHeight]
 func (ns *Indexer) DeleteBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64) {
 	// node error check
@@ -233,4 +223,40 @@ func (ns *Indexer) DeleteBlocksInRange(fromBlockHeight uint64, toBlockHeight uin
 	ns.deleteTypeByQuery("token_transfer", db.IntegerRangeQuery{Field: "blockno", Min: fromBlockHeight, Max: toBlockHeight})
 	ns.deleteTypeByQuery("token", db.IntegerRangeQuery{Field: "blockno", Min: fromBlockHeight, Max: toBlockHeight})
 	ns.deleteTypeByQuery("nft", db.IntegerRangeQuery{Field: "blockno", Min: fromBlockHeight, Max: toBlockHeight})
+}
+
+func (ns *Indexer) deleteTypeByQuery(typeName string, rangeQuery db.IntegerRangeQuery) {
+	deleted, err := ns.db.Delete(db.QueryParams{
+		IndexName:    ns.indexNamePrefix + typeName,
+		IntegerRange: &rangeQuery,
+	})
+	if err != nil {
+		ns.log.Warn().Err(err).Str("typeName", typeName).Msg("Failed to delete documents")
+	} else {
+		ns.log.Info().Uint64("deleted", deleted).Str("typeName", typeName).Msg("Deleted documents")
+	}
+}
+
+// register staking account to white list. ( staking addresses receive rewards by block creation )
+func (ns *Indexer) registerStakingWhiteList() {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_balance",
+		SortField: "staking_float",
+		Size:      10000,
+		From:      10000,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		balance := new(doc.EsAccountBalance)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if balance := document.(*doc.EsAccountBalance); balance.StakingFloat >= 10000 {
+			ns.whiteListAddresses.Store(balance.Id, true)
+		}
+	}
 }
