@@ -149,26 +149,29 @@ Usage:
   indexer [flags]
 
 Flags:
-  -A, --aergo string       host and port of aergo server. Alternative to setting host and port separately.
-  -E, --dburl string       Database URL (default "http://localhost:9200")
-  -M, --mode string        indexer running mode. Alternative to setting check, clean, onsync separately.
-  -h, --help               help for indexer
-  -H, --host string        host address of aergo server (default "localhost")
-  -p, --port int32         port number of aergo server (default 7845)
-  -N, --network string     network type. mainnet or testnet (default "testnet")
-      --check              check and fix index "--from ~ --to" blocks
-      --clean              clean unexpected data in index
-      --from int32         start syncing from this block number
-      --to int32           stop syncing at this block number
-      --bulk               size of bulk for batch indexing
-      --batch              time limit for batch indexing
-      --miner              number of processes minning blocks
-      --grpc               number of grpc connections to full nodes
+  -A, --aergo string                    host and port of aergo server. Alternative to setting host and port separately.
+      --batch int32                     batch duration (default 60)
+      --bulk int32                      bulk size (default 4000)
+      --check                           check and fix indices of range of heights
+      --clean                           clean unexpected data in index
+  -E, --dburl string                    Database URL (default "localhost:9200")
+      --from uint                       start syncing from this block number
+      --grpc int                        number of miner (default 16)
+  -h, --help                            help for indexer
+  -H, --host string                     host address of aergo server (default "localhost")
+      --miner int                       number of miner (default 32)
+  -M, --mode string                     indexer running mode. Alternative to setting check, clean, onsync separately.
+  -N, --network string                  network type. mainnet or testnet (default "testnet")
+  -p, --port int32                      port number of aergo server (default 7845)
+  -P, --prefix string                   prefix used for index names. if not set, use network type.
+      --to uint                         stop syncing at this block number
+  -W, --whitelist strings               address for indexing whitelist balance, onsync only
+  -B, --whitelist_block_interval uint   block interval for indexing whitelist balance, onsync only (default 1000)
 ```
 
 Example
 
-    ./bin/indexer -H localhost -p 7845 --dburl http://localhost:9200 --prefix chain_
+    ./bin/indexer -H localhost -p 7845 --dburl http://localhost:9200
 
 You can use the `--prefix` parameter and multiple instances of this program to sync several blockchains with one database.
 

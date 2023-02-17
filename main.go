@@ -27,6 +27,7 @@ var (
 	host                   string
 	port                   int32
 	dbURL                  string
+	prefix                 string
 	networkType            string
 	aergoAddress           string
 	startFrom              uint64
@@ -48,6 +49,7 @@ func init() {
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
+	fs.StringVarP(&prefix, "prefix", "P", "", "prefix used for index names. if not set, use network type.")
 	fs.StringVarP(&networkType, "network", "N", "testnet", "network type. mainnet or testnet")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
@@ -84,6 +86,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	indexer, err := indx.NewIndexer(
 		indx.SetServerAddr(getServerAddress()),
 		indx.SetDBAddr(dbURL),
+		indx.SetPrefix(prefix),
 		indx.SetNetworkType(networkType),
 		indx.SetRunMode(getRunMode()),
 		indx.SetLogger(logger),
