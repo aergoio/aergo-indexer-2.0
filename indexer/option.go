@@ -29,6 +29,13 @@ func SetDBAddr(dbAddr string) IndexerOptionFunc {
 	}
 }
 
+func SetPrefix(prefix string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.prefix = prefix
+		return nil
+	}
+}
+
 func SetNetworkType(networkType string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.networkType = networkType

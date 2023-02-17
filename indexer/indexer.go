@@ -30,6 +30,7 @@ type Indexer struct {
 
 	// config
 	log                    *log.Logger
+	prefix                 string
 	networkType            string
 	runMode                string
 	aliasNamePrefix        string
@@ -146,7 +147,10 @@ func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientControlle
 }
 
 func (ns *Indexer) initIndexPrefix() {
-	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.networkType)
+	if ns.prefix == "" {
+		ns.prefix = ns.networkType
+	}
+	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.prefix)
 	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 }
 
