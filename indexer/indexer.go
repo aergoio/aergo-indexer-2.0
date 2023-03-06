@@ -53,18 +53,19 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log:             log.NewLogger(""),
-		networkType:     "",
-		aliasNamePrefix: "",
-		indexNamePrefix: "",
-		lastBlockHeight: 0,
-		startHeight:     0,
-		bulkSize:        0,
-		batchTime:       0,
-		minerNum:        0,
-		dbAddr:          "",
-		serverAddr:      "",
-		grpcNum:         0,
+		log:                log.NewLogger(""),
+		networkType:        "",
+		aliasNamePrefix:    "",
+		indexNamePrefix:    "",
+		lastBlockHeight:    0,
+		startHeight:        0,
+		bulkSize:           0,
+		batchTime:          0,
+		minerNum:           0,
+		dbAddr:             "",
+		serverAddr:         "",
+		grpcNum:            0,
+		whiteListAddresses: sync.Map{},
 	}
 
 	// overwrite options on it
