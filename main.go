@@ -30,6 +30,7 @@ var (
 	prefix                 string
 	networkType            string
 	aergoAddress           string
+	cluster                bool
 	startFrom              uint64
 	stopAt                 uint64
 	batchTime              int32
@@ -49,8 +50,9 @@ func init() {
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
-	fs.StringVarP(&prefix, "prefix", "P", "", "prefix used for index names. if not set, use network type.")
-	fs.StringVarP(&networkType, "network", "N", "testnet", "network type. mainnet or testnet")
+	fs.StringVarP(&prefix, "prefix", "P", "", "index name prefix. if empty, use network type.")
+	fs.StringVarP(&networkType, "network", "N", "testnet", "network type")
+	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index")
@@ -60,7 +62,7 @@ func init() {
 	fs.Int32Var(&bulkSize, "bulk", 4000, "bulk size")
 	fs.Int32Var(&batchTime, "batch", 60, "batch duration")
 	fs.IntVar(&minerNum, "miner", 32, "number of miner")
-	fs.IntVar(&grpcNum, "grpc", 16, "number of miner")
+	fs.IntVar(&grpcNum, "grpc", 16, "number of grpc client")
 
 	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for indexing whitelist balance, onsync only")
 	fs.Uint64VarP(&whiteListBlockInterval, "whitelist_block_interval", "B", 1000, "block interval for indexing whitelist balance, onsync only")
@@ -76,11 +78,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
-	var clusterMode bool
-	if networkType == "mainnet" {
-		clusterMode = true // init es mappings with cluster mode ( mainnet only )
-	}
-	doc.InitEsMappings(clusterMode)
+	doc.InitEsMappings(cluster)
 
 	// init indexer
 	indexer, err := indx.NewIndexer(

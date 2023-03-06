@@ -11,7 +11,7 @@ import (
 var cccv_nft_address []byte
 
 func (ns *Indexer) is_cccv_nft(contractAddress []byte) bool {
-	return bytes.Equal(contractAddress, cccv_nft_address)
+	return cccv_nft_address != nil && bytes.Equal(contractAddress, cccv_nft_address)
 }
 
 func (ns *Indexer) init_cccv_nft() {
