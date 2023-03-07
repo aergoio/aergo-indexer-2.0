@@ -4,13 +4,17 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
     container_name: es
     volumes:
-      - el_data:/usr/share/elasticsearch/data
-      - el_logs:/usr/share/elasticsearch/logs
+      - type: bind
+        source: /data/eldata/data
+        target: /usr/share/elasticsearch/data
+      - type: bind
+        source: /data/eldata/logs
+        target: /usr/share/elasticsearch/logs
     environment:
       discovery.type: single-node
       xpack.security.enabled: false
       bootstrap.memory_lock: true
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ES_JAVA_OPTS: -Xms2048m -Xmx2048m
     ulimits:
      memlock:
       soft: -1
@@ -33,11 +37,13 @@ services:
     build:
      context: ./
      dockerfile: Dockerfile
-    image: indexer
+    image: indexer:2.1.4
     command: indexer
       - --aergo=testnet-api.aergo.io:7845
       - --dburl=http://es:9200
       - --network=testnet
+      - --prefix=testnet
+      - --cluster=false
       - --mode=check
       - --from=0
       - --to=0
@@ -52,20 +58,15 @@ services:
     build:
      context: ./
      dockerfile: Dockerfile
-    image: indexer
+    image: indexer:2.1.4
     command: indexer
       - --aergo=testnet-api.aergo.io:7845
       - --dburl=http://es:9200
       - --network=testnet
+      - --prefix=testnet
+      - --cluster=false
       - --mode=onsync
-      - --from=0
-      - --to=0
       - --bulk=800
       - --batch=60
       - --miner=32
       - --grpc=16
-volumes:
-  el_data:
-    driver: local
-  el_logs:
-    driver: local
