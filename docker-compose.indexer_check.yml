@@ -2,7 +2,7 @@ version: '3.2'
 services:
   indexer_check:
     container_name: indexer_check
-    image: indexer:1.0.3
+    image: indexer
     build:
      context: ./
      dockerfile: Dockerfile
