@@ -22,23 +22,27 @@ func (ns *Indexer) OnSync() error {
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
 
+	// init config
 	ns.init_cccv_nft()
 	ns.registerStakingWhiteList()
-
-	ns.lastBlockHeight = uint64(ns.GetBestBlockFromClient()) - 1
+	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
+	ns.bulkSize = 800
+	ns.batchTime = 10 * time.Second
+	ns.minerNum = 8
+	ns.grpcNum = 4
 
 	BestBlockNo, err := ns.GetBestBlockFromDb()
 	if err == nil {
-		bulk_size := int(ns.lastBlockHeight - BestBlockNo)
+		bulk_size := int(ns.lastHeight - BestBlockNo)
 		switch {
 		case bulk_size <= 100:
 			// small size -> direct insert
-			ns.lastBlockHeight = BestBlockNo
+			ns.lastHeight = BestBlockNo
 		case 100 < bulk_size && bulk_size < 10000:
 			// middle size -> bulk insert
 			go func() {
 				ns.StartBulkChannel()
-				ns.InsertBlocksInRange(BestBlockNo, ns.lastBlockHeight)
+				ns.InsertBlocksInRange(BestBlockNo, ns.lastHeight)
 				ns.StopBulkChannel()
 			}()
 		default:
@@ -50,7 +54,7 @@ func (ns *Indexer) OnSync() error {
 	}
 
 	// Get ready to start
-	ns.log.Info().Uint64("OnSync block height", ns.lastBlockHeight+1).Msg("Started Indexer")
+	ns.log.Info().Uint64("OnSync block height", ns.lastHeight+1).Msg("Started Indexer")
 
 	// Sync stream
 	go ns.StartStream()
@@ -81,8 +85,8 @@ func (ns *Indexer) SleepIndexer(BlockNo uint64) {
 		BestBlockNo, err := ns.GetBestBlockFromDb()
 		if err == nil {
 			if CBlockNo >= BestBlockNo {
-				ns.lastBlockHeight = BestBlockNo
-				fmt.Println("<------ WAKE UP ------> ", ns.lastBlockHeight)
+				ns.lastHeight = BestBlockNo
+				fmt.Println("<------ WAKE UP ------> ", ns.lastHeight)
 				return_tag = true
 				return
 			} else {
@@ -103,17 +107,17 @@ func (ns *Indexer) StartStream() {
 	SyncBlock := func(block *types.Block) error {
 		newHeight := block.Header.BlockNo
 		fmt.Println("->")
-		if newHeight < ns.lastBlockHeight { // Rewound 1 or more blocks
+		if newHeight < ns.lastHeight { // Rewound 1 or more blocks
 			// This needs to be syncronous, otherwise it may
 			// delete the block we are just about to add
-			ns.DeleteBlocksInRange(newHeight+1, ns.lastBlockHeight)
-			ns.lastBlockHeight = newHeight
+			ns.DeleteBlocksInRange(newHeight+1, ns.lastHeight)
+			ns.lastHeight = newHeight
 			return nil
 		}
 
 		// indexing
-		if newHeight > ns.lastBlockHeight+1 {
-			for H := ns.lastBlockHeight + 1; H < newHeight; H++ {
+		if newHeight > ns.lastHeight+1 {
+			for H := ns.lastHeight + 1; H < newHeight; H++ {
 				MChannel <- BlockInfo{2, H}
 				fmt.Println("O NB :", H)
 			}
@@ -126,12 +130,12 @@ func (ns *Indexer) StartStream() {
 				ns.SleepIndexer(newHeight)
 			} else {
 				MChannel <- BlockInfo{2, newHeight}
-				ns.lastBlockHeight = newHeight
+				ns.lastHeight = newHeight
 				fmt.Println("O NB :", newHeight)
 			}
 		} else {
 			MChannel <- BlockInfo{2, newHeight}
-			ns.lastBlockHeight = newHeight
+			ns.lastHeight = newHeight
 			fmt.Println("O NB :", newHeight)
 		}
 		return nil

@@ -52,7 +52,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		ns.insertBlock(info.Type, blockD)
 
 		// indexing whitelist balance
-		if ns.runMode == "onsync" && blockHeight%ns.whiteListBlockInterval == 0 {
+		if ns.runMode == "onsync" && blockHeight%1000 == 0 {
 			ns.whiteListAddresses.Range(func(k, v interface{}) bool {
 				if addr, ok := k.(string); ok {
 					if addr, err := types.DecodeAddress(addr); err == nil {

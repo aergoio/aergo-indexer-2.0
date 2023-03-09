@@ -1,8 +1,6 @@
 package indexer
 
 import (
-	"time"
-
 	"github.com/aergoio/aergo-lib/log"
 )
 
@@ -36,9 +34,9 @@ func SetPrefix(prefix string) IndexerOptionFunc {
 	}
 }
 
-func SetNetworkType(networkType string) IndexerOptionFunc {
+func SetInitCccvNft(initCccvNft string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.networkType = networkType
+		indexer.initCccvNft = initCccvNft
 		return nil
 	}
 }
@@ -50,37 +48,9 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 	}
 }
 
-func SetBulkSize(bulkSize int32) IndexerOptionFunc {
-	return func(indexer *Indexer) error {
-		indexer.bulkSize = bulkSize
-		return nil
-	}
-}
-
-func SetBatchTime(batchTime int32) IndexerOptionFunc {
-	return func(indexer *Indexer) error {
-		indexer.batchTime = time.Duration(batchTime) * time.Second
-		return nil
-	}
-}
-
 func SetStartHeight(starHeight uint64) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.startHeight = starHeight
-		return nil
-	}
-}
-
-func SetMinerNum(minerNum int) IndexerOptionFunc {
-	return func(indexer *Indexer) error {
-		indexer.minerNum = minerNum
-		return nil
-	}
-}
-
-func SetGrpcNum(grpcNum int) IndexerOptionFunc {
-	return func(indexer *Indexer) error {
-		indexer.grpcNum = grpcNum
 		return nil
 	}
 }
@@ -90,13 +60,6 @@ func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 		for _, addr := range whiteListAddresses {
 			indexer.whiteListAddresses.Store(addr, true)
 		}
-		return nil
-	}
-}
-
-func SetWhiteListBlockInterval(whiteListBlockInterval uint64) IndexerOptionFunc {
-	return func(indexer *Indexer) error {
-		indexer.whiteListBlockInterval = whiteListBlockInterval
 		return nil
 	}
 }

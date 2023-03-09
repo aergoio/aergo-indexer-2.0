@@ -17,7 +17,7 @@ func (ns *Indexer) is_cccv_nft(contractAddress []byte) bool {
 func (ns *Indexer) init_cccv_nft() {
 	var cccv_nft_string, txid string
 	var blockno uint64
-	switch ns.networkType {
+	switch ns.initCccvNft {
 	case "mainnet":
 		cccv_nft_string = "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
 		txid = "9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL"
