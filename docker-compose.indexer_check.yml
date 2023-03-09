@@ -13,11 +13,8 @@ services:
     command: indexer
       - --aergo=testnet-api.aergo.io:7845
       - --dburl=http://localhost:9200
-      - --network=testnet
+      - --prefix=testnet
       - --mode=check
       - --from=0
       - --to=0
-      - --bulk=4000
-      - --batch=60
-      - --miner=32
-      - --grpc=16
+      - --cluster=false
