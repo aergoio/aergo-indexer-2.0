@@ -20,31 +20,32 @@ type Indexer struct {
 	db         db.DbController
 	grpcClient *client.AergoClientController
 
-	stream   types.AergoRPCService_ListBlockStreamClient
-	MChannel chan BlockInfo
-	BChannel ChanInfoType
-	RChannel []chan BlockInfo
-	SynDone  chan bool
-	accToken sync.Map
-	peerId   sync.Map
+	stream          types.AergoRPCService_ListBlockStreamClient
+	MChannel        chan BlockInfo
+	BChannel        ChanInfoType
+	RChannel        []chan BlockInfo
+	SynDone         chan bool
+	accToken        sync.Map
+	peerId          sync.Map
+	indexNamePrefix string
+	aliasNamePrefix string
 
-	// config
-	log                    *log.Logger
-	prefix                 string
-	networkType            string
-	runMode                string
-	aliasNamePrefix        string
-	indexNamePrefix        string
-	lastBlockHeight        uint64
-	startHeight            uint64
-	bulkSize               int32
-	batchTime              time.Duration
-	minerNum               int
-	dbAddr                 string
-	serverAddr             string
-	grpcNum                int
-	whiteListAddresses     sync.Map
-	whiteListBlockInterval uint64
+	// for bulk
+	bulkSize  int32
+	batchTime time.Duration
+	minerNum  int
+	grpcNum   int
+
+	// config by user
+	log                *log.Logger
+	dbAddr             string
+	serverAddr         string
+	prefix             string
+	runMode            string
+	startHeight        uint64
+	lastHeight         uint64
+	whiteListAddresses sync.Map
+	initCccvNft        string
 }
 
 // NewIndexer creates new Indexer instance
@@ -53,19 +54,7 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log:                log.NewLogger(""),
-		networkType:        "",
-		aliasNamePrefix:    "",
-		indexNamePrefix:    "",
-		lastBlockHeight:    0,
-		startHeight:        0,
-		bulkSize:           0,
-		batchTime:          0,
-		minerNum:           0,
-		dbAddr:             "",
-		serverAddr:         "",
-		grpcNum:            0,
-		whiteListAddresses: sync.Map{},
+		log: log.NewLogger(""),
 	}
 
 	// overwrite options on it
@@ -148,9 +137,6 @@ func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientControlle
 }
 
 func (ns *Indexer) initIndexPrefix() {
-	if ns.prefix == "" {
-		ns.prefix = ns.networkType
-	}
 	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.prefix)
 	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 }

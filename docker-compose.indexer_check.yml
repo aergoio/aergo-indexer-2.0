@@ -1,0 +1,23 @@
+version: '3.2'
+services:
+  indexer_check:
+    container_name: indexer_check
+    image: indexer:1.0.3
+    build:
+     context: ./
+     dockerfile: Dockerfile
+    ports:
+     - 8001:8001
+    privileged: true
+    network_mode: host
+    command: indexer
+      - --aergo=testnet-api.aergo.io:7845
+      - --dburl=http://localhost:9200
+      - --network=testnet
+      - --mode=check
+      - --from=0
+      - --to=0
+      - --bulk=4000
+      - --batch=60
+      - --miner=32
+      - --grpc=16

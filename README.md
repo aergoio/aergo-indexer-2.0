@@ -149,25 +149,20 @@ Usage:
   indexer [flags]
 
 Flags:
-  -A, --aergo string                    host and port of aergo server. Alternative to setting host and port separately.
-      --batch int32                     batch duration (default 60)
-      --bulk int32                      bulk size (default 4000)
-      --check                           check and fix indices of range of heights
-      --clean                           clean unexpected data in index
-  -C, --cluster                         elasticsearch cluster mode
-  -E, --dburl string                    Database URL (default "localhost:9200")
-      --from uint                       start syncing from this block number
-      --grpc int                        number of grpc client (default 16)
-  -h, --help                            help for indexer
-  -H, --host string                     host address of aergo server (default "localhost")
-      --miner int                       number of miner (default 32)
-  -M, --mode string                     indexer running mode. Alternative to setting check, clean, onsync separately.
-  -N, --network string                  network type (default "testnet")
-  -p, --port int32                      port number of aergo server (default 7845)
-  -P, --prefix string                   index name prefix. if empty, use network type.
-      --to uint                         stop syncing at this block number
-  -W, --whitelist strings               address for indexing whitelist balance, onsync only
-  -B, --whitelist_block_interval uint   block interval for indexing whitelist balance, onsync only (default 1000)
+  -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately.
+      --cccv string         indexing cccv nft by network ( mainnet or testnet ). only use for cccv
+      --check               check and fix indices of range of heights
+      --clean               clean unexpected data in index
+  -C, --cluster             elasticsearch cluster type
+  -E, --dburl string        Database URL (default "localhost:9200")
+      --from uint           start syncing from this block number. check only
+  -h, --help                help for indexer
+  -H, --host string         host address of aergo server (default "localhost")
+  -M, --mode string         indexer running mode. Alternative to setting check, clean separately. (default "onsync")
+  -p, --port int32          port number of aergo server (default 7845)
+  -P, --prefix string       index name prefix
+      --to uint             stop syncing at this block number. check only
+  -W, --whitelist strings   address for indexing whitelist balance. onsync only
 ```
 
 Example

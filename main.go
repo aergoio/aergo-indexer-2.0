@@ -21,24 +21,19 @@ var (
 		Run:   rootRun,
 	}
 
-	runMode                string
-	checkMode              bool
-	cleanMode              bool
-	host                   string
-	port                   int32
-	dbURL                  string
-	prefix                 string
-	networkType            string
-	aergoAddress           string
-	cluster                bool
-	startFrom              uint64
-	stopAt                 uint64
-	batchTime              int32
-	bulkSize               int32
-	minerNum               int
-	grpcNum                int
-	whiteListAddress       []string
-	whiteListBlockInterval uint64
+	runMode          string
+	checkMode        bool
+	cleanMode        bool
+	host             string
+	port             int32
+	dbURL            string
+	prefix           string
+	aergoAddress     string
+	cluster          bool
+	startFrom        uint64
+	stopAt           uint64
+	whiteListAddress []string
+	cccvNft          string
 
 	logger  *log.Logger
 	indexer *indx.Indexer
@@ -50,22 +45,16 @@ func init() {
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
-	fs.StringVarP(&prefix, "prefix", "P", "", "index name prefix. if empty, use network type.")
-	fs.StringVarP(&networkType, "network", "N", "testnet", "network type")
+	fs.StringVarP(&prefix, "prefix", "P", "", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
 	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index")
-	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, clean, onsync separately.")
-	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number")
-	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number")
-	fs.Int32Var(&bulkSize, "bulk", 4000, "bulk size")
-	fs.Int32Var(&batchTime, "batch", 60, "batch duration")
-	fs.IntVar(&minerNum, "miner", 32, "number of miner")
-	fs.IntVar(&grpcNum, "grpc", 16, "number of grpc client")
-
-	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for indexing whitelist balance, onsync only")
-	fs.Uint64VarP(&whiteListBlockInterval, "whitelist_block_interval", "B", 1000, "block interval for indexing whitelist balance, onsync only")
+	fs.StringVarP(&runMode, "mode", "M", "onsync", "indexer running mode. Alternative to setting check, clean separately.")
+	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number. check only")
+	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number. check only")
+	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for indexing whitelist balance. onsync only")
+	fs.StringVar(&cccvNft, "cccv", "", "indexing cccv nft by network ( mainnet or testnet ). only use for cccv")
 }
 
 func main() {
@@ -85,15 +74,10 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indx.SetServerAddr(getServerAddress()),
 		indx.SetDBAddr(dbURL),
 		indx.SetPrefix(prefix),
-		indx.SetNetworkType(networkType),
+		indx.SetInitCccvNft(cccvNft),
 		indx.SetRunMode(getRunMode()),
 		indx.SetLogger(logger),
-		indx.SetBulkSize(bulkSize),
-		indx.SetBatchTime(batchTime),
-		indx.SetMinerNum(minerNum),
-		indx.SetGrpcNum(grpcNum),
 		indx.SetWhiteListAddresses(whiteListAddress),
-		indx.SetWhiteListBlockInterval(whiteListBlockInterval),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")

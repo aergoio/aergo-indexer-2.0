@@ -1,0 +1,25 @@
+version: '3.2'
+services:
+  indexer_onsync:
+    container_name: indexer_onsync
+    image: indexer:1.0.3
+    build:
+     context: ./
+     dockerfile: Dockerfile
+    ports:
+     - 8000:8000
+    privileged: true
+    network_mode: host
+    restart: always
+    command: indexer
+      - --aergo=mainnet-api.aergo.io:7845
+      - --dburl=http://localhost:9200
+      - --network=testnet
+      - --mode=onsync
+      - --from=0
+      - --to=0
+      - --bulk=500
+      - --batch=10
+      - --miner=8
+      - --grpc=4
+      - --whitelist=abcd,bcde,cdef

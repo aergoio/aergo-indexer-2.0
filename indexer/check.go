@@ -3,7 +3,6 @@ package indexer
 import (
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
@@ -34,23 +33,25 @@ func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) error {
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
 
+	// init config
 	ns.init_cccv_nft()
-
 	if stopAt == 0 {
-		ns.lastBlockHeight = ns.GetBestBlockFromClient() - 1
+		ns.lastHeight = ns.GetBestBlockFromClient() - 1
 	} else {
-		ns.lastBlockHeight = stopAt
+		ns.lastHeight = stopAt
 	}
+	ns.bulkSize = 4000
+	ns.batchTime = 60 * time.Second
+	ns.minerNum = 32
+	ns.grpcNum = 16
 
-	ns.fixIndex(startFrom, ns.lastBlockHeight)
+	ns.fixIndex(startFrom, ns.lastHeight)
 	return nil
 }
 
 func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 	ns.log.Info().Uint64("startFrom", Start_Pos).Uint64("stopAt", End_Pos).Msg("Check Block range")
 	ns.StartBulkChannel()
-
-	os.WriteFile("./bulk_start_time.txt", []byte(time.Now().String()), 0644)
 
 	var block doc.DocType
 	var err error
@@ -108,5 +109,4 @@ func (ns *Indexer) fixIndex(Start_Pos uint64, End_Pos uint64) {
 
 	ns.StopBulkChannel()
 	ns.log.Info().Uint64("missing", missingBlocks).Msg("Done with consistency check")
-	os.WriteFile("./bulk_end_time.txt", []byte(time.Now().String()), 0644)
 }
