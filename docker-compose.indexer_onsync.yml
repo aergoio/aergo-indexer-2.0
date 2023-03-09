@@ -11,7 +11,7 @@ services:
     privileged: true
     network_mode: host
     command: indexer
-      - --aergo=mainnet-api.aergo.io:7845
+      - --aergo=http://localhost:7845
       - --dburl=http://localhost:9200
       - --prefix=testnet
       - --mode=onsync
