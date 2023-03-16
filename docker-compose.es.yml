@@ -27,8 +27,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-file: "7"   # number of files or file count
-        max-size: "10m" # file size
+        max-file: "7"
+        max-size: "10m"
   kibana:
     image: docker.elastic.co/kibana/kibana:7.15.2
     container_name: kibana
@@ -40,6 +40,6 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-file: "7"   # number of files or file count
-        max-size: "10m" # file size
+        max-file: "7"
+        max-size: "10m"
     network_mode: host
