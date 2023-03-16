@@ -11,8 +11,8 @@ services:
     privileged: true
     network_mode: host
     command: indexer
-      - --aergo=http://localhost:7845
-      - --dburl=http://localhost:9200
+      - --aergo=localhost:7845
+      - --dburl=localhost:9200
       - --prefix=testnet
       - --mode=check
       - --from=0

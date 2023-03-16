@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   indexer_onsync:
-    container_name: indexer_onsync
+    container_name: indexer_onsync:latest
     image: indexer
     build:
      context: ./
@@ -11,8 +11,8 @@ services:
     privileged: true
     network_mode: host
     command: indexer
-      - --aergo=http://localhost:7845
-      - --dburl=http://localhost:9200
+      - --aergo=localhost:7845
+      - --dburl=localhost:9200
       - --prefix=testnet
       - --mode=onsync
       - --cluster=false
