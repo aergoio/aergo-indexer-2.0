@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   indexer_check:
-    container_name: indexer_check
+    container_name: indexer_check:latest
     image: indexer
     build:
      context: ./
