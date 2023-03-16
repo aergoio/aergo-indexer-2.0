@@ -23,6 +23,12 @@ services:
       - 9200:9200
       - 9300:9300
     privileged: true
+    network_mode: host
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "7"   # number of files or file count
+        max-size: "10m" # file size
   kibana:
     image: docker.elastic.co/kibana/kibana:7.15.2
     container_name: kibana
@@ -31,3 +37,9 @@ services:
     environment:
       ELASTICSEARCH_URL: http://es:9200
       ELASTICSEARCH_HOSTS: http://es:9200
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "7"   # number of files or file count
+        max-size: "10m" # file size
+    network_mode: host
