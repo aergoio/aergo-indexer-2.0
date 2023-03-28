@@ -21,9 +21,10 @@ var (
 		Run:   rootRun,
 	}
 
-	runMode          string
-	checkMode        bool
-	cleanMode        bool
+	runMode   string
+	checkMode bool
+	cleanMode bool
+
 	host             string
 	port             int32
 	dbURL            string
@@ -33,7 +34,7 @@ var (
 	startFrom        uint64
 	stopAt           uint64
 	whiteListAddress []string
-	cccvNft          string
+	typeCccvNft      string
 
 	logger  *log.Logger
 	indexer *indx.Indexer
@@ -49,12 +50,13 @@ func init() {
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
 
 	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
-	fs.BoolVar(&cleanMode, "clean", false, "clean unexpected data in index")
+	fs.BoolVar(&cleanMode, "clean", false, "check and clean unexpected data in indices")
 	fs.StringVarP(&runMode, "mode", "M", "onsync", "indexer running mode. Alternative to setting check, clean separately.")
+
 	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number. check only")
 	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for indexing whitelist balance. onsync only")
-	fs.StringVar(&cccvNft, "cccv", "", "indexing cccv nft by network ( mainnet or testnet ). only use for cccv")
+	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
 }
 
 func main() {
@@ -74,7 +76,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indx.SetServerAddr(getServerAddress()),
 		indx.SetDBAddr(dbURL),
 		indx.SetPrefix(prefix),
-		indx.SetInitCccvNft(cccvNft),
+		indx.SetNetworkTypeForCccv(typeCccvNft),
 		indx.SetRunMode(getRunMode()),
 		indx.SetLogger(logger),
 		indx.SetWhiteListAddresses(whiteListAddress),
@@ -109,10 +111,10 @@ func getServerAddress() string {
 func getRunMode() string {
 	if len(runMode) > 0 {
 		return runMode
-	} else if checkMode {
-		return "check"
 	} else if cleanMode {
 		return "clean"
+	} else if checkMode {
+		return "check"
 	}
 	return "onsync"
 }

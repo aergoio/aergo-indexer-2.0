@@ -118,7 +118,7 @@ balance         string      Precise BigInt string representation of total supply
 balance_float   float32     Imprecise float representation of amount, useful for sorting
 ```
 
-nft 
+nft
 ```
 Field           Type        Comment
 id              string      nft id
@@ -150,9 +150,9 @@ Usage:
 
 Flags:
   -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately.
-      --cccv string         indexing cccv nft by network ( mainnet or testnet ). only use for cccv
+      --cccv string         indexing cccv nft by network type ( mainnet or testnet ). only use for cccv
       --check               check and fix indices of range of heights
-      --clean               clean unexpected data in index
+      --clean               check and clean unexpected data in indices
   -C, --cluster             elasticsearch cluster type
   -E, --dburl string        Database URL (default "localhost:9200")
       --from uint           start syncing from this block number. check only
