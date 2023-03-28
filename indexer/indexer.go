@@ -20,15 +20,18 @@ type Indexer struct {
 	db         db.DbController
 	grpcClient *client.AergoClientController
 
-	stream          types.AergoRPCService_ListBlockStreamClient
-	MChannel        chan BlockInfo
-	BChannel        ChanInfoType
-	RChannel        []chan BlockInfo
-	SynDone         chan bool
-	accToken        sync.Map
-	peerId          sync.Map
-	indexNamePrefix string
-	aliasNamePrefix string
+	stream             types.AergoRPCService_ListBlockStreamClient
+	MChannel           chan BlockInfo
+	BChannel           ChanInfoType
+	RChannel           []chan BlockInfo
+	SynDone            chan bool
+	accToken           sync.Map
+	peerId             sync.Map
+	whiteListAddresses sync.Map
+	indexNamePrefix    string
+	aliasNamePrefix    string
+	lastHeight         uint64
+	cccvNftAddress     []byte
 
 	// for bulk
 	bulkSize  int32
@@ -42,10 +45,9 @@ type Indexer struct {
 	serverAddr         string
 	prefix             string
 	runMode            string
-	startHeight        uint64
-	lastHeight         uint64
-	whiteListAddresses sync.Map
-	initCccvNft        string
+	checkMode          bool
+	cleanMode          bool
+	NetworkTypeForCccv string
 }
 
 // NewIndexer creates new Indexer instance
@@ -54,7 +56,11 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log: log.NewLogger(""),
+		log:       log.NewLogger(""),
+		bulkSize:  4000,
+		batchTime: 60 * time.Second,
+		minerNum:  32,
+		grpcNum:   16,
 	}
 
 	// overwrite options on it
@@ -80,26 +86,25 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 // Start setups the indexer
 func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
-	var err error
+	ns.CreateIndexIfNotExists("block")
+	ns.CreateIndexIfNotExists("tx")
+	ns.CreateIndexIfNotExists("name")
+	ns.CreateIndexIfNotExists("token")
+	ns.CreateIndexIfNotExists("contract")
+	ns.CreateIndexIfNotExists("token_transfer")
+	ns.CreateIndexIfNotExists("account_tokens")
+	ns.CreateIndexIfNotExists("nft")
+	ns.CreateIndexIfNotExists("account_balance")
+
+	ns.initCccvNft()
+	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
+
 	switch ns.runMode {
 	case "check":
-		err = ns.RunCheckIndex(startFrom, stopAt)
-		if err != nil {
-			ns.log.Warn().Err(err).Msg("Check failed")
-		}
-		return true
-	case "clean":
-		err = ns.RunCleanIndex()
-		if err != nil {
-			ns.log.Warn().Err(err).Msg("Clean failed")
-		}
+		ns.RunCheckIndex(startFrom, stopAt)
 		return true
 	case "onsync":
-		err = ns.OnSync()
-		if err != nil {
-			ns.log.Warn().Err(err).Msg("Could not start indexer")
-			return true
-		}
+		ns.OnSync()
 		return false
 	default:
 		ns.log.Warn().Str("mode", ns.runMode).Msg("Invalid run mode")
@@ -139,6 +144,41 @@ func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientControlle
 func (ns *Indexer) initIndexPrefix() {
 	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.prefix)
 	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
+}
+
+// CreateIndexIfNotExists creates the indices and aliases in ES
+func (ns *Indexer) CreateIndexIfNotExists(documentType string) {
+	aliasName := ns.aliasNamePrefix + documentType
+
+	// Check for existing index to find out current indexNamePrefix
+	exists, indexNamePrefix, err := ns.db.GetExistingIndexPrefix(aliasName, documentType)
+	if err != nil {
+		ns.log.Error().Err(err).Msg("Error when checking for alias")
+	}
+
+	if exists {
+		ns.log.Info().Str("aliasName", aliasName).Str("indexNamePrefix", indexNamePrefix).Msg("Alias found")
+		ns.indexNamePrefix = indexNamePrefix
+		return
+	}
+
+	// Create new index
+	indexName := ns.indexNamePrefix + documentType
+	err = ns.db.CreateIndex(indexName, documentType)
+	if err != nil {
+		ns.log.Error().Err(err).Str("indexName", indexName).Msg("Error when creating index")
+	} else {
+		ns.log.Info().Str("indexName", indexName).Msg("Created index")
+	}
+
+	// Update alias, only when initializing and not reindexing
+	err = ns.db.UpdateAlias(aliasName, indexName)
+	if err != nil {
+		ns.log.Error().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
+	} else {
+		ns.log.Info().Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
+	}
+	return
 }
 
 // UpdateAliasForType updates aliases

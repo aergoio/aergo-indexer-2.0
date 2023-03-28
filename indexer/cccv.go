@@ -8,16 +8,14 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
-var cccv_nft_address []byte
-
-func (ns *Indexer) is_cccv_nft(contractAddress []byte) bool {
-	return cccv_nft_address != nil && bytes.Equal(contractAddress, cccv_nft_address)
+func (ns *Indexer) isCccvNft(contractAddress []byte) bool {
+	return ns.cccvNftAddress != nil && bytes.Equal(contractAddress, ns.cccvNftAddress)
 }
 
-func (ns *Indexer) init_cccv_nft() {
+func (ns *Indexer) initCccvNft() {
 	var cccv_nft_string, txid string
 	var blockno uint64
-	switch ns.initCccvNft {
+	switch ns.NetworkTypeForCccv {
 	case "mainnet":
 		cccv_nft_string = "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
 		txid = "9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL"
@@ -32,7 +30,7 @@ func (ns *Indexer) init_cccv_nft() {
 
 	// init cccv address - check, onsync, clean mode
 	var err error
-	cccv_nft_address, err = types.DecodeAddress(cccv_nft_string)
+	ns.cccvNftAddress, err = types.DecodeAddress(cccv_nft_string)
 	if err != nil {
 		return
 	}

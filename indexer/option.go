@@ -34,9 +34,9 @@ func SetPrefix(prefix string) IndexerOptionFunc {
 	}
 }
 
-func SetInitCccvNft(initCccvNft string) IndexerOptionFunc {
+func SetNetworkTypeForCccv(initCccvNft string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.initCccvNft = initCccvNft
+		indexer.NetworkTypeForCccv = initCccvNft
 		return nil
 	}
 }
@@ -44,13 +44,10 @@ func SetInitCccvNft(initCccvNft string) IndexerOptionFunc {
 func SetRunMode(runMode string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.runMode = runMode
-		return nil
-	}
-}
-
-func SetStartHeight(starHeight uint64) IndexerOptionFunc {
-	return func(indexer *Indexer) error {
-		indexer.startHeight = starHeight
+		if runMode == "clean" {
+			indexer.runMode = "check"
+			indexer.cleanMode = true
+		}
 		return nil
 	}
 }

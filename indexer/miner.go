@@ -131,7 +131,7 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, Min
 			tokenType = category.ARC2
 		}
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
-		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.is_cccv_nft(receipt.ContractAddress))
+		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.isCccvNft(receipt.ContractAddress))
 		tokenD := doc.ConvToken(txD, receipt.ContractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
 		if tokenD.Name != "" {
 			// Add Token doc
@@ -179,7 +179,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 			tokenType = category.ARC2
 		}
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(contractAddress)
-		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.is_cccv_nft(contractAddress))
+		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
 		tokenD := doc.ConvToken(txD, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
 		if tokenD.Name == "" {
 			return
@@ -191,7 +191,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 			Timestamp:    txD.Timestamp,
 			TokenAddress: doc.EncodeAndResolveAccount(contractAddress, txD.BlockNo),
 		}
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txD.Account, ns.is_cccv_nft(contractAddress))
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txD.Account, ns.isCccvNft(contractAddress))
 		accountTokensD := doc.ConvAccountTokens(tokenTransferD, txD.Account, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
@@ -207,7 +207,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		}
 
 		// Add TokenTransfer Doc ( mint )
-		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.is_cccv_nft(event.ContractAddress))
+		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.isCccvNft(event.ContractAddress))
 		tokenTransferD := doc.ConvTokenTransfer(event.ContractAddress, txD, idx, "MINT", args[0].(string), tokenId, amount, amountFloat)
 		if tokenTransferD.Amount == "" {
 			return
@@ -217,13 +217,13 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync {
-			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.is_cccv_nft(event.ContractAddress))
+			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.isCccvNft(event.ContractAddress))
 			tokenUpD := doc.ConvTokenUp(txD, event.ContractAddress, supply, supplyFloat)
 			ns.updateToken(tokenUpD)
 		}
 
 		// Add AccountTokens Doc ( update TO-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.To, ns.is_cccv_nft(event.ContractAddress))
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.To, ns.isCccvNft(event.ContractAddress))
 		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.To, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
@@ -241,7 +241,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		}
 
 		// Add TokenTransfer Doc
-		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[2], ns.is_cccv_nft(event.ContractAddress))
+		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[2], ns.isCccvNft(event.ContractAddress))
 		tokenTransferD := doc.ConvTokenTransfer(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), tokenId, amount, amountFloat)
 		if tokenTransferD.Amount == "" {
 			return
@@ -255,12 +255,12 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		ns.insertTokenTransfer(info.Type, tokenTransferD)
 
 		// Add AccountTokens Doc ( update TO-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.To, ns.is_cccv_nft(event.ContractAddress))
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.To, ns.isCccvNft(event.ContractAddress))
 		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.To, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
 		// Add AccountTokens Doc ( update FROM-Account )
-		balance, balanceFloat = MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.From, ns.is_cccv_nft(event.ContractAddress))
+		balance, balanceFloat = MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.From, ns.isCccvNft(event.ContractAddress))
 		accountTokensD = doc.ConvAccountTokens(tokenTransferD, tokenTransferD.From, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
@@ -278,7 +278,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		}
 
 		// Add TokenTransfer Doc ( burn )
-		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.is_cccv_nft(event.ContractAddress))
+		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.isCccvNft(event.ContractAddress))
 		tokenTransferD := doc.ConvTokenTransfer(event.ContractAddress, txD, idx, args[0].(string), "BURN", tokenId, amount, amountFloat)
 		if tokenTransferD.Amount == "" {
 			return
@@ -288,13 +288,13 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync {
-			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.is_cccv_nft(event.ContractAddress))
+			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.isCccvNft(event.ContractAddress))
 			tokenUpD := doc.ConvTokenUp(txD, event.ContractAddress, supply, supplyFloat)
 			ns.updateToken(tokenUpD)
 		}
 
 		// Add AccountTokens Doc ( update FROM-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.From, ns.is_cccv_nft(event.ContractAddress))
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.From, ns.isCccvNft(event.ContractAddress))
 		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.From, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensD)
 
