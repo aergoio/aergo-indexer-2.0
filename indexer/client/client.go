@@ -36,6 +36,14 @@ func NewAergoClient(serverAddr string, ctx context.Context) (*AergoClientControl
 	return &AergoClientController{types.NewAergoRPCServiceClient(conn)}, nil
 }
 
+func (t *AergoClientController) GetChainInfo() (*types.ChainInfo, error) {
+	chaininfo, err := t.client.GetChainInfo(context.Background(), &types.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	return chaininfo, nil
+}
+
 func (t *AergoClientController) GetBestBlock() (uint64, error) {
 	blockchain, err := t.client.Blockchain(context.Background(), &types.Empty{})
 	if err != nil {
