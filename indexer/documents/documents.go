@@ -484,8 +484,7 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"version": {
 							"type": "long"
-						},
-
+						}
 					}
 				}
 			}`,
@@ -804,8 +803,7 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"version": {
 							"type": "long"
-						},
-						
+						}
 					}
 				}
 			}`,
