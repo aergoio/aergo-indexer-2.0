@@ -95,6 +95,12 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
+	ns.CreateIndexIfNotExists("chain_info")
+
+	if ns.checkChainInfo() != nil {
+		ns.log.Info().Msg("Chain info is not valid. please check aergo server info or reset")
+		return true
+	}
 
 	ns.initCccvNft()
 	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
@@ -144,6 +150,55 @@ func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientControlle
 func (ns *Indexer) initIndexPrefix() {
 	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.prefix)
 	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
+}
+
+func (ns *Indexer) checkChainInfo() error {
+	// get chain info from db
+	document, err := ns.db.SelectOne(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "chain_info",
+	}, func() doc.DocType {
+		chainInfo := new(doc.EsChainInfo)
+		chainInfo.BaseEsType = new(doc.BaseEsType)
+		return chainInfo
+	})
+	if err != nil {
+		return err
+	}
+
+	// get chain info from node
+	chainInfoFromNode, err := ns.grpcClient.GetChainInfo()
+	if err != nil {
+		return err
+	}
+
+	// if empty in db, put new chain info
+	if document == nil {
+		chainInfo := doc.EsChainInfo{
+			BaseEsType: &doc.BaseEsType{
+				Id: chainInfoFromNode.Id.Magic,
+			},
+			Mainnet:   chainInfoFromNode.Id.Mainnet,
+			Public:    chainInfoFromNode.Id.Public,
+			Consensus: chainInfoFromNode.Id.Consensus,
+			Version:   uint64(chainInfoFromNode.Id.Version),
+		}
+		err = ns.db.Insert(&chainInfo, ns.indexNamePrefix+"chain_info")
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// valid chain info
+	chainInfoFromDb := document.(*doc.EsChainInfo)
+	if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
+		chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
+		chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
+		chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
+		chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) {
+		return errors.New("chain info is not matched")
+	}
+	return nil
 }
 
 // CreateIndexIfNotExists creates the indices and aliases in ES

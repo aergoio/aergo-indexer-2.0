@@ -1,17 +1,18 @@
 # Aergo Metadata Indexer
 
-This is a go program that connects to aergo server over RPC and synchronizes blockchain metadata with a database. It currently supports Elasticsearch.
+This is a go program that connects to aergo server over RPC and synchronizes blockchain metadata with a database. It supports Elasticsearch.
 
 This creates the indices,
    1. `block`
    2. `tx`
-   3. `name` (with a prefix)
+   3. `name`
    4. `token`
    5. `token_transfer`
    6. `account_balance`
    7. `account_tokens`
    8. `nft`
    9. `contract`
+  10. `chain_info`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -141,6 +142,15 @@ blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
 ```
 
+chain_info
+```
+Field           Type        Comment
+id              string      chain magic id
+public          bool        is public chain
+mainnet         bool        is mainnet
+consensus       string      consensus info
+version         uint64      version info
+```
 
 ## Usage
 
@@ -187,6 +197,6 @@ When reindexing, this creates new indices to sync the blockchain from scratch.
 
 ## Build and run using Docker Compose
 
-    docker compose -p aergo_indexer -f docker-compose.testnet.yml up
+    docker compose -p aergo_indexer up
 
 [Automatic latest build from master on Docker Hub](https://hub.docker.com/r/aergo/indexer2)

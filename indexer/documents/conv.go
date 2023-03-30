@@ -178,6 +178,16 @@ func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance st
 	}
 }
 
+func ConvChainInfo(chainInfo *types.ChainInfo) EsChainInfo {
+	return EsChainInfo{
+		BaseEsType: &BaseEsType{Id: chainInfo.Id.Magic},
+		Public:     chainInfo.Id.Public,
+		Mainnet:    chainInfo.Id.Mainnet,
+		Consensus:  chainInfo.Id.Consensus,
+		Version:    uint64(chainInfo.Id.Version),
+	}
+}
+
 // Aergo system refer to special accounts that don't need to be resolved
 func isAergoSystem(address string) bool {
 	return address == "aergo.system"

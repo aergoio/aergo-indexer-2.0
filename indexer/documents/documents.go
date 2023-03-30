@@ -158,6 +158,15 @@ type EsAccountBalance struct {
 	StakingFloat float32   `json:"staking_float" db:"staking_float"`
 }
 
+// EsChainInfo is meta data of a chain information
+type EsChainInfo struct {
+	*BaseEsType
+	Public    bool   `json:"public" db:"public"`
+	Mainnet   bool   `json:"mainnet" db:"mainnet"`
+	Consensus string `json:"consensus" db:"consensus"`
+	Version   uint64 `json:"version" db:"version"`
+}
+
 var EsMappings map[string]string
 
 func InitEsMappings(clusterMode bool) {
@@ -454,6 +463,32 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
+			"chain_info": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"id": {
+							"type": "keyword"
+						},
+						"public": {
+							"type": "boolean"
+						},
+						"mainnet": {
+							"type": "boolean"
+						},
+						"consensus": {
+							"type": "keyword"
+						},
+						"version": {
+							"type": "long"
+						},
+
+					}
+				}
+			}`,
 		}
 	} else {
 		EsMappings = map[string]string{
@@ -745,6 +780,32 @@ func InitEsMappings(clusterMode bool) {
 						"staking_float": {
 							"type": "float"
 						}
+					}
+				}
+			}`,
+			"chain_info": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"id": {
+							"type": "keyword"
+						},
+						"public": {
+							"type": "boolean"
+						},
+						"mainnet": {
+							"type": "boolean"
+						},
+						"consensus": {
+							"type": "keyword"
+						},
+						"version": {
+							"type": "long"
+						},
+						
 					}
 				}
 			}`,
