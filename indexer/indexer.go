@@ -86,19 +86,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 // Start setups the indexer
 func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
-	ns.CreateIndexIfNotExists("block")
-	ns.CreateIndexIfNotExists("tx")
-	ns.CreateIndexIfNotExists("name")
-	ns.CreateIndexIfNotExists("token")
-	ns.CreateIndexIfNotExists("contract")
-	ns.CreateIndexIfNotExists("token_transfer")
-	ns.CreateIndexIfNotExists("account_tokens")
-	ns.CreateIndexIfNotExists("nft")
-	ns.CreateIndexIfNotExists("account_balance")
-	ns.CreateIndexIfNotExists("chain_info")
-
-	if ns.checkChainInfo() != nil {
-		ns.log.Info().Msg("Chain info is not valid. please check aergo server info or reset")
+	if ns.InitIndex() != nil {
+		ns.log.Info().Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
 		return true
 	}
 
@@ -152,9 +141,30 @@ func (ns *Indexer) initIndexPrefix() {
 	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 }
 
-func (ns *Indexer) checkChainInfo() error {
-	// get chain info from db
-	document, err := ns.db.SelectOne(db.QueryParams{
+func (ns *Indexer) InitIndex() error {
+	if ns.runMode == "check" { // check 모드일 경우 충돌 방지를 위해 대기
+		for {
+			if _, _, err := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"block", "block"); err == nil {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+	}
+
+	// create index
+	ns.CreateIndexIfNotExists("block")
+	ns.CreateIndexIfNotExists("tx")
+	ns.CreateIndexIfNotExists("name")
+	ns.CreateIndexIfNotExists("token")
+	ns.CreateIndexIfNotExists("contract")
+	ns.CreateIndexIfNotExists("token_transfer")
+	ns.CreateIndexIfNotExists("account_tokens")
+	ns.CreateIndexIfNotExists("nft")
+	ns.CreateIndexIfNotExists("account_balance")
+	ns.CreateIndexIfNotExists("chain_info")
+
+	// check chain info
+	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
 	}, func() doc.DocType {
 		chainInfo := new(doc.EsChainInfo)
@@ -164,15 +174,11 @@ func (ns *Indexer) checkChainInfo() error {
 	if err != nil {
 		return err
 	}
-
-	// get chain info from node
-	chainInfoFromNode, err := ns.grpcClient.GetChainInfo()
+	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
 	if err != nil {
 		return err
 	}
-
-	// if empty in db, put new chain info
-	if document == nil {
+	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
 			BaseEsType: &doc.BaseEsType{
 				Id: chainInfoFromNode.Id.Magic,
@@ -188,14 +194,12 @@ func (ns *Indexer) checkChainInfo() error {
 		}
 		return nil
 	}
-
-	// valid chain info
 	chainInfoFromDb := document.(*doc.EsChainInfo)
 	if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
 		chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
 		chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
 		chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
-		chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) {
+		chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
 		return errors.New("chain info is not matched")
 	}
 	return nil
