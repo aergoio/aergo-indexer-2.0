@@ -79,17 +79,17 @@ func (t *AergoClientController) ListBlockStream() (types.AergoRPCService_ListBlo
 func (t *AergoClientController) BalanceOf(address []byte) (balance string, balanceFloat float32, staking string, stakingFloat float32) {
 	// get unstake balance
 	unstakingInfo, err := t.client.GetState(context.Background(), &types.SingleBytes{Value: address})
-	if err != nil {
-		return "0", 0, "0", 0
+	bigUnstaking := big.NewInt(0)
+	if err == nil {
+		bigUnstaking.SetBytes(unstakingInfo.GetBalance())
 	}
-	bigUnstaking := big.NewInt(0).SetBytes(unstakingInfo.GetBalance())
 
 	// get stake balance
 	stakingInfo, err := t.client.GetStaking(context.Background(), &types.AccountAddress{Value: address})
-	if err != nil {
-		return "0", 0, "0", 0
+	bigStaking := big.NewInt(0)
+	if err == nil {
+		bigStaking = big.NewInt(0).SetBytes(stakingInfo.GetAmount())
 	}
-	bigStaking := big.NewInt(0).SetBytes(stakingInfo.GetAmount())
 	staking = bigStaking.String()
 
 	// make total balance
