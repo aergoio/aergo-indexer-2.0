@@ -22,8 +22,6 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
-    privileged: true
-    network_mode: host
     logging:
       driver: "json-file"
       options:
@@ -42,7 +40,6 @@ services:
       options:
         max-file: "7"
         max-size: "10m"
-    network_mode: host
   indexer_check:
     container_name: indexer_check
     image: indexer
