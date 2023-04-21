@@ -96,7 +96,7 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 
 	switch ns.runMode {
 	case "check":
-		ns.RunCheckIndex(startFrom, stopAt)
+		ns.Check(startFrom, stopAt)
 		return true
 	case "onsync":
 		ns.OnSync()
@@ -143,11 +143,11 @@ func (ns *Indexer) initIndexPrefix() {
 
 func (ns *Indexer) InitIndex() error {
 	if ns.runMode == "check" { // check 모드일 경우 충돌 방지를 위해 대기
-		for {
-			if _, _, err := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"block", "block"); err == nil {
+		for i := 0; i < 10; i++ {
+			time.Sleep(time.Second)
+			if exist, _, _ := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"block", "block"); exist == true {
 				break
 			}
-			time.Sleep(time.Second)
 		}
 	}
 

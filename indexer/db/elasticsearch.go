@@ -31,7 +31,6 @@ func NewElasticClient(esURL string) (*elastic.Client, error) {
 	}
 	httpClient := &http.Client{Transport: tr}
 	client, err := elastic.NewClient(
-		elastic.SetSniff(false),
 		elastic.SetHttpClient(httpClient),
 		elastic.SetURL(url),
 		elastic.SetHealthcheckTimeoutStartup(30*time.Second),

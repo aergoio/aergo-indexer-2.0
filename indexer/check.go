@@ -9,7 +9,7 @@ import (
 )
 
 // Start setups the indexer
-func (ns *Indexer) RunCheckIndex(startFrom uint64, stopAt uint64) {
+func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 	fmt.Println("=======> Start Check index ..")
 
 	if stopAt == 0 {
