@@ -45,7 +45,6 @@ type Indexer struct {
 	serverAddr         string
 	prefix             string
 	runMode            string
-	checkMode          bool
 	cleanMode          bool
 	NetworkTypeForCccv string
 }
@@ -143,9 +142,9 @@ func (ns *Indexer) initIndexPrefix() {
 
 func (ns *Indexer) InitIndex() error {
 	if ns.runMode == "check" { // check 모드일 경우 충돌 방지를 위해 대기
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 20; i++ {
 			time.Sleep(time.Second)
-			if exist, _, _ := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"block", "block"); exist == true {
+			if exist, _, _ := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"chain_info", "chain_info"); exist == true {
 				break
 			}
 		}
