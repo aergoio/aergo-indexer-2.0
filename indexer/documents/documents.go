@@ -784,7 +784,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"chain_info": `{
 				"settings": {
-					"number_of_replicas": 0
+					"number_of_shards": 10,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
