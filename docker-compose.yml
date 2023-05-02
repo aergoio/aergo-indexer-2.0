@@ -61,4 +61,3 @@ services:
     network_mode: host
     depends_on:
       - elasticsearch
-      - indexer_onsync
