@@ -84,8 +84,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 // Start setups the indexer
 func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
-	if ns.InitIndex() != nil {
-		ns.log.Info().Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
+	if err := ns.InitIndex(); err != nil {
+		ns.log.Error().Err(err).Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
 		return true
 	}
 
@@ -94,8 +94,8 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 
 	switch ns.runMode {
 	case "all":
-		ns.Check(startFrom, stopAt)
 		ns.OnSync()
+		ns.Check(startFrom, stopAt)
 		return false
 	case "check":
 		ns.Check(startFrom, stopAt)
