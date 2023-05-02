@@ -45,7 +45,6 @@ type Indexer struct {
 	serverAddr         string
 	prefix             string
 	runMode            string
-	cleanMode          bool
 	NetworkTypeForCccv string
 }
 
@@ -94,6 +93,10 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
 
 	switch ns.runMode {
+	case "all":
+		ns.Check(startFrom, stopAt)
+		ns.OnSync()
+		return false
 	case "check":
 		ns.Check(startFrom, stopAt)
 		return true
@@ -141,15 +144,6 @@ func (ns *Indexer) initIndexPrefix() {
 }
 
 func (ns *Indexer) InitIndex() error {
-	if ns.runMode == "check" { // check 모드일 경우 충돌 방지를 위해 대기
-		for i := 0; i < 20; i++ {
-			time.Sleep(time.Second)
-			if exist, _, _ := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"chain_info", "chain_info"); exist == true {
-				break
-			}
-		}
-	}
-
 	// create index
 	ns.CreateIndexIfNotExists("block")
 	ns.CreateIndexIfNotExists("tx")

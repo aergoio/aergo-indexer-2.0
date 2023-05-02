@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -9,8 +11,30 @@ import (
 )
 
 const (
-	AergoServerAddress = "testnet-api.aergo.io:7845" // testnet
+	// AergoServerAddress = "3.38.108.120:7845"
+	AergoServerAddress = "testnet.api-aergo-io:7845" // testnet
 )
+
+func TestQuery_BalanceOf(t *testing.T) {
+	ctx := context.Background()
+
+	grpcClient, err := NewAergoClient(AergoServerAddress, ctx)
+	require.NoError(t, err)
+	blockchainStatus, err := grpcClient.client.Blockchain(ctx, &types.Empty{})
+	require.NoError(t, err)
+	fmt.Println(blockchainStatus.ChainInfo)
+	fmt.Println("best chainid hash :", blockchainStatus.BestChainIdHash)
+
+	blockNumber, err := grpcClient.GetBestBlock()
+	require.NoError(t, err)
+
+	var blockQuery []byte = make([]byte, 8)
+	binary.LittleEndian.PutUint64(blockQuery, blockNumber)
+
+	// fmt.Println("best block chain num or id :", blockInfo.Header.BlockNo, blockInfo.Header.ChainID)
+	// rawAddr, _ := types.DecodeAddress("AmPpcKvToDCUkhT1FJjdbNvR4kNDhLFJGHkSqfjWe3QmHm96qv4R")
+	// fmt.Println(grpcClient.BalanceOf(rawAddr))
+}
 
 func TestQuery_TokenInfo(t *testing.T) {
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())

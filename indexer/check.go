@@ -16,8 +16,9 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 		stopAt = ns.GetBestBlockFromClient() - 1
 	}
 	ns.fixIndex(startFrom, stopAt)
-	if ns.cleanMode {
-		ns.cleanIndex()
+	err := ns.cleanIndex()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to clean unexpected data")
 	}
 }
 
