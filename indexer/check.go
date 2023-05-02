@@ -3,6 +3,7 @@ package indexer
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
@@ -12,12 +13,23 @@ import (
 func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 	fmt.Println("=======> Start Check index ..")
 
+	aliasName := ns.aliasNamePrefix + "block"
+	for {
+		_, _, err := ns.db.GetExistingIndexPrefix(aliasName, "block")
+
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+
 	if stopAt == 0 {
 		stopAt = ns.GetBestBlockFromClient() - 1
 	}
 	ns.fixIndex(startFrom, stopAt)
-	if ns.cleanMode {
-		ns.cleanIndex()
+	err := ns.cleanIndex()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to clean unexpected data")
 	}
 }
 

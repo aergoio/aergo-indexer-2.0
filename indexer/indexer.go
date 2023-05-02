@@ -45,7 +45,6 @@ type Indexer struct {
 	serverAddr         string
 	prefix             string
 	runMode            string
-	cleanMode          bool
 	NetworkTypeForCccv string
 }
 
@@ -85,8 +84,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 // Start setups the indexer
 func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
-	if ns.InitIndex() != nil {
-		ns.log.Info().Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
+	if err := ns.InitIndex(); err != nil {
+		ns.log.Error().Err(err).Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
 		return true
 	}
 
@@ -94,6 +93,10 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
 
 	switch ns.runMode {
+	case "all":
+		ns.OnSync()
+		ns.Check(startFrom, stopAt)
+		return false
 	case "check":
 		ns.Check(startFrom, stopAt)
 		return true
@@ -141,15 +144,6 @@ func (ns *Indexer) initIndexPrefix() {
 }
 
 func (ns *Indexer) InitIndex() error {
-	if ns.runMode == "check" { // check 모드일 경우 충돌 방지를 위해 대기
-		for i := 0; i < 20; i++ {
-			time.Sleep(time.Second)
-			if exist, _, _ := ns.db.GetExistingIndexPrefix(ns.aliasNamePrefix+"chain_info", "chain_info"); exist == true {
-				break
-			}
-		}
-	}
-
 	// create index
 	ns.CreateIndexIfNotExists("block")
 	ns.CreateIndexIfNotExists("tx")
@@ -162,20 +156,27 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("account_balance")
 	ns.CreateIndexIfNotExists("chain_info")
 
+	// wait until create index
+	time.Sleep(time.Second * 10)
+
+	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
+	if err != nil {
+		return err
+	}
+
 	// check chain info
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
+		SortField: "version",
+		SortAsc:   true,
+		From:      0,
 	}, func() doc.DocType {
 		chainInfo := new(doc.EsChainInfo)
 		chainInfo.BaseEsType = new(doc.BaseEsType)
 		return chainInfo
 	})
 	if err != nil {
-		return err
-	}
-	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
-	if err != nil {
-		return err
+		ns.log.Error().Err(err).Msg("Could not query chain info, add new one.")
 	}
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{

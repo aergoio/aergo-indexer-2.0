@@ -183,7 +183,7 @@ func (ns *Indexer) registerStakingWhiteList() {
 		if err == io.EOF {
 			break
 		}
-		if balance := document.(*doc.EsAccountBalance); balance.StakingFloat >= 10000 {
+		if balance, ok := document.(*doc.EsAccountBalance); ok && balance.StakingFloat >= 10000 {
 			ns.whiteListAddresses.Store(balance.Id, true)
 		}
 	}

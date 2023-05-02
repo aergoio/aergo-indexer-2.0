@@ -21,9 +21,9 @@ var (
 		Run:   rootRun,
 	}
 
-	runMode   string
-	checkMode bool
-	cleanMode bool
+	runMode    string
+	checkMode  bool
+	onsyncMode bool
 
 	host             string
 	port             int32
@@ -46,12 +46,12 @@ func init() {
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
-	fs.StringVarP(&prefix, "prefix", "P", "", "index name prefix")
+	fs.StringVarP(&prefix, "prefix", "P", "testnet", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
 
-	fs.BoolVar(&checkMode, "check", false, "check and fix indices of range of heights")
-	fs.BoolVar(&cleanMode, "clean", false, "check and clean unexpected data in indices")
-	fs.StringVarP(&runMode, "mode", "M", "onsync", "indexer running mode. Alternative to setting check, clean separately.")
+	fs.BoolVar(&checkMode, "check", false, "check indices of range of heights")
+	fs.BoolVar(&onsyncMode, "onsync", true, "onsync data in indices")
+	fs.StringVarP(&runMode, "mode", "M", "all", "indexer running mode. Alternative to setting check, onsync separately.")
 
 	fs.Uint64Var(&startFrom, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&stopAt, "to", 0, "stop syncing at this block number. check only")
@@ -111,8 +111,8 @@ func getServerAddress() string {
 func getRunMode() string {
 	if len(runMode) > 0 {
 		return runMode
-	} else if cleanMode {
-		return "clean"
+	} else if onsyncMode && checkMode {
+		return "all"
 	} else if checkMode {
 		return "check"
 	}

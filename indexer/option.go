@@ -44,10 +44,6 @@ func SetNetworkTypeForCccv(initCccvNft string) IndexerOptionFunc {
 func SetRunMode(runMode string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.runMode = runMode
-		if runMode == "clean" {
-			indexer.runMode = "check"
-			indexer.cleanMode = true
-		}
 		return nil
 	}
 }
