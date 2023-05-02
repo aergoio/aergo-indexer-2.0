@@ -159,7 +159,7 @@ Usage:
   indexer [flags]
 
 Flags:
-  -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately. (default "alpha-api.aergo.io:7845")
+  -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately.
       --cccv string         indexing cccv nft by network type ( mainnet or testnet ). only use for cccv
       --check               check indices of range of heights
   -C, --cluster             elasticsearch cluster type
