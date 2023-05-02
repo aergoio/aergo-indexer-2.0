@@ -41,8 +41,8 @@ services:
         max-file: "7"
         max-size: "10m"
     network_mode: host
-  indexer_onsync:
-    container_name: indexer_onsync
+  indexer:
+    container_name: indexer
     image: indexer
     build:
      context: ./
@@ -54,25 +54,7 @@ services:
       - --aergo=localhost:7845
       - --dburl=localhost:9200
       - --prefix=testnet
-      - --mode=onsync
-      - --cluster=false
-    network_mode: host
-    depends_on:
-      - elasticsearch
-  indexer_check:
-    container_name: indexer_check
-    image: indexer
-    build:
-     context: ./
-     dockerfile: Dockerfile
-    ports:
-     - 8001:8001
-    privileged: true
-    command: indexer
-      - --aergo=localhost:7845
-      - --dburl=localhost:9200
-      - --prefix=testnet
-      - --mode=check
+      - --mode=all
       - --from=0
       - --to=0
       - --cluster=false
