@@ -40,7 +40,6 @@ services:
       options:
         max-file: "7"
         max-size: "10m"
-    network_mode: host
   indexer:
     container_name: indexer
     image: indexer
