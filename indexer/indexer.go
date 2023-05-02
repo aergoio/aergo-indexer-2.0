@@ -156,6 +156,7 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("account_balance")
 	ns.CreateIndexIfNotExists("chain_info")
 
+	// wait until create index
 	time.Sleep(time.Second * 10)
 
 	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
