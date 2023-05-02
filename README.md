@@ -159,18 +159,18 @@ Usage:
   indexer [flags]
 
 Flags:
-  -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately.
+  -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately. (default "alpha-api.aergo.io:7845")
       --cccv string         indexing cccv nft by network type ( mainnet or testnet ). only use for cccv
-      --check               check and fix indices of range of heights
-      --clean               check and clean unexpected data in indices
+      --check               check indices of range of heights
   -C, --cluster             elasticsearch cluster type
   -E, --dburl string        Database URL (default "localhost:9200")
       --from uint           start syncing from this block number. check only
   -h, --help                help for indexer
   -H, --host string         host address of aergo server (default "localhost")
-  -M, --mode string         indexer running mode. Alternative to setting check, clean separately. (default "onsync")
+  -M, --mode string         indexer running mode. Alternative to setting check, onsync separately. (default "all")
+      --onsync              onsync data in indices (default true)
   -p, --port int32          port number of aergo server (default 7845)
-  -P, --prefix string       index name prefix
+  -P, --prefix string       index name prefix (default "testnet")
       --to uint             stop syncing at this block number. check only
   -W, --whitelist strings   address for indexing whitelist balance. onsync only
 ```
