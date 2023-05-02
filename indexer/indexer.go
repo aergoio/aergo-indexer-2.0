@@ -156,6 +156,11 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("account_balance")
 	ns.CreateIndexIfNotExists("chain_info")
 
+	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
+	if err != nil {
+		return err
+	}
+
 	// check chain info
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
@@ -168,11 +173,7 @@ func (ns *Indexer) InitIndex() error {
 		return chainInfo
 	})
 	if err != nil {
-		return err
-	}
-	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
-	if err != nil {
-		return err
+		ns.log.Error().Err(err).Msg("Could not query chain info, add new one.")
 	}
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
