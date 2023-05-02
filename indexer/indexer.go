@@ -159,8 +159,9 @@ func (ns *Indexer) InitIndex() error {
 	// check chain info
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
-		SortField: "id",
+		SortField: "version",
 		SortAsc:   true,
+		From:      0,
 	}, func() doc.DocType {
 		chainInfo := new(doc.EsChainInfo)
 		chainInfo.BaseEsType = new(doc.BaseEsType)
