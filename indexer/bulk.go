@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,7 +14,7 @@ func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uin
 
 	for blockHeight := toBlockHeight; blockHeight > fromBlockHeight; blockHeight-- {
 		if blockHeight%100000 == 0 {
-			fmt.Println(">>>>> Current Reindex Height :", blockHeight)
+			ns.log.Info().Uint64("Height", blockHeight).Msg("Current Reindex")
 		}
 		ns.RChannel[blockHeight%uint64(ns.minerNum)] <- BlockInfo{BlockType_Bulk, blockHeight}
 	}
@@ -41,12 +42,12 @@ func (ns *Indexer) StartBulkChannel() {
 	// Start multiple miners
 	GrpcClients := make([]*client.AergoClientController, ns.grpcNum)
 	for i := 0; i < ns.grpcNum; i++ {
-		GrpcClients[i] = ns.WaitForClient(ns.serverAddr)
+		GrpcClients[i] = ns.WaitForClient(context.Background())
 	}
 
 	ns.RChannel = make([]chan BlockInfo, ns.minerNum)
 	for i := 0; i < ns.minerNum; i++ {
-		fmt.Println(":::::::::::::::::::::: Start Channels")
+		ns.log.Debug().Msg("grpc channel start")
 		ns.RChannel[i] = make(chan BlockInfo)
 		if ns.grpcNum > 0 {
 			go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.grpcNum])
@@ -58,7 +59,7 @@ func (ns *Indexer) StartBulkChannel() {
 
 // Stop Bulk indexing
 func (ns *Indexer) StopBulkChannel() {
-	fmt.Println(":::::::::::::::::::::: STOP Channels")
+	ns.log.Debug().Msg("grpc channel stop")
 
 	for i := 0; i < ns.minerNum; i++ {
 		ns.RChannel[i] <- BlockInfo{BlockType_StopMiner, 0}
@@ -154,7 +155,7 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 		dur := time.Since(begin).Seconds()
 		pps := int64(float64(total) / dur)
 
-		ns.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps).Msg("")
+		ns.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps)
 
 		begin = time.Now()
 		total = 0

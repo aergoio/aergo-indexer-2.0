@@ -43,12 +43,20 @@ func NewElasticClient(esURL string) (*elastic.Client, error) {
 }
 
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
-func NewElasticsearchDbController(esURL string) (*ElasticsearchDbController, error) {
+func NewElasticsearchDbController(ctx context.Context, esURL string) (*ElasticsearchDbController, error) {
 	client, err := NewElasticClient(esURL)
 	if err != nil {
 		return nil, err
 	}
 	return &ElasticsearchDbController{client: client}, nil
+}
+
+func (esdb *ElasticsearchDbController) HealthCheck(ctx context.Context) bool {
+	_, err := esdb.client.ClusterHealth().Do(ctx)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool {

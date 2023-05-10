@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -51,6 +50,7 @@ type Indexer struct {
 // NewIndexer creates new Indexer instance
 func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	var err error
+	ctx := context.Background()
 
 	// set default options
 	svc := &Indexer{
@@ -68,22 +68,26 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		}
 	}
 
-	// conn server, db
-	svc.grpcClient = svc.WaitForClient(svc.serverAddr)
-	svc.db, err = db.NewElasticsearchDbController(svc.dbAddr)
+	// connect server
+	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Attempting to connect to the Aergo server")
+	svc.grpcClient = svc.WaitForClient(ctx)
+	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Successfully connected to the Aergo server")
+
+	// connect db
+	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Attempting to connect to the database")
+	svc.db, err = svc.WaitForDatabase(ctx)
 	if err != nil {
 		return nil, err
 	}
-	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Initialized database connection")
-
-	// init index prefix, cccv
-	svc.initIndexPrefix()
+	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Successfully connected to the database")
 
 	return svc, nil
 }
 
 // Start setups the indexer
 func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) {
+	ns.log.Info().Msg("Start Indexer")
+
 	if err := ns.InitIndex(); err != nil {
 		ns.log.Error().Err(err).Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
 		return true
@@ -117,25 +121,35 @@ func (ns *Indexer) Stop() {
 	}
 
 	ns.log.Info().Msg("Stop Indexer")
-
-	os.Exit(0)
 }
 
-func (ns *Indexer) WaitForClient(serverAddr string) *client.AergoClientController {
+func (ns *Indexer) WaitForClient(ctx context.Context) *client.AergoClientController {
 	var err error
-	ctx := context.Background()
 	var aergoClient *client.AergoClientController
 	for {
-		aergoClient, err = client.NewAergoClient(serverAddr, ctx)
+		aergoClient, err = client.NewAergoClient(ns.serverAddr, ctx)
 		if err == nil && aergoClient != nil {
 			break
 		}
-		ns.log.Info().Str("serverAddr", serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
+		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not connect to aergo server, retrying")
 		time.Sleep(time.Second)
 	}
-	ns.log.Info().Str("serverAddr", serverAddr).Msg("Connected to aergo server")
-
 	return aergoClient
+}
+
+func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbController, error) {
+	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr)
+	if err != nil {
+		return nil, err
+	}
+	// wait until elasticsearch client is ready
+	for {
+		if ok := dbController.HealthCheck(ctx); ok == true {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	return dbController, nil
 }
 
 func (ns *Indexer) initIndexPrefix() {
@@ -144,6 +158,9 @@ func (ns *Indexer) initIndexPrefix() {
 }
 
 func (ns *Indexer) InitIndex() error {
+	// init index prefix
+	ns.initIndexPrefix()
+
 	// create index
 	ns.CreateIndexIfNotExists("block")
 	ns.CreateIndexIfNotExists("tx")
