@@ -162,7 +162,14 @@ func (ns *Indexer) InitIndex() error {
 	ns.initIndexPrefix()
 
 	// create index
-	ns.CreateIndexIfNotExists("block")
+	for {
+		err := ns.CreateIndexIfNotExists("block")
+		if err == nil {
+			break
+		}
+		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not create block, retrying...")
+		time.Sleep(time.Second)
+	}
 	ns.CreateIndexIfNotExists("tx")
 	ns.CreateIndexIfNotExists("name")
 	ns.CreateIndexIfNotExists("token")
@@ -172,9 +179,6 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
 	ns.CreateIndexIfNotExists("chain_info")
-
-	// wait until create index
-	time.Sleep(time.Second * 10)
 
 	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
 	if err != nil {
@@ -223,19 +227,20 @@ func (ns *Indexer) InitIndex() error {
 }
 
 // CreateIndexIfNotExists creates the indices and aliases in ES
-func (ns *Indexer) CreateIndexIfNotExists(documentType string) {
+func (ns *Indexer) CreateIndexIfNotExists(documentType string) error {
 	aliasName := ns.aliasNamePrefix + documentType
 
 	// Check for existing index to find out current indexNamePrefix
 	exists, indexNamePrefix, err := ns.db.GetExistingIndexPrefix(aliasName, documentType)
 	if err != nil {
 		ns.log.Error().Err(err).Msg("Error when checking for alias")
+		return err
 	}
 
 	if exists {
 		ns.log.Info().Str("aliasName", aliasName).Str("indexNamePrefix", indexNamePrefix).Msg("Alias found")
 		ns.indexNamePrefix = indexNamePrefix
-		return
+		return nil
 	}
 
 	// Create new index
@@ -243,18 +248,20 @@ func (ns *Indexer) CreateIndexIfNotExists(documentType string) {
 	err = ns.db.CreateIndex(indexName, documentType)
 	if err != nil {
 		ns.log.Error().Err(err).Str("indexName", indexName).Msg("Error when creating index")
+		return err
 	} else {
 		ns.log.Info().Str("indexName", indexName).Msg("Created index")
 	}
 
-	// Update alias, only when initializing and not reindexing
+	// Update alias
 	err = ns.db.UpdateAlias(aliasName, indexName)
 	if err != nil {
 		ns.log.Error().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
+		return err
 	} else {
 		ns.log.Info().Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
 	}
-	return
+	return nil
 }
 
 // UpdateAliasForType updates aliases

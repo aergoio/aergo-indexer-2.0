@@ -493,8 +493,8 @@ func InitEsMappings(clusterMode bool) {
 		EsMappings = map[string]string{
 			"tx": `{
 				"settings": {
-					"number_of_shards": 50,
-					"number_of_replicas": 0
+					"number_of_shards": 10,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -536,8 +536,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"block": `{
 				"settings": {
-					"number_of_shards": 100,
-					"number_of_replicas": 0
+					"number_of_shards": 20,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -567,8 +567,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"name": `{
 				"settings": {
-					"number_of_shards": 2,
-					"number_of_replicas": 0
+					"number_of_shards": 1,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -589,8 +589,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"token_transfer": `{
 				"settings": {
-					"number_of_shards": 30,
-					"number_of_replicas": 0
+					"number_of_shards": 3,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -629,8 +629,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"token": `{
 				"settings": {
-					"number_of_shards": 5,
-					"number_of_replicas": 0
+					"number_of_shards": 1,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -672,8 +672,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"account_tokens": `{
 				"settings": {
-					"number_of_shards": 10,
-					"number_of_replicas": 0
+					"number_of_shards": 3,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -700,8 +700,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"nft": `{
 				"settings": {
-					"number_of_shards": 30,
-					"number_of_replicas": 0
+					"number_of_shards": 1,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -731,8 +731,8 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"contract": `{
 				"settings": {
-					"number_of_shards": 10,
-					"number_of_replicas": 0
+					"number_of_shards": 1,
+					"number_of_replicas": 1
 				},
 				"mappings": {
 					"properties": {
@@ -753,7 +753,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"account_balance": `{
 				"settings": {
-					"number_of_shards": 10,
+					"number_of_shards": 1,
 					"number_of_replicas": 1
 				},
 				"mappings": {
@@ -784,7 +784,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"chain_info": `{
 				"settings": {
-					"number_of_shards": 10,
+					"number_of_shards": 1,
 					"number_of_replicas": 1
 				},
 				"mappings": {
