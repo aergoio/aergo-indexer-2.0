@@ -629,7 +629,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"token": `{
 				"settings": {
-					"number_of_shards": 1,
+					"number_of_shards": 3,
 					"number_of_replicas": 1
 				},
 				"mappings": {
@@ -700,7 +700,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"nft": `{
 				"settings": {
-					"number_of_shards": 1,
+					"number_of_shards": 3,
 					"number_of_replicas": 1
 				},
 				"mappings": {
@@ -731,7 +731,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"contract": `{
 				"settings": {
-					"number_of_shards": 1,
+					"number_of_shards": 3,
 					"number_of_replicas": 1
 				},
 				"mappings": {
@@ -753,7 +753,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"account_balance": `{
 				"settings": {
-					"number_of_shards": 1,
+					"number_of_shards": 3,
 					"number_of_replicas": 1
 				},
 				"mappings": {
@@ -784,7 +784,7 @@ func InitEsMappings(clusterMode bool) {
 			}`,
 			"chain_info": `{
 				"settings": {
-					"number_of_shards": 1,
+					"number_of_shards": 3,
 					"number_of_replicas": 1
 				},
 				"mappings": {
