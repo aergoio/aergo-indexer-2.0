@@ -12,13 +12,6 @@ services:
      memlock:
       soft: -1
       hard: -1
-    volumes:
-      - type: bind
-        source: ./data/eldata/data
-        target: /usr/share/elasticsearch/data
-      - type: bind
-        source: ./data/eldata/logs
-        target: /usr/share/elasticsearch/logs
     ports:
       - 9200:9200
       - 9300:9300
@@ -60,3 +53,8 @@ services:
     network_mode: host
     depends_on:
       - elasticsearch
+volumes:
+  el_data:
+    driver: local
+  el_logs:
+    driver: local
