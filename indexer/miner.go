@@ -26,7 +26,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 	for info := range RChannel {
 		// stop miner
 		if info.Type == BlockType_StopMiner {
-			fmt.Println(":::::::::::::::::::::: STOP Miner")
+			ns.log.Debug().Msg("stop miner")
 			break
 		}
 
@@ -443,10 +443,8 @@ func (ns *Indexer) insertToken(blockType BlockType, tokenD doc.EsToken) {
 func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.EsAccountTokens) {
 	if blockType == BlockType_Bulk {
 		if _, ok := ns.accToken.Load(accountTokensD.Id); ok {
-			// fmt.Println("succs", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
 			return
 		} else {
-			// fmt.Println("fail", fmt.Sprintf("%s-%s", account, tokenTransfer.TokenAddress))
 			ns.BChannel.AccTokens <- ChanInfo{1, accountTokensD}
 			ns.accToken.Store(accountTokensD.Id, true)
 		}

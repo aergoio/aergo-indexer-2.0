@@ -5,9 +5,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	indx "github.com/aergoio/aergo-indexer-2.0/indexer"
+	"github.com/aergoio/aergo-indexer-2.0/indexer"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-lib/log"
 	"github.com/spf13/cobra"
@@ -36,15 +35,14 @@ var (
 	whiteListAddress []string
 	typeCccvNft      string
 
-	logger  *log.Logger
-	indexer *indx.Indexer
+	logger *log.Logger
 )
 
 func init() {
 	fs := rootCmd.PersistentFlags()
 	fs.StringVarP(&host, "host", "H", "localhost", "host address of aergo server")
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
-	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
+	fs.StringVarP(&aergoAddress, "aergo", "A", "alpha-api.aergo.io:7845", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
 	fs.StringVarP(&prefix, "prefix", "P", "testnet", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
@@ -72,33 +70,32 @@ func rootRun(cmd *cobra.Command, args []string) {
 	doc.InitEsMappings(cluster)
 
 	// init indexer
-	indexer, err := indx.NewIndexer(
-		indx.SetServerAddr(getServerAddress()),
-		indx.SetDBAddr(dbURL),
-		indx.SetPrefix(prefix),
-		indx.SetNetworkTypeForCccv(typeCccvNft),
-		indx.SetRunMode(getRunMode()),
-		indx.SetLogger(logger),
-		indx.SetWhiteListAddresses(whiteListAddress),
+	indx, err := indexer.NewIndexer(
+		indexer.SetServerAddr(getServerAddress()),
+		indexer.SetDBAddr(dbURL),
+		indexer.SetPrefix(prefix),
+		indexer.SetNetworkTypeForCccv(typeCccvNft),
+		indexer.SetRunMode(getRunMode()),
+		indexer.SetLogger(logger),
+		indexer.SetWhiteListAddresses(whiteListAddress),
 	)
 	if err != nil {
-		logger.Warn().Err(err).Str("dbURL", dbURL).Msg("Could not start indexer")
+		logger.Warn().Err(err).Msg("Could not start indexer")
 		return
 	}
 
 	// start indexer
-	exitOnComplete := indexer.Start(startFrom, stopAt)
+	exitOnComplete := indx.Start(startFrom, stopAt)
 	if exitOnComplete == true {
 		return
 	}
 
-	handleKillSig(func() {
-		indexer.Stop()
+	interrupt := handleKillSig(func() {
+		indx.Stop()
 	}, logger)
 
-	for {
-		time.Sleep(time.Second)
-	}
+	// Wait main routine to stop
+	<-interrupt.C
 }
 
 func getServerAddress() string {
@@ -119,7 +116,15 @@ func getRunMode() string {
 	return "onsync"
 }
 
-func handleKillSig(handler func(), logger *log.Logger) {
+type interrupt struct {
+	C chan struct{}
+}
+
+func handleKillSig(handler func(), logger *log.Logger) interrupt {
+	i := interrupt{
+		C: make(chan struct{}),
+	}
+
 	sigChannel := make(chan os.Signal, 1)
 
 	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
@@ -127,7 +132,8 @@ func handleKillSig(handler func(), logger *log.Logger) {
 		for signal := range sigChannel {
 			logger.Info().Msgf("Receive signal %s, Shutting down...", signal)
 			handler()
-			os.Exit(1)
+			close(i.C)
 		}
 	}()
+	return i
 }

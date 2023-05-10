@@ -13,7 +13,7 @@ import (
 // Start setups the indexer
 func (ns *Indexer) OnSync() {
 	// Get ready to start
-	ns.log.Info().Uint64("OnSync block height", ns.lastHeight+1).Msg("Started Indexer")
+	ns.log.Info().Uint64("height", ns.lastHeight+1).Msg("Start Onsync...")
 
 	ns.registerStakingWhiteList()
 	// Sync stream
@@ -29,7 +29,6 @@ func (ns *Indexer) startStream() {
 
 	SyncBlock := func(block *types.Block) error {
 		newHeight := block.Header.BlockNo
-		fmt.Println("->")
 		if newHeight < ns.lastHeight { // Rewound 1 or more blocks
 			// This needs to be syncronous, otherwise it may
 			// delete the block we are just about to add
@@ -42,7 +41,7 @@ func (ns *Indexer) startStream() {
 		if newHeight > ns.lastHeight+1 {
 			for H := ns.lastHeight + 1; H < newHeight; H++ {
 				MChannel <- BlockInfo{2, H}
-				fmt.Println("O NB :", H)
+				fmt.Println(">>> New Block :", H)
 			}
 		}
 
@@ -54,12 +53,12 @@ func (ns *Indexer) startStream() {
 			} else {
 				MChannel <- BlockInfo{2, newHeight}
 				ns.lastHeight = newHeight
-				fmt.Println("O NB :", newHeight)
+				fmt.Println(">>> New Block :", newHeight)
 			}
 		} else {
 			MChannel <- BlockInfo{2, newHeight}
 			ns.lastHeight = newHeight
-			fmt.Println("O NB :", newHeight)
+			fmt.Println(">>> New Block :", newHeight)
 		}
 		return nil
 	}
@@ -94,17 +93,16 @@ func (ns *Indexer) openStream() {
 			ns.log.Info().Msg("Waiting open stream in 6 seconds")
 			time.Sleep(6 * time.Second)
 		} else {
-			ns.log.Info().Msg("Starting stream ....")
+			ns.log.Info().Msg("Starting stream...")
 			return
 		}
 	}
 }
 
 func (ns *Indexer) sleepStream(BlockNo uint64) {
-	fmt.Println("<------  SLEEP  ------> ", BlockNo)
+	ns.log.Info().Msgf("Sleep stream... %d", BlockNo)
 
 	return_tag := false
-
 	go func() {
 		for {
 			switch return_tag {
@@ -125,14 +123,14 @@ func (ns *Indexer) sleepStream(BlockNo uint64) {
 		if err == nil {
 			if CBlockNo >= BestBlockNo {
 				ns.lastHeight = BestBlockNo
-				fmt.Println("<------ WAKE UP ------> ", ns.lastHeight)
+				ns.log.Info().Msgf("Wake up stream %d", ns.lastHeight)
 				return_tag = true
 				return
 			} else {
 				CBlockNo = BestBlockNo
 			}
 		}
-		fmt.Println("X CB : ", CBlockNo)
+		fmt.Println(">>> Sleep Block : ", CBlockNo)
 	}
 }
 

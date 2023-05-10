@@ -1,9 +1,7 @@
 package indexer
 
 import (
-	"fmt"
 	"io"
-	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
@@ -11,17 +9,7 @@ import (
 
 // Start setups the indexer
 func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
-	fmt.Println("=======> Start Check index ..")
-
-	aliasName := ns.aliasNamePrefix + "block"
-	for {
-		_, _, err := ns.db.GetExistingIndexPrefix(aliasName, "block")
-
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second)
-	}
+	ns.log.Info().Uint64("from", startFrom).Uint64("to", stopAt).Msg("Start Check...")
 
 	if stopAt == 0 {
 		stopAt = ns.GetBestBlockFromClient() - 1
@@ -71,7 +59,7 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 		blockNo = block.(*doc.EsBlock).BlockNo
 
 		if blockNo%100000 == 0 {
-			fmt.Println(">>> Check Block :", blockNo)
+			ns.log.Info().Uint64("BlockNo", blockNo).Msg("Current Check")
 		}
 		if blockNo >= prevBlockNo {
 			continue
@@ -97,7 +85,7 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 
 // Start clean the indexer
 func (ns *Indexer) cleanIndex() error {
-	fmt.Println("=======> Start Clean index ..")
+	ns.log.Info().Msg("Clean index Start...")
 
 	// 1. get token list
 	scrollToken := ns.db.Scroll(db.QueryParams{
