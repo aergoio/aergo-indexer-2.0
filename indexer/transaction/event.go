@@ -8,17 +8,17 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
-// EventType
-type EventType string
+// EventName
+type EventName string
 
 // Categories
 const (
-	EventNone     EventType = ""
-	EventNewArc1  EventType = "new_arc1_token"
-	EventNewArc2  EventType = "new_arc2_token"
-	EventMint     EventType = "mint"
-	EventTransfer EventType = "transfer"
-	EventBurn     EventType = "burn"
+	EventNone         EventName = ""
+	EventNewArc1Token EventName = "new_arc1_token"
+	EventNewArc2Token EventName = "new_arc2_token"
+	EventMint         EventName = "mint"
+	EventTransfer     EventName = "transfer"
+	EventBurn         EventName = "burn"
 )
 
 func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contractAddress []byte, err error) {
@@ -27,10 +27,10 @@ func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contrac
 	}
 
 	// get token type
-	switch event.EventName {
-	case "new_arc1_token":
+	switch EventName(event.EventName) {
+	case EventNewArc1Token:
 		tokenType = TokenARC1
-	case "new_arc2_token":
+	case EventNewArc2Token:
 		tokenType = TokenARC2
 	default:
 		return TokenNone, nil, fmt.Errorf("invalid event name | %s", event.EventName)
@@ -61,6 +61,9 @@ func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contrac
 func UnmarshalEventMint(event *types.Event) (contractAddress []byte, accountFrom, accountTo, amountOrId string, err error) {
 	if event == nil {
 		return nil, "", "", "", errors.New("not exist event")
+	}
+	if EventName(event.EventName) != EventMint {
+		return nil, "", "", "", fmt.Errorf("invalid event name | %s", event.EventName)
 	}
 
 	// get contract address
@@ -95,8 +98,7 @@ func UnmarshalEventTransfer(event *types.Event) (contractAddress []byte, account
 	if event == nil {
 		return nil, "", "", "", errors.New("not exist event")
 	}
-
-	if event.EventName != "transfer" {
+	if EventName(event.EventName) != EventTransfer {
 		return nil, "", "", "", fmt.Errorf("invalid event name | %s", event.EventName)
 	}
 
@@ -138,6 +140,9 @@ func UnmarshalEventTransfer(event *types.Event) (contractAddress []byte, account
 func UnmarshalEventBurn(event *types.Event) (contractAddress []byte, accountFrom, accountTo, amountOrId string, err error) {
 	if event == nil {
 		return nil, "", "", "", errors.New("not exist event")
+	}
+	if EventName(event.EventName) != EventBurn {
+		return nil, "", "", "", fmt.Errorf("invalid event name | %s", event.EventName)
 	}
 
 	// get contract address

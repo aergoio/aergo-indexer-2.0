@@ -150,8 +150,8 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byt
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
-	switch event.EventName {
-	case "new_arc1_token", "new_arc2_token":
+	switch transaction.EventName(event.EventName) {
+	case transaction.EventNewArc1Token, transaction.EventNewArc2Token:
 		tokenType, contractAddress, err := transaction.UnmarshalEventNewArcToken(event)
 		if err != nil {
 			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
@@ -177,7 +177,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 		ns.insertContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Policy 1 )")
-	case "mint":
+	case transaction.EventMint:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventMint(event)
 		if err != nil {
 			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
@@ -207,7 +207,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			ns.insertNFT(info.Type, nftDoc)
 		}
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token minted")
-	case "transfer":
+	case transaction.EventTransfer:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventMint(event)
 		if err != nil {
 			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
@@ -240,7 +240,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			ns.insertNFT(info.Type, nftDoc)
 		}
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token transfered")
-	case "burn":
+	case transaction.EventBurn:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventBurn(event)
 		if err != nil {
 			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
