@@ -246,23 +246,23 @@ func TestConvTokenTransfer(t *testing.T) {
 }
 
 func TestConvAccountTokens(t *testing.T) {
-	fn_test := func(esTokenTransfer EsTokenTransfer, account string, balance string, balanceFloat float32, esAccountTokensExpect EsAccountTokens) {
-		esAccountTokensConv := ConvAccountTokens(esTokenTransfer, account, balance, balanceFloat)
+	fn_test := func(tokenId string, tokenAddress string, timestamp time.Time, account string, balance string, balanceFloat float32, esAccountTokensExpect EsAccountTokens) {
+		esAccountTokensConv := ConvAccountTokens(tokenId, tokenAddress, timestamp, account, balance, balanceFloat)
 		require.Equal(t, esAccountTokensExpect, esAccountTokensConv)
 	}
 
-	fn_test(EsTokenTransfer{
-		BlockNo:      105810882,
-		Timestamp:    time.Unix(0, 1668652376002288214),
-		TokenAddress: "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
-		TokenId:      "a6d6d055488d443d29952c1ca276b34ca_203",
-	}, "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "7364", 7364, EsAccountTokens{
-		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF")},
-		Account:      "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD",
-		TokenAddress: "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
-		Type:         transaction.TokenARC2,
-		Timestamp:    time.Unix(0, 1668652376002288214),
-		Balance:      "7364",
-		BalanceFloat: 7364,
-	})
+	fn_test(
+		"a6d6d055488d443d29952c1ca276b34ca_203",
+		"Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
+		time.Unix(0, 1668652376002288214),
+		"AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "7364", 7364, EsAccountTokens{
+			BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF")},
+			Account:      "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD",
+			TokenAddress: "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
+			Type:         transaction.TokenARC2,
+			Timestamp:    time.Unix(0, 1668652376002288214),
+			Balance:      "7364",
+			BalanceFloat: 7364,
+		},
+	)
 }

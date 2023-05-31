@@ -3,9 +3,7 @@ package indexer
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
@@ -156,29 +154,13 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byt
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
-	var args []interface{}
 	switch event.EventName {
 	case "new_arc1_token", "new_arc2_token":
-		// 2022.04.20 FIX
-		// 배포된 컨트랙트 주소 값이 return 값으로 출력하던 스펙 변경
-		// contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
-		err := json.Unmarshal([]byte(event.JsonArgs), &args)
-		if err != nil {
-			return
-		}
-		// TODO : 컨트랙트 인자값 바뀔 시 fatal 가능성 존재 - 예외처리 필요
-		contractAddress, err := types.DecodeAddress(args[0].(string))
+		tokenType, contractAddress, err := transaction.UnmarshalEventNewArc(event)
 		if err != nil {
 			return
 		}
 
-		// Add Token Doc
-		var tokenType transaction.TokenType
-		if event.EventName == "new_arc1_token" {
-			tokenType = transaction.TokenARC1
-		} else {
-			tokenType = transaction.TokenARC2
-		}
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(contractAddress)
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
 		tokenDoc := doc.ConvToken(txDoc, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
@@ -188,12 +170,8 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 		ns.insertToken(info.Type, tokenDoc)
 
 		// Add AccountTokens Doc ( update Amount )
-		tokenTransferDoc := doc.EsTokenTransfer{
-			Timestamp:    txDoc.Timestamp,
-			TokenAddress: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo),
-		}
 		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txDoc.Account, ns.isCccvNft(contractAddress))
-		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, txDoc.Account, balance, balanceFloat)
+		accountTokensDoc := doc.ConvAccountTokens("", transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo), txDoc.Timestamp, txDoc.Account, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add Contract Doc
@@ -204,85 +182,78 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 
 		fmt.Println(">>>>>>>>>>> POLICY 1 :", transaction.EncodeAccount(contractAddress))
 	case "mint":
-		json.Unmarshal([]byte(event.JsonArgs), &args)
-		if args[0] == nil || len(args) < 2 {
+		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventMint(event)
+		if err != nil {
 			return
 		}
 
 		// Add TokenTransfer Doc ( mint )
-		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.isCccvNft(event.ContractAddress))
-		tokenTransferDoc := doc.ConvTokenTransfer(event.ContractAddress, txDoc, idx, "MINT", args[0].(string), tokenId, amount, amountFloat)
-		if tokenTransferDoc.Amount == "" {
-			return
-		}
+		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(contractAddress, amountOrId, ns.isCccvNft(event.ContractAddress))
+		tokenTransferDoc := doc.ConvTokenTransfer(contractAddress, txDoc, idx, accountFrom, accountTo, tokenId, amount, amountFloat)
 		txDoc.TokenTransfers++
 		ns.insertTokenTransfer(info.Type, tokenTransferDoc) // TODO : TokenTransfer 에서 amount 에 NFT 이름이 들어있는지 디버깅 필요
 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync {
-			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.isCccvNft(event.ContractAddress))
-			tokenUpDoc := doc.ConvTokenUp(txDoc, event.ContractAddress, supply, supplyFloat)
+			supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
+			tokenUpDoc := doc.ConvTokenUp(txDoc, contractAddress, supply, supplyFloat)
 			ns.updateToken(tokenUpDoc)
 		}
 
 		// Add AccountTokens Doc ( update TO-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.To, ns.isCccvNft(event.ContractAddress))
-		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.To, balance, balanceFloat)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.To, ns.isCccvNft(contractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc.TokenId, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.To, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc
 		if tokenTransferDoc.TokenId != "" { // ARC2
-			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferDoc.TokenId)
+			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(contractAddress, tokenTransferDoc.TokenId)
 			// ARC2.tokenTransfer.Amount --> nftDoc.Account (ownerOf)
-			nftDoc := doc.ConvNFT(event.ContractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
+			nftDoc := doc.ConvNFT(contractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
 	case "transfer":
-		json.Unmarshal([]byte(event.JsonArgs), &args)
-		if args[0] == nil || len(args) < 3 {
+		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventMint(event)
+		if err != nil {
 			return
 		}
 
 		// Add TokenTransfer Doc ( transfer )
-		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[2], ns.isCccvNft(event.ContractAddress))
-		tokenTransferDoc := doc.ConvTokenTransfer(event.ContractAddress, txDoc, idx, args[0].(string), args[1].(string), tokenId, amount, amountFloat)
+		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(contractAddress, amountOrId, ns.isCccvNft(contractAddress))
+		tokenTransferDoc := doc.ConvTokenTransfer(contractAddress, txDoc, idx, accountFrom, accountTo, tokenId, amount, amountFloat)
 		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		if strings.Contains(tokenTransferDoc.From, "1111111111111111111111111") {
-			tokenTransferDoc.From = "MINT"
-		} else if strings.Contains(tokenTransferDoc.To, "1111111111111111111111111") {
-			tokenTransferDoc.To = "BURN"
-		}
+
 		txDoc.TokenTransfers++
 		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Add AccountTokens Doc ( update TO-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.To, ns.isCccvNft(event.ContractAddress))
-		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.To, balance, balanceFloat)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.To, ns.isCccvNft(contractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc.TokenId, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.To, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add AccountTokens Doc ( update FROM-Account )
-		balance, balanceFloat = MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.From, ns.isCccvNft(event.ContractAddress))
-		accountTokensDoc = doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.From, balance, balanceFloat)
+		balance, balanceFloat = MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.From, ns.isCccvNft(contractAddress))
+		accountTokensDoc = doc.ConvAccountTokens(tokenTransferDoc.TokenId, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.From, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc ( update NFT )
 		if tokenTransferDoc.TokenId != "" { // ARC2
-			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferDoc.TokenId)
+			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(contractAddress, tokenTransferDoc.TokenId)
 			// ARC2.tokenTransfer.Amount --> nftDoc.Account (ownerOf)
-			nftDoc := doc.ConvNFT(event.ContractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
+			nftDoc := doc.ConvNFT(contractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
 	case "burn":
-		json.Unmarshal([]byte(event.JsonArgs), &args)
-		if args[0] == nil || len(args) < 2 {
+		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventBurn(event)
+		if err != nil {
 			return
 		}
 
 		// Add TokenTransfer Doc ( burn )
-		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.isCccvNft(event.ContractAddress))
-		tokenTransferDoc := doc.ConvTokenTransfer(event.ContractAddress, txDoc, idx, args[0].(string), "BURN", tokenId, amount, amountFloat)
+		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(contractAddress, amountOrId, ns.isCccvNft(contractAddress))
+		tokenTransferDoc := doc.ConvTokenTransfer(contractAddress, txDoc, idx, accountFrom, accountTo, tokenId, amount, amountFloat)
 		if tokenTransferDoc.Amount == "" {
 			return
 		}
@@ -291,21 +262,21 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync { // TODO : 성능 문제인듯.. 아마 지우는게 맞음 ( 캐싱을 하던가 )
-			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.isCccvNft(event.ContractAddress))
-			tokenUpDoc := doc.ConvTokenUp(txDoc, event.ContractAddress, supply, supplyFloat)
+			supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
+			tokenUpDoc := doc.ConvTokenUp(txDoc, contractAddress, supply, supplyFloat)
 			ns.updateToken(tokenUpDoc)
 		}
 
 		// Add AccountTokens Doc ( update FROM-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.From, ns.isCccvNft(event.ContractAddress))
-		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.From, balance, balanceFloat)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.From, ns.isCccvNft(contractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc.TokenId, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.From, balance, balanceFloat)
 		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc ( delete NFT on Sync only )
 		if tokenTransferDoc.TokenId != "" && info.Type == BlockType_Sync { // ARC2. TODO.. Sync 지우기
-			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferDoc.TokenId)
+			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(contractAddress, tokenTransferDoc.TokenId)
 			// ARC2.tokenTransfer.Amount --> nftDoc.Account (ownerOf)
-			nftDoc := doc.ConvNFT(event.ContractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
+			nftDoc := doc.ConvNFT(contractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
 	default:
@@ -403,7 +374,7 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc doc
 		if _, ok := ns.accToken.Load(accountTokensDoc.Id); ok {
 			return
 		} else {
-			ns.BChannel.AccTokens <- ChanInfo{1, accountTokensDoc}
+			ns.BChannel.AccTokens <- ChanInfo{ChanType_Add, accountTokensDoc}
 			ns.accToken.Store(accountTokensDoc.Id, true)
 		}
 	} else {
@@ -464,9 +435,9 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc doc
 func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 	/*
 		if blockType == BlockType_Bulk {
-			ns.BChannel.NFT <- ChanInfo{ChanType_Add, nftD}
+			ns.BChannel.NFT <- ChanInfo{ChanType_Add, nftDoc}
 		} else {
-			ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
+			ns.db.Insert(nftDoc, ns.indexNamePrefix+"nft")
 		}
 	*/
 

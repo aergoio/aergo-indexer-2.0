@@ -145,19 +145,19 @@ func ConvTokenTransfer(contractAddress []byte, txDoc EsTx, idx int, from string,
 	}
 }
 
-func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, balanceFloat float32) EsAccountTokens {
-	var tokenType transaction.TokenType // TODO : 외부에서 ARC 여부를 판단하도록 변경
-	if ttDoc.TokenId == "" {
+func ConvAccountTokens(tokenId string, tokenAddress string, timestamp time.Time, account string, balance string, balanceFloat float32) EsAccountTokens {
+	var tokenType transaction.TokenType
+	if tokenId == "" {
 		tokenType = transaction.TokenARC1
 	} else {
 		tokenType = transaction.TokenARC2
 	}
 
 	return EsAccountTokens{
-		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", account, ttDoc.TokenAddress)},
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", account, tokenAddress)},
 		Account:      account,
-		TokenAddress: ttDoc.TokenAddress,
-		Timestamp:    ttDoc.Timestamp,
+		TokenAddress: tokenAddress,
+		Timestamp:    timestamp,
 		Type:         tokenType,
 		Balance:      balance,
 		BalanceFloat: balanceFloat,
