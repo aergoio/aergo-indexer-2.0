@@ -45,7 +45,7 @@ func (ns *Indexer) initCccvNft() {
 			Name_lower:   "cccv_nft",
 			Symbol:       "CNFT",
 			Symbol_lower: "cnft",
-			Type:         category.ARC2,
+			Type:         category.TokenARC2,
 			Supply:       "0",
 			SupplyFloat:  float32(0),
 		}

@@ -43,20 +43,20 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 			}
 		}
 		// Get Block doc
-		blockD := doc.ConvBlock(block, ns.makePeerId(block.Header.PubKey))
+		blockDoc := doc.ConvBlock(block, ns.makePeerId(block.Header.PubKey))
 		for _, tx := range block.Body.Txs {
-			ns.MinerTx(info, blockD, tx, MinerGRPC)
+			ns.MinerTx(info, blockDoc, tx, MinerGRPC)
 		}
 
 		// Add block doc
-		ns.insertBlock(info.Type, blockD)
+		ns.insertBlock(info.Type, blockDoc)
 
 		// indexing whitelist balance
-		if ns.runMode == "onsync" && blockHeight%1000 == 0 {
+		if info.Type == BlockType_Sync && blockHeight%1000 == 0 { // onsync only
 			ns.whiteListAddresses.Range(func(k, v interface{}) bool {
 				if addr, ok := k.(string); ok {
 					if addr, err := types.DecodeAddress(addr); err == nil {
-						ns.MinerBalance(info, blockD, addr, MinerGRPC)
+						ns.MinerBalance(info, blockDoc, addr, MinerGRPC)
 					}
 				}
 				return true
@@ -65,87 +65,84 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 	}
 }
 
-func (ns *Indexer) MinerTx(info BlockInfo, blockD doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
 	// Get Tx doc
-	txD := doc.ConvTx(tx, blockD)
+	txDoc := doc.ConvTx(tx, blockDoc)
 
+	// set tx status
 	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
 	if err != nil {
-		txD.Status = "NO_RECEIPT"
-		ns.log.Warn().Str("tx", txD.Id).Err(err).Msg("Failed to get tx receipt")
-		ns.insertTx(info.Type, txD)
+		txDoc.Status = "NO_RECEIPT"
+		ns.log.Warn().Str("tx", txDoc.Id).Err(err).Msg("Failed to get tx receipt")
+		ns.insertTx(info.Type, txDoc)
 		return
 	}
-	txD.Status = receipt.Status
+	txDoc.Status = receipt.Status
 	if receipt.Status == "ERROR" {
-		ns.insertTx(info.Type, txD)
+		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
 	// Process name transactions
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
-		nameD := doc.ConvName(tx, txD.BlockNo)
-		ns.insertName(info.Type, nameD)
-		ns.insertTx(info.Type, txD)
+		nameDoc := doc.ConvName(tx, txDoc.BlockNo)
+		ns.insertName(info.Type, nameDoc)
+		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
 	// Balance from, to
-	ns.MinerBalance(info, blockD, tx.Body.Account, MinerGRPC)
+	ns.MinerBalance(info, blockDoc, tx.Body.Account, MinerGRPC)
 	if bytes.Equal(tx.Body.Account, tx.Body.Recipient) != true {
-		ns.MinerBalance(info, blockD, tx.Body.Recipient, MinerGRPC)
+		ns.MinerBalance(info, blockDoc, tx.Body.Recipient, MinerGRPC)
 	}
 
 	// Process Token and TokenTransfer
-	switch txD.Category {
+	switch txDoc.Category {
 	case category.Call:
 	case category.Deploy:
 	case category.Payload:
 	case category.MultiCall:
 	default:
-		ns.insertTx(info.Type, txD)
+		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
 	// Contract Deploy
-	if txD.Category == category.Deploy {
-		contractD := doc.ConvContract(txD, receipt.ContractAddress)
-		ns.insertContract(info.Type, contractD)
+	if txDoc.Category == category.Deploy {
+		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+		ns.insertContract(info.Type, contractDoc)
 	}
 
 	// Process Events
 	events := receipt.GetEvents()
 	for idx, event := range events {
-		ns.MinerEvent(info, blockD, txD, idx, event, MinerGRPC)
+		ns.MinerEvent(info, blockDoc, txDoc, idx, event, MinerGRPC)
 	}
 
 	// POLICY 2 Token
-	tType := MaybeTokenCreation(tx)
+	tType := category.MaybeTokenCreation(tx)
 	switch tType {
-	case TokenCreationType_ARC1, TokenCreationType_ARC2:
+	case category.TokenARC1, category.TokenARC2:
 		// Add Token doc
-		var tokenType category.TokenType
-		if tType == TokenCreationType_ARC1 {
-			tokenType = category.ARC1
-		} else {
-			tokenType = category.ARC2
-		}
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.isCccvNft(receipt.ContractAddress))
-		tokenD := doc.ConvToken(txD, receipt.ContractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
-		if tokenD.Name != "" {
+		tokenDoc := doc.ConvToken(txDoc, receipt.ContractAddress, tType, name, symbol, decimals, supply, supplyFloat)
+		if tokenDoc.Name != "" {
 			// Add Token doc
-			ns.insertToken(info.Type, tokenD)
+			ns.insertToken(info.Type, tokenDoc)
 
 			// Add Contract doc
-			contractD := doc.ConvContract(txD, receipt.ContractAddress)
-			ns.insertContract(info.Type, contractD)
+			contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+			ns.insertContract(info.Type, contractDoc)
+
+			// TODO : Policy 2 에서는 NFT 처리 없음? - ARC2 토큰 들어오는지 확인 필요
 
 			fmt.Println(">>>>>>>>>>> POLICY 2 :", doc.EncodeAccount(receipt.ContractAddress))
 		}
 	default:
 	}
-	ns.insertTx(info.Type, txD)
+	ns.insertTx(info.Type, txDoc)
 	return
 }
 
@@ -154,18 +151,22 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byt
 		return
 	}
 	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
-	balanceFromD := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
-	ns.insertAccountBalance(info.Type, balanceFromD)
+	balanceFromDoc := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
+	ns.insertAccountBalance(info.Type, balanceFromDoc)
 }
 
-func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
 	var args []interface{}
 	switch event.EventName {
 	case "new_arc1_token", "new_arc2_token":
 		// 2022.04.20 FIX
 		// 배포된 컨트랙트 주소 값이 return 값으로 출력하던 스펙 변경
 		// contractAddress, err := types.DecodeAddress(receipt.Ret[1:len(receipt.Ret)-1])
-		json.Unmarshal([]byte(event.JsonArgs), &args)
+		err := json.Unmarshal([]byte(event.JsonArgs), &args)
+		if err != nil {
+			return
+		}
+		// TODO : 컨트랙트 인자값 바뀔 시 fatal 가능성 존재 - 예외처리 필요
 		contractAddress, err := types.DecodeAddress(args[0].(string))
 		if err != nil {
 			return
@@ -174,30 +175,32 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 		// Add Token Doc
 		var tokenType category.TokenType
 		if event.EventName == "new_arc1_token" {
-			tokenType = category.ARC1
+			tokenType = category.TokenARC1
 		} else {
-			tokenType = category.ARC2
+			tokenType = category.TokenARC2
 		}
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(contractAddress)
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
-		tokenD := doc.ConvToken(txD, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
-		if tokenD.Name == "" {
+		tokenDoc := doc.ConvToken(txDoc, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
+		if tokenDoc.Name == "" {
 			return
 		}
-		ns.insertToken(info.Type, tokenD)
+		ns.insertToken(info.Type, tokenDoc)
 
 		// Add AccountTokens Doc ( update Amount )
-		tokenTransferD := doc.EsTokenTransfer{
-			Timestamp:    txD.Timestamp,
-			TokenAddress: doc.EncodeAndResolveAccount(contractAddress, txD.BlockNo),
+		tokenTransferDoc := doc.EsTokenTransfer{
+			Timestamp:    txDoc.Timestamp,
+			TokenAddress: doc.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo),
 		}
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txD.Account, ns.isCccvNft(contractAddress))
-		accountTokensD := doc.ConvAccountTokens(tokenTransferD, txD.Account, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensD)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txDoc.Account, ns.isCccvNft(contractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, txDoc.Account, balance, balanceFloat)
+		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add Contract Doc
-		contractD := doc.ConvContract(txD, contractAddress)
-		ns.insertContract(info.Type, contractD)
+		contractDoc := doc.ConvContract(txDoc, contractAddress)
+		ns.insertContract(info.Type, contractDoc)
+
+		// TODO : NFT 추가가 없음
 
 		fmt.Println(">>>>>>>>>>> POLICY 1 :", doc.EncodeAccount(contractAddress))
 	case "mint":
@@ -208,31 +211,31 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 
 		// Add TokenTransfer Doc ( mint )
 		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.isCccvNft(event.ContractAddress))
-		tokenTransferD := doc.ConvTokenTransfer(event.ContractAddress, txD, idx, "MINT", args[0].(string), tokenId, amount, amountFloat)
-		if tokenTransferD.Amount == "" {
+		tokenTransferDoc := doc.ConvTokenTransfer(event.ContractAddress, txDoc, idx, "MINT", args[0].(string), tokenId, amount, amountFloat)
+		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		txD.TokenTransfers++
-		ns.insertTokenTransfer(info.Type, tokenTransferD)
+		txDoc.TokenTransfers++
+		ns.insertTokenTransfer(info.Type, tokenTransferDoc) // TODO : TokenTransfer 에서 amount 에 NFT 이름이 들어있는지 디버깅 필요
 
 		// Update TokenUp Doc
 		if info.Type == BlockType_Sync {
 			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.isCccvNft(event.ContractAddress))
-			tokenUpD := doc.ConvTokenUp(txD, event.ContractAddress, supply, supplyFloat)
-			ns.updateToken(tokenUpD)
+			tokenUpDoc := doc.ConvTokenUp(txDoc, event.ContractAddress, supply, supplyFloat)
+			ns.updateToken(tokenUpDoc)
 		}
 
 		// Add AccountTokens Doc ( update TO-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.To, ns.isCccvNft(event.ContractAddress))
-		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.To, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensD)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.To, ns.isCccvNft(event.ContractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.To, balance, balanceFloat)
+		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc
-		if tokenTransferD.TokenId != "" { // ARC2
-			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferD.TokenId)
-			// ARC2.tokenTransfer.Amount --> nftD.Account (ownerOf)
-			nftD := doc.ConvNFT(event.ContractAddress, tokenTransferD, tokenTransferD.Amount, tokenUri, imageUrl)
-			ns.insertNFT(info.Type, nftD)
+		if tokenTransferDoc.TokenId != "" { // ARC2
+			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferDoc.TokenId)
+			// ARC2.tokenTransfer.Amount --> nftDoc.Account (ownerOf)
+			nftDoc := doc.ConvNFT(event.ContractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
+			ns.insertNFT(info.Type, nftDoc)
 		}
 	case "transfer":
 		json.Unmarshal([]byte(event.JsonArgs), &args)
@@ -240,36 +243,36 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 			return
 		}
 
-		// Add TokenTransfer Doc
+		// Add TokenTransfer Doc ( transfer )
 		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[2], ns.isCccvNft(event.ContractAddress))
-		tokenTransferD := doc.ConvTokenTransfer(event.ContractAddress, txD, idx, args[0].(string), args[1].(string), tokenId, amount, amountFloat)
-		if tokenTransferD.Amount == "" {
+		tokenTransferDoc := doc.ConvTokenTransfer(event.ContractAddress, txDoc, idx, args[0].(string), args[1].(string), tokenId, amount, amountFloat)
+		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		if strings.Contains(tokenTransferD.From, "1111111111111111111111111") {
-			tokenTransferD.From = "MINT"
-		} else if strings.Contains(tokenTransferD.To, "1111111111111111111111111") {
-			tokenTransferD.To = "BURN"
+		if strings.Contains(tokenTransferDoc.From, "1111111111111111111111111") {
+			tokenTransferDoc.From = "MINT"
+		} else if strings.Contains(tokenTransferDoc.To, "1111111111111111111111111") {
+			tokenTransferDoc.To = "BURN"
 		}
-		txD.TokenTransfers++
-		ns.insertTokenTransfer(info.Type, tokenTransferD)
+		txDoc.TokenTransfers++
+		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Add AccountTokens Doc ( update TO-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.To, ns.isCccvNft(event.ContractAddress))
-		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.To, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensD)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.To, ns.isCccvNft(event.ContractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.To, balance, balanceFloat)
+		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add AccountTokens Doc ( update FROM-Account )
-		balance, balanceFloat = MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.From, ns.isCccvNft(event.ContractAddress))
-		accountTokensD = doc.ConvAccountTokens(tokenTransferD, tokenTransferD.From, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensD)
+		balance, balanceFloat = MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.From, ns.isCccvNft(event.ContractAddress))
+		accountTokensDoc = doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.From, balance, balanceFloat)
+		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
-		// Add NFT Doc ( update NFT on Sync only )
-		if tokenTransferD.TokenId != "" && info.Type == BlockType_Sync { // ARC2
-			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferD.TokenId)
-			// ARC2.tokenTransfer.Amount --> nftD.Account (ownerOf)
-			nftD := doc.ConvNFT(event.ContractAddress, tokenTransferD, tokenTransferD.Amount, tokenUri, imageUrl)
-			ns.insertNFT(info.Type, nftD)
+		// Add NFT Doc ( update NFT )
+		if tokenTransferDoc.TokenId != "" { // ARC2
+			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferDoc.TokenId)
+			// ARC2.tokenTransfer.Amount --> nftDoc.Account (ownerOf)
+			nftDoc := doc.ConvNFT(event.ContractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
+			ns.insertNFT(info.Type, nftDoc)
 		}
 	case "burn":
 		json.Unmarshal([]byte(event.JsonArgs), &args)
@@ -279,80 +282,35 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockD doc.EsBlock, txD doc.EsTx, 
 
 		// Add TokenTransfer Doc ( burn )
 		tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(event.ContractAddress, args[1], ns.isCccvNft(event.ContractAddress))
-		tokenTransferD := doc.ConvTokenTransfer(event.ContractAddress, txD, idx, args[0].(string), "BURN", tokenId, amount, amountFloat)
-		if tokenTransferD.Amount == "" {
+		tokenTransferDoc := doc.ConvTokenTransfer(event.ContractAddress, txDoc, idx, args[0].(string), "BURN", tokenId, amount, amountFloat)
+		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		txD.TokenTransfers++
-		ns.insertTokenTransfer(info.Type, tokenTransferD)
+		txDoc.TokenTransfers++
+		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Update TokenUp Doc
-		if info.Type == BlockType_Sync {
+		if info.Type == BlockType_Sync { // TODO : 성능 문제인듯.. 아마 지우는게 맞음 ( 캐싱을 하던가 )
 			supply, supplyFloat := MinerGRPC.QueryTotalSupply(event.ContractAddress, ns.isCccvNft(event.ContractAddress))
-			tokenUpD := doc.ConvTokenUp(txD, event.ContractAddress, supply, supplyFloat)
-			ns.updateToken(tokenUpD)
+			tokenUpDoc := doc.ConvTokenUp(txDoc, event.ContractAddress, supply, supplyFloat)
+			ns.updateToken(tokenUpDoc)
 		}
 
 		// Add AccountTokens Doc ( update FROM-Account )
-		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferD.From, ns.isCccvNft(event.ContractAddress))
-		accountTokensD := doc.ConvAccountTokens(tokenTransferD, tokenTransferD.From, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensD)
+		balance, balanceFloat := MinerGRPC.QueryBalanceOf(event.ContractAddress, tokenTransferDoc.From, ns.isCccvNft(event.ContractAddress))
+		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, tokenTransferDoc.From, balance, balanceFloat)
+		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc ( delete NFT on Sync only )
-		if tokenTransferD.TokenId != "" && info.Type == BlockType_Sync { // ARC2
-			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferD.TokenId)
-			// ARC2.tokenTransfer.Amount --> nftD.Account (ownerOf)
-			nftD := doc.ConvNFT(event.ContractAddress, tokenTransferD, tokenTransferD.Amount, tokenUri, imageUrl)
-			ns.insertNFT(info.Type, nftD)
+		if tokenTransferDoc.TokenId != "" && info.Type == BlockType_Sync { // ARC2. TODO.. Sync 지우기
+			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(event.ContractAddress, tokenTransferDoc.TokenId)
+			// ARC2.tokenTransfer.Amount --> nftDoc.Account (ownerOf)
+			nftDoc := doc.ConvNFT(event.ContractAddress, tokenTransferDoc, tokenTransferDoc.Amount, tokenUri, imageUrl)
+			ns.insertNFT(info.Type, nftDoc)
 		}
 	default:
 		return
 	}
-}
-
-// MaybeTokenCreation runs a heuristic to determine if tx might be creating a token
-func MaybeTokenCreation(tx *types.Tx) TokenCreationType {
-	txBody := tx.GetBody()
-
-	// We treat the payload (which is part bytecode, part ABI) as text
-	// and check that ALL the ARC1/2 keywords are included
-	if !(txBody.GetType() == types.TxType_DEPLOY && len(txBody.Payload) > 30) {
-		return TokenCreationType_None
-	}
-
-	payload := string(txBody.GetPayload())
-
-	keywords := [...]string{"name", "balanceOf", "transfer", "symbol", "totalSupply"}
-	for _, keyword := range keywords {
-		if !strings.Contains(payload, keyword) {
-			return TokenCreationType_None
-		}
-	}
-
-	suc := true
-	keywords1 := [...]string{"decimals"}
-	for _, keyword := range keywords1 {
-		if !strings.Contains(payload, keyword) {
-			suc = false
-			break
-		}
-	}
-	if suc {
-		return TokenCreationType_ARC1
-	}
-
-	suc = true
-	keywords2 := [...]string{"ownerOf"}
-	for _, keyword := range keywords2 {
-		if !strings.Contains(payload, keyword) {
-			suc = false
-			break
-		}
-	}
-	if suc {
-		return TokenCreationType_ARC2
-	}
-	return TokenCreationType_None
 }
 
 func (ns *Indexer) makePeerId(pubKey []byte) string {
@@ -372,29 +330,29 @@ func (ns *Indexer) makePeerId(pubKey []byte) string {
 	return peer
 }
 
-func (ns *Indexer) insertBlock(blockType BlockType, blockD doc.EsBlock) {
+func (ns *Indexer) insertBlock(blockType BlockType, blockDoc doc.EsBlock) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockD}
+		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockDoc}
 	} else {
-		err := ns.db.Insert(blockD, ns.indexNamePrefix+"block")
+		err := ns.db.Insert(blockDoc, ns.indexNamePrefix+"block")
 		if err != nil {
 			ns.log.Error().Err(err).Msg("insertBlock")
 		}
 	}
 }
 
-func (ns *Indexer) insertTx(blockType BlockType, txD doc.EsTx) {
+func (ns *Indexer) insertTx(blockType BlockType, txDoc doc.EsTx) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txD}
+		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txDoc}
 	} else {
-		err := ns.db.Insert(txD, ns.indexNamePrefix+"tx")
+		err := ns.db.Insert(txDoc, ns.indexNamePrefix+"tx")
 		if err != nil {
 			ns.log.Error().Err(err).Msg("insertTx")
 		}
 	}
 }
 
-func (ns *Indexer) insertContract(blockType BlockType, contractD doc.EsContract) {
+func (ns *Indexer) insertContract(blockType BlockType, contractDoc doc.EsContract) {
 	/*
 		if blockType == BlockType_Bulk {
 			// to bulk
@@ -404,13 +362,13 @@ func (ns *Indexer) insertContract(blockType BlockType, contractD doc.EsContract)
 			ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
 		}
 	*/
-	err := ns.db.Insert(contractD, ns.indexNamePrefix+"contract")
+	err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
 	if err != nil {
 		ns.log.Error().Err(err).Msg("insertContract")
 	}
 }
 
-func (ns *Indexer) insertName(blockType BlockType, nameD doc.EsName) {
+func (ns *Indexer) insertName(blockType BlockType, nameDoc doc.EsName) {
 	/*
 		if blockType == BlockType_Bulk {
 			// to bulk
@@ -420,13 +378,13 @@ func (ns *Indexer) insertName(blockType BlockType, nameD doc.EsName) {
 			ns.db.Insert(nameD, ns.indexNamePrefix+"name")
 		}
 	*/
-	err := ns.db.Insert(nameD, ns.indexNamePrefix+"name")
+	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
 		ns.log.Error().Err(err).Msg("insertName")
 	}
 }
 
-func (ns *Indexer) insertToken(blockType BlockType, tokenD doc.EsToken) {
+func (ns *Indexer) insertToken(blockType BlockType, tokenDoc doc.EsToken) {
 	/*
 		if blockType == BlockType_Bulk {
 			ns.BChannel.Token <- ChanInfo{ChanType_Add, tokenD}
@@ -434,34 +392,34 @@ func (ns *Indexer) insertToken(blockType BlockType, tokenD doc.EsToken) {
 			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 		}
 	*/
-	err := ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
+	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
 		ns.log.Error().Err(err).Msg("insertToken")
 	}
 }
 
-func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensD doc.EsAccountTokens) {
+func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc doc.EsAccountTokens) {
 	if blockType == BlockType_Bulk {
-		if _, ok := ns.accToken.Load(accountTokensD.Id); ok {
+		if _, ok := ns.accToken.Load(accountTokensDoc.Id); ok {
 			return
 		} else {
-			ns.BChannel.AccTokens <- ChanInfo{1, accountTokensD}
-			ns.accToken.Store(accountTokensD.Id, true)
+			ns.BChannel.AccTokens <- ChanInfo{1, accountTokensDoc}
+			ns.accToken.Store(accountTokensDoc.Id, true)
 		}
 	} else {
-		err := ns.db.Insert(accountTokensD, ns.indexNamePrefix+"account_tokens")
+		err := ns.db.Insert(accountTokensDoc, ns.indexNamePrefix+"account_tokens")
 		if err != nil {
 			ns.log.Error().Err(err).Msg("insertAccountTokens")
 		}
 	}
 }
 
-func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceD doc.EsAccountBalance) {
+func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAccountBalance) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "account_balance",
 		StringMatch: &db.StringMatchQuery{
 			Field: "_id",
-			Value: balanceD.Id,
+			Value: balanceDoc.Id,
 		},
 	}, func() doc.DocType {
 		balance := new(doc.EsAccountBalance)
@@ -474,47 +432,52 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceD doc.EsAcco
 
 	if document != nil { // 기존에 존재하는 주소라면 잔고에 상관없이 update
 		accountBalance := document.(*doc.EsAccountBalance)
-		if balanceD.BlockNo < accountBalance.BlockNo { // blockNo, timeStamp 는 최신으로 저장
-			balanceD.BlockNo = accountBalance.BlockNo
-			balanceD.Timestamp = accountBalance.Timestamp
+		if balanceDoc.BlockNo < accountBalance.BlockNo { // blockNo, timeStamp 는 최신으로 저장
+			balanceDoc.BlockNo = accountBalance.BlockNo
+			balanceDoc.Timestamp = accountBalance.Timestamp
 		}
-		err = ns.db.Update(balanceD, ns.indexNamePrefix+"account_balance", balanceD.Id)
-	} else if balanceD.BalanceFloat > 0 { // 처음 발견된 주소라면 잔고 > 0 일 때만 insert
-		err = ns.db.Insert(balanceD, ns.indexNamePrefix+"account_balance")
+		err = ns.db.Update(balanceDoc, ns.indexNamePrefix+"account_balance", balanceDoc.Id)
+	} else if balanceDoc.BalanceFloat > 0 { // 처음 발견된 주소라면 잔고 > 0 일 때만 insert
+		err = ns.db.Insert(balanceDoc, ns.indexNamePrefix+"account_balance")
 	}
 	if err != nil {
 		ns.log.Error().Err(err).Msg("insertAccountBalance")
 	}
 
 	// stake 주소는 whitelist 에 추가
-	if balanceD.StakingFloat > 0 {
-		ns.whiteListAddresses.Store(balanceD.Id, true)
+	if balanceDoc.StakingFloat > 0 {
+		ns.whiteListAddresses.Store(balanceDoc.Id, true)
 	}
 }
 
-func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferD doc.EsTokenTransfer) {
+func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferD}
+		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
 	} else {
-		err := ns.db.Insert(tokenTransferD, ns.indexNamePrefix+"token_transfer")
+		err := ns.db.Insert(tokenTransferDoc, ns.indexNamePrefix+"token_transfer")
 		if err != nil {
 			ns.log.Error().Err(err).Msg("insertTokenTransfer")
 		}
 	}
 }
 
-func (ns *Indexer) insertNFT(blockType BlockType, nftD doc.EsNFT) {
-	if blockType == BlockType_Bulk {
-		ns.BChannel.NFT <- ChanInfo{ChanType_Add, nftD}
-	} else {
-		err := ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
-		if err != nil {
-			ns.log.Error().Err(err).Msg("insertNFT")
+func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
+	/*
+		if blockType == BlockType_Bulk {
+			ns.BChannel.NFT <- ChanInfo{ChanType_Add, nftD}
+		} else {
+			ns.db.Insert(nftD, ns.indexNamePrefix+"nft")
 		}
+	*/
+
+	// TODO : 과거 nft가 추가될 경우 갱신하지 않는 로직 추가
+	err := ns.db.Insert(nftDoc, ns.indexNamePrefix+"nft")
+	if err != nil {
+		ns.log.Error().Err(err).Msg("insertNFT")
 	}
 }
 
-func (ns *Indexer) updateToken(tokenD doc.EsTokenUp) {
+func (ns *Indexer) updateToken(tokenDoc doc.EsTokenUp) {
 	/*
 		if blockType == BlockType_Bulk {
 			ns.BChannel.Token <- ChanInfo{ChanType_Add, tokenD}
@@ -522,7 +485,7 @@ func (ns *Indexer) updateToken(tokenD doc.EsTokenUp) {
 			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
 		}
 	*/
-	err := ns.db.Update(tokenD, ns.indexNamePrefix+"token", tokenD.Id)
+	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {
 		ns.log.Error().Err(err).Msg("updateToken")
 	}

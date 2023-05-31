@@ -33,7 +33,7 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 }
 
 // ConvTx converts Tx from RPC into Elasticsearch type
-func ConvTx(tx *types.Tx, blockD EsBlock) EsTx {
+func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
 	category, method := category.DetectTxCategory(tx)
 	if len(method) > 50 {
@@ -41,15 +41,15 @@ func ConvTx(tx *types.Tx, blockD EsBlock) EsTx {
 	}
 	return EsTx{
 		BaseEsType:     &BaseEsType{Id: base58.Encode(tx.Hash)},
-		Account:        EncodeAndResolveAccount(tx.Body.Account, blockD.BlockNo),
-		Recipient:      EncodeAndResolveAccount(tx.Body.Recipient, blockD.BlockNo),
+		Account:        EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
+		Recipient:      EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:         amount.String(),
 		AmountFloat:    bigIntToFloat(amount, 18),
 		Type:           fmt.Sprintf("%d", tx.Body.Type),
 		Category:       category,
 		Method:         method,
-		Timestamp:      blockD.Timestamp,
-		BlockNo:        blockD.BlockNo,
+		Timestamp:      blockDoc.Timestamp,
+		BlockNo:        blockDoc.BlockNo,
 		TokenTransfers: 0,
 	}
 }
@@ -148,11 +148,11 @@ func ConvTokenTransfer(contractAddress []byte, txDoc EsTx, idx int, from string,
 }
 
 func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, balanceFloat float32) EsAccountTokens {
-	var tokenType category.TokenType
+	var tokenType category.TokenType // TODO : 외부에서 ARC 여부를 판단하도록 변경
 	if ttDoc.TokenId == "" {
-		tokenType = category.ARC1
+		tokenType = category.TokenARC1
 	} else {
-		tokenType = category.ARC2
+		tokenType = category.TokenARC2
 	}
 
 	return EsAccountTokens{

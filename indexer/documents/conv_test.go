@@ -156,7 +156,7 @@ func TestConvToken(t *testing.T) {
 		BlockNo:    95022525,
 		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
 		Category:   category.Call,
-	}, "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", category.ARC1, "Blankazzang Point", "PBLKA", 18, "100000000", 100000000, EsToken{
+	}, "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", category.TokenARC1, "Blankazzang Point", "PBLKA", 18, "100000000", 100000000, EsToken{
 		BaseEsType:   &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
 		TxId:         base58.Encode([]byte("5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u")),
 		BlockNo:      95022525,
@@ -276,7 +276,7 @@ func TestConvAccountTokens(t *testing.T) {
 		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF")},
 		Account:      "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD",
 		TokenAddress: "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
-		Type:         category.ARC2,
+		Type:         category.TokenARC2,
 		Timestamp:    time.Unix(0, 1668652376002288214),
 		Balance:      "7364",
 		BalanceFloat: 7364,
