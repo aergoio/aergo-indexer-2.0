@@ -152,14 +152,10 @@ func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbCont
 	return dbController, nil
 }
 
-func (ns *Indexer) initIndexPrefix() {
-	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.prefix)
-	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
-}
-
 func (ns *Indexer) InitIndex() error {
 	// init index prefix
-	ns.initIndexPrefix()
+	ns.aliasNamePrefix = fmt.Sprintf("%s_", ns.prefix)
+	ns.indexNamePrefix = fmt.Sprintf("%s%s_", ns.aliasNamePrefix, time.Now().UTC().Format("2006-01-02_15-04-05"))
 
 	// create index
 	for {
