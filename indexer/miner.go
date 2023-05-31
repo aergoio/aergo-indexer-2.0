@@ -138,7 +138,7 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 
 			// TODO : Policy 2 에서는 NFT 처리 없음? - ARC2 토큰 들어오는지 확인 필요
 
-			fmt.Println(">>>>>>>>>>> POLICY 2 :", doc.EncodeAccount(receipt.ContractAddress))
+			fmt.Println(">>>>>>>>>>> POLICY 2 :", transaction.EncodeAccount(receipt.ContractAddress))
 		}
 	default:
 	}
@@ -147,7 +147,7 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 }
 
 func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
-	if doc.IsBalanceNotResolved(string(address)) {
+	if transaction.IsBalanceNotResolved(string(address)) {
 		return
 	}
 	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
@@ -190,7 +190,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 		// Add AccountTokens Doc ( update Amount )
 		tokenTransferDoc := doc.EsTokenTransfer{
 			Timestamp:    txDoc.Timestamp,
-			TokenAddress: doc.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo),
+			TokenAddress: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo),
 		}
 		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txDoc.Account, ns.isCccvNft(contractAddress))
 		accountTokensDoc := doc.ConvAccountTokens(tokenTransferDoc, txDoc.Account, balance, balanceFloat)
@@ -202,7 +202,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 
 		// TODO : NFT 추가가 없음
 
-		fmt.Println(">>>>>>>>>>> POLICY 1 :", doc.EncodeAccount(contractAddress))
+		fmt.Println(">>>>>>>>>>> POLICY 1 :", transaction.EncodeAccount(contractAddress))
 	case "mint":
 		json.Unmarshal([]byte(event.JsonArgs), &args)
 		if args[0] == nil || len(args) < 2 {

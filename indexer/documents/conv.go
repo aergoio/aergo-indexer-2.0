@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -26,7 +25,7 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 		TxCount:       uint(len(block.Body.Txs)),
 		Size:          uint64(proto.Size(block)),
 		BlockProducer: blockProducer,
-		RewardAccount: EncodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
+		RewardAccount: transaction.EncodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
 		RewardAmount:  rewardAmount,
 	}
 }
@@ -40,8 +39,8 @@ func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
 	}
 	return EsTx{
 		BaseEsType:     &BaseEsType{Id: base58.Encode(tx.Hash)},
-		Account:        EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
-		Recipient:      EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
+		Account:        transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
+		Recipient:      transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:         amount.String(),
 		AmountFloat:    bigIntToFloat(amount, 18),
 		Type:           fmt.Sprintf("%d", tx.Body.Type),
@@ -56,7 +55,7 @@ func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
 // ConvContractCreateTx creates document for token creation
 func ConvContract(txDoc EsTx, contractAddress []byte) EsContract {
 	return EsContract{
-		BaseEsType: &BaseEsType{Id: EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Creator:    txDoc.Account,
 		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
@@ -67,7 +66,7 @@ func ConvContract(txDoc EsTx, contractAddress []byte) EsContract {
 // ConvContractCreateTx creates document for token creation
 func ConvTokenUp(txDoc EsTx, contractAddress []byte, supply string, supplyFloat float32) EsTokenUp {
 	return EsTokenUp{
-		BaseEsType:  &BaseEsType{Id: EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		BaseEsType:  &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Supply:      supply,
 		SupplyFloat: supplyFloat,
 	}
@@ -76,7 +75,7 @@ func ConvTokenUp(txDoc EsTx, contractAddress []byte, supply string, supplyFloat 
 // ConvContractCreateTx creates document for token creation
 func ConvToken(txDoc EsTx, contractAddress []byte, tokenType transaction.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32) EsToken {
 	return EsToken{
-		BaseEsType:     &BaseEsType{Id: EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		BaseEsType:     &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		TxId:           txDoc.GetID(),
 		BlockNo:        txDoc.BlockNo,
 		TokenTransfers: uint64(0),
@@ -100,7 +99,7 @@ func ConvName(tx *types.Tx, blockNo uint64) EsName {
 	if err == nil {
 		name = payload.Args[0]
 		if payload.Name == "v1createName" {
-			address = EncodeAndResolveAccount(tx.Body.Account, blockNo)
+			address = transaction.EncodeAndResolveAccount(tx.Body.Account, blockNo)
 		}
 		if payload.Name == "v1updateName" {
 			address = payload.Args[1]
@@ -136,7 +135,7 @@ func ConvTokenTransfer(contractAddress []byte, txDoc EsTx, idx int, from string,
 		TxId:         txDoc.GetID(),
 		BlockNo:      txDoc.BlockNo,
 		Timestamp:    txDoc.Timestamp,
-		TokenAddress: EncodeAndResolveAccount(contractAddress, txDoc.BlockNo),
+		TokenAddress: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo),
 		Sender:       txDoc.Account,
 		From:         from,
 		To:           to,
@@ -167,7 +166,7 @@ func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, ba
 
 func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance string, balanceFloat float32, staking string, stakingFloat float32) EsAccountBalance {
 	return EsAccountBalance{
-		BaseEsType:   &BaseEsType{Id: EncodeAndResolveAccount(address, blockNo)},
+		BaseEsType:   &BaseEsType{Id: transaction.EncodeAndResolveAccount(address, blockNo)},
 		Timestamp:    ts,
 		BlockNo:      blockNo,
 		Balance:      balance,
@@ -185,89 +184,6 @@ func ConvChainInfo(chainInfo *types.ChainInfo) EsChainInfo {
 		Consensus:  chainInfo.Id.Consensus,
 		Version:    uint64(chainInfo.Id.Version),
 	}
-}
-
-// Aergo system refer to special accounts that don't need to be resolved
-func isAergoSystem(address string) bool {
-	return address == "aergo.system"
-}
-
-// Alias refer to special accounts that don't need to be resolved
-func isAlias(address string) bool {
-	if len(address) != 12 {
-		return false
-	}
-	for _, c := range address {
-		if !unicode.IsUpper(c) && !unicode.IsLower(c) && !unicode.IsNumber(c) {
-			return false
-		}
-	}
-	return true
-}
-
-// Internal names refer to special accounts that don't need to be resolved
-func isInternalName(name string) bool {
-	switch name {
-	case
-		"aergo.name",
-		"aergo.system",
-		"aergo.enterprise",
-		"aergo.vault":
-		return true
-	}
-	return false
-}
-
-// Refer to special accounts that don't need to be resolved - alias or aergo.system
-func IsBalanceNotResolved(name string) bool {
-	return isAlias(name) || isAergoSystem(name)
-}
-
-func DecodeAccount(account string) []byte {
-	if account == "" {
-		return nil
-	}
-	if isAlias(account) || isInternalName(account) {
-		return []byte(account)
-	}
-	dec, _ := types.DecodeAddress(account)
-	return dec
-}
-
-func EncodeAccount(account []byte) string {
-	if account == nil {
-		return ""
-	}
-	if isAlias(string(account)) || isInternalName(string(account)) {
-		return string(account)
-	}
-	return types.EncodeAddress(account)
-}
-
-func EncodeAndResolveAccount(account []byte, blockNo uint64) string {
-	var encoded = EncodeAccount(account)
-	// Seo
-	return encoded
-	/*
-		if len(encoded) > 12 || isInternalName(encoded) || encoded == "" {
-			return encoded
-		}
-
-		// Resolve name
-		var nameRequest = &types.Name{
-			Name:    encoded,
-			BlockNo: blockNo,
-		}
-
-		ctx := context.Background()
-		nameInfo, err := ns.grpcClient.GetNameInfo(ctx, nameRequest)
-
-		if err != nil {
-			return "UNRESOLVED: " + encoded
-		}
-
-		return encodeAccount(nameInfo.GetDestination())
-	*/
 }
 
 // bigIntToFloat takes a big.Int, divides it by 10^exp and returns the resulting float
