@@ -37,10 +37,10 @@ const (
 )
 
 type ChanInfoType struct {
-	Block         chan ChanInfo
-	Tx            chan ChanInfo
-	Name          chan ChanInfo
-	Token         chan ChanInfo
+	Block chan ChanInfo
+	Tx    chan ChanInfo
+	// Name          chan ChanInfo
+	// Token         chan ChanInfo
 	TokenTransfer chan ChanInfo
 	AccTokens     chan ChanInfo
 	NFT           chan ChanInfo
