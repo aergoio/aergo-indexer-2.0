@@ -67,17 +67,18 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 	// Get Tx doc
 	txDoc := doc.ConvTx(tx, blockDoc)
 
+	// add tx doc ( defer )
+	defer ns.insertTx(info.Type, txDoc)
+
 	// set tx status
 	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
 	if err != nil {
 		txDoc.Status = "NO_RECEIPT"
 		ns.log.Warn().Str("tx", txDoc.Id).Err(err).Msg("Failed to get tx receipt")
-		ns.insertTx(info.Type, txDoc)
 		return
 	}
 	txDoc.Status = receipt.Status
 	if receipt.Status == "ERROR" {
-		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
@@ -85,7 +86,6 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
 		nameDoc := doc.ConvName(tx, txDoc.BlockNo)
 		ns.insertName(info.Type, nameDoc)
-		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
@@ -102,7 +102,6 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 	case transaction.TxPayload:
 	case transaction.TxMultiCall:
 	default:
-		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
@@ -122,25 +121,23 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 	tType := transaction.MaybeTokenCreation(tx)
 	switch tType {
 	case transaction.TokenARC1, transaction.TokenARC2:
-		// Add Token doc
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
+		if name == "" {
+			return
+		}
+
+		// Add Token doc
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.isCccvNft(receipt.ContractAddress))
 		tokenDoc := doc.ConvToken(txDoc, receipt.ContractAddress, tType, name, symbol, decimals, supply, supplyFloat)
-		if tokenDoc.Name != "" {
-			// Add Token doc
-			ns.insertToken(info.Type, tokenDoc)
+		ns.insertToken(info.Type, tokenDoc)
 
-			// Add Contract doc
-			contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
-			ns.insertContract(info.Type, contractDoc)
-
-			// TODO : Policy 2 에서는 NFT 처리 없음? - ARC2 토큰 들어오는지 확인 필요
-
-			fmt.Println(">>>>>>>>>>> POLICY 2 :", transaction.EncodeAccount(receipt.ContractAddress))
-		}
-	default:
+		// Add Contract doc
+		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+		ns.insertContract(info.Type, contractDoc)
+		// TODO : Policy 2 에서는 NFT 처리 없음? - ARC2 토큰 들어오는지 확인 필요
+		fmt.Println(">>>>>>>>>>> POLICY 2 :", transaction.EncodeAccount(receipt.ContractAddress))
 	}
-	ns.insertTx(info.Type, txDoc)
+
 	return
 }
 
@@ -162,11 +159,12 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 		}
 
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(contractAddress)
-		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
-		tokenDoc := doc.ConvToken(txDoc, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
-		if tokenDoc.Name == "" {
+		if name == "" {
 			return
 		}
+
+		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
+		tokenDoc := doc.ConvToken(txDoc, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
 		ns.insertToken(info.Type, tokenDoc)
 
 		// Add AccountTokens Doc ( update Amount )
