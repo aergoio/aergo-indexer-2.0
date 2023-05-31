@@ -7,7 +7,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/mr-tron/base58"
@@ -35,7 +34,7 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 // ConvTx converts Tx from RPC into Elasticsearch type
 func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
-	category, method := category.DetectTxCategory(tx)
+	category, method := transaction.DetectTxCategory(tx)
 	if len(method) > 50 {
 		method = method[:50]
 	}
@@ -75,7 +74,7 @@ func ConvTokenUp(txDoc EsTx, contractAddress []byte, supply string, supplyFloat 
 }
 
 // ConvContractCreateTx creates document for token creation
-func ConvToken(txDoc EsTx, contractAddress []byte, tokenType category.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32) EsToken {
+func ConvToken(txDoc EsTx, contractAddress []byte, tokenType transaction.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32) EsToken {
 	return EsToken{
 		BaseEsType:     &BaseEsType{Id: EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		TxId:           txDoc.GetID(),
@@ -148,11 +147,11 @@ func ConvTokenTransfer(contractAddress []byte, txDoc EsTx, idx int, from string,
 }
 
 func ConvAccountTokens(ttDoc EsTokenTransfer, account string, balance string, balanceFloat float32) EsAccountTokens {
-	var tokenType category.TokenType // TODO : 외부에서 ARC 여부를 판단하도록 변경
+	var tokenType transaction.TokenType // TODO : 외부에서 ARC 여부를 판단하도록 변경
 	if ttDoc.TokenId == "" {
-		tokenType = category.TokenARC1
+		tokenType = transaction.TokenARC1
 	} else {
-		tokenType = category.TokenARC2
+		tokenType = transaction.TokenARC2
 	}
 
 	return EsAccountTokens{

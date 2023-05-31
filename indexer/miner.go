@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -99,17 +99,17 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 
 	// Process Token and TokenTransfer
 	switch txDoc.Category {
-	case category.Call:
-	case category.Deploy:
-	case category.Payload:
-	case category.MultiCall:
+	case transaction.TxCall:
+	case transaction.TxDeploy:
+	case transaction.TxPayload:
+	case transaction.TxMultiCall:
 	default:
 		ns.insertTx(info.Type, txDoc)
 		return
 	}
 
 	// Contract Deploy
-	if txDoc.Category == category.Deploy {
+	if txDoc.Category == transaction.TxDeploy {
 		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
 		ns.insertContract(info.Type, contractDoc)
 	}
@@ -121,9 +121,9 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 	}
 
 	// POLICY 2 Token
-	tType := category.MaybeTokenCreation(tx)
+	tType := transaction.MaybeTokenCreation(tx)
 	switch tType {
-	case category.TokenARC1, category.TokenARC2:
+	case transaction.TokenARC1, transaction.TokenARC2:
 		// Add Token doc
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(receipt.ContractAddress)
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.isCccvNft(receipt.ContractAddress))
@@ -173,11 +173,11 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 		}
 
 		// Add Token Doc
-		var tokenType category.TokenType
+		var tokenType transaction.TokenType
 		if event.EventName == "new_arc1_token" {
-			tokenType = category.TokenARC1
+			tokenType = transaction.TokenARC1
 		} else {
-			tokenType = category.TokenARC2
+			tokenType = transaction.TokenARC2
 		}
 		name, symbol, decimals := MinerGRPC.QueryTokenInfo(contractAddress)
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
