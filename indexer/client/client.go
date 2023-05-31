@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"google.golang.org/grpc"
 )
@@ -132,40 +133,38 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 	return balance, balanceFloat
 }
 
-func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, arg interface{}, isCccvNft bool) (tokenId, amount string, amountFloat float32) {
+func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, amountOrId string, isCccvNft bool) (tokenType transaction.TokenType, tokenId string, amount string, amountFloat float32) {
 	var err error
 	var owner string
 
-	if argStr, ok := arg.(string); ok {
-		// 2022/06/05 숫자인 token ID 허용
-		if isCccvNft == true {
-			owner, err = t.queryContract(contractAddress, "query", "ownerOf", argStr)
-		} else {
-			owner, err = t.queryContract(contractAddress, "ownerOf", argStr)
-		}
-		if err == nil { // ARC 2
-			tokenId = argStr
-			amountFloat = 1.0
-			// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-			if owner != "" {
-				amount = owner
-			} else {
-				amount = "BURN"
-			}
-		} else { // ARC 1
-			if AmountFloat, err := strconv.ParseFloat(argStr, 32); err == nil {
-				amountFloat = float32(AmountFloat)
-				amount = argStr
-				tokenId = ""
-			} else {
-				amount = ""
-			}
-		}
+	// 2022/06/05 숫자인 token ID 허용
+	if isCccvNft == true {
+		owner, err = t.queryContract(contractAddress, "query", "ownerOf", amountOrId)
 	} else {
-		amount = ""
+		owner, err = t.queryContract(contractAddress, "ownerOf", amountOrId)
+	}
+	if err == nil { // ARC 2
+		tokenType = transaction.TokenARC2
+		tokenId = amountOrId
+		amountFloat = 1.0
+		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
+		if owner != "" {
+			amount = owner
+		} else {
+			amount = "BURN"
+		}
+	} else { // ARC 1
+		tokenType = transaction.TokenARC1
+		if AmountFloat, err := strconv.ParseFloat(amountOrId, 32); err == nil {
+			amountFloat = float32(AmountFloat)
+			amount = amountOrId
+			tokenId = ""
+		} else {
+			amount = ""
+		}
 	}
 
-	return tokenId, amount, amountFloat
+	return tokenType, tokenId, amount, amountFloat
 }
 
 func (t *AergoClientController) QueryTotalSupply(contractAddress []byte, isCccvNft bool) (supply string, supplyFloat float32) {

@@ -184,21 +184,20 @@ func TestConvName(t *testing.T) {
 }
 
 func TestConvNFT(t *testing.T) {
-	fn_test := func(contractAddress []byte, esTokenTransfer EsTokenTransfer, amount string, tokenUri string, imageUrl string, esNFTExpect EsNFT) {
+	fn_test := func(esTokenTransfer EsTokenTransfer, tokenUri string, imageUrl string, esNFTExpect EsNFT) {
 		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
-		esNFTConv := ConvNFT(contractAddress, esTokenTransfer, amount, tokenUri, imageUrl)
+		esNFTConv := ConvNFT(esTokenTransfer, tokenUri, imageUrl)
 		require.Equal(t, esNFTExpect, esNFTConv)
 	}
 
 	fn_test(
-		[]byte("Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF"),
 		EsTokenTransfer{
 			Timestamp:    time.Unix(0, 1668652376002288214),
 			BlockNo:      1,
 			TokenAddress: types.EncodeAddress([]byte("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA")),
 			TokenId:      "cccv_nft",
+			Amount:       "1000",
 		},
-		"1000",
 		"https://api.booost.live/nft/vehicles/OSOMDJ0SR6",
 		"https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png?v=2",
 		EsNFT{
@@ -246,13 +245,13 @@ func TestConvTokenTransfer(t *testing.T) {
 }
 
 func TestConvAccountTokens(t *testing.T) {
-	fn_test := func(tokenId string, tokenAddress string, timestamp time.Time, account string, balance string, balanceFloat float32, esAccountTokensExpect EsAccountTokens) {
-		esAccountTokensConv := ConvAccountTokens(tokenId, tokenAddress, timestamp, account, balance, balanceFloat)
+	fn_test := func(tokenType transaction.TokenType, tokenAddress string, timestamp time.Time, account string, balance string, balanceFloat float32, esAccountTokensExpect EsAccountTokens) {
+		esAccountTokensConv := ConvAccountTokens(tokenType, tokenAddress, timestamp, account, balance, balanceFloat)
 		require.Equal(t, esAccountTokensExpect, esAccountTokensConv)
 	}
 
 	fn_test(
-		"a6d6d055488d443d29952c1ca276b34ca_203",
+		transaction.TokenARC2,
 		"Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
 		time.Unix(0, 1668652376002288214),
 		"AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "7364", 7364, EsAccountTokens{

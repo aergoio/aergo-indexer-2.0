@@ -21,7 +21,7 @@ const (
 	EventBurn     EventType = "burn"
 )
 
-func UnmarshalEventNewArc(event *types.Event) (tokenType TokenType, contractAddress []byte, err error) {
+func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contractAddress []byte, err error) {
 	if event == nil {
 		return TokenNone, nil, errors.New("not exist event")
 	}
