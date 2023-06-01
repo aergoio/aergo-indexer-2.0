@@ -49,7 +49,7 @@ func init() {
 
 	fs.BoolVar(&checkMode, "check", true, "check indices of range of heights")
 	fs.BoolVar(&onsyncMode, "onsync", true, "onsync data in indices")
-	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, onsync separately.")
+	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode.(all,check,onsync) Alternative to setting check, onsync separately.")
 
 	fs.Uint64Var(&From, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&To, "to", 0, "stop syncing at this block number. check only")
