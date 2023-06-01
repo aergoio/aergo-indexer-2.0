@@ -47,14 +47,14 @@ func init() {
 	fs.StringVarP(&prefix, "prefix", "P", "testnet", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
 
-	fs.BoolVar(&checkMode, "check", false, "check indices of range of heights")
+	fs.BoolVar(&checkMode, "check", true, "check indices of range of heights")
 	fs.BoolVar(&onsyncMode, "onsync", true, "onsync data in indices")
-	fs.StringVarP(&runMode, "mode", "M", "all", "indexer running mode. Alternative to setting check, onsync separately.")
+	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode. Alternative to setting check, onsync separately.")
 
 	fs.Uint64Var(&From, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&To, "to", 0, "stop syncing at this block number. check only")
-	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for indexing whitelist balance. onsync only")
-	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
+	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for update account balance. onsync only")
+	fs.StringVar(&typeCccvNft, "cccv", "mainnet", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
 }
 
 func main() {

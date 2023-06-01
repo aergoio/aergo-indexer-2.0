@@ -172,7 +172,7 @@ Flags:
   -p, --port int32          port number of aergo server (default 7845)
   -P, --prefix string       index name prefix (default "testnet")
       --to uint             stop syncing at this block number. check only
-  -W, --whitelist strings   address for indexing whitelist balance. onsync only
+  -W, --whitelist strings   address for track update account balance. onsync only
 ```
 
 Example
