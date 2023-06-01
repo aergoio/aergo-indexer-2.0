@@ -40,7 +40,7 @@ func (ns *Indexer) startStream() {
 		// indexing
 		if newHeight > ns.lastHeight+1 {
 			for H := ns.lastHeight + 1; H < newHeight; H++ {
-				MChannel <- BlockInfo{2, H}
+				MChannel <- BlockInfo{BlockType_Sync, H}
 				fmt.Println(">>> New Block :", H)
 			}
 		}
@@ -51,12 +51,12 @@ func (ns *Indexer) startStream() {
 			if err == nil && BestBlockNo >= newHeight {
 				ns.sleepStream(newHeight)
 			} else {
-				MChannel <- BlockInfo{2, newHeight}
+				MChannel <- BlockInfo{BlockType_Sync, newHeight}
 				ns.lastHeight = newHeight
 				fmt.Println(">>> New Block :", newHeight)
 			}
 		} else {
-			MChannel <- BlockInfo{2, newHeight}
+			MChannel <- BlockInfo{BlockType_Sync, newHeight}
 			ns.lastHeight = newHeight
 			fmt.Println(">>> New Block :", newHeight)
 		}

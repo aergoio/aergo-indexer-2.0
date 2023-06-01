@@ -1,9 +1,8 @@
-package category
+package transaction
 
 import (
 	"strings"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -12,27 +11,27 @@ type TxCategory string
 
 // Categories
 const (
-	None       TxCategory = ""
-	Payload    TxCategory = "payload"
-	Call       TxCategory = "call"
-	Governance TxCategory = "governance"
-	System     TxCategory = "system"
-	Staking    TxCategory = "staking"
-	Voting     TxCategory = "voting"
-	Name       TxCategory = "name"
-	NameCreate TxCategory = "namecreate"
-	NameUpdate TxCategory = "nameupdate"
-	Enterprise TxCategory = "enterprise"
-	Conf       TxCategory = "conf"
-	Cluster    TxCategory = "cluster"
-	Deploy     TxCategory = "deploy"
-	Redeploy   TxCategory = "redeploy"
-	MultiCall  TxCategory = "multicall"
-	Transfer   TxCategory = "transfer"
+	TxNone       TxCategory = ""
+	TxPayload    TxCategory = "payload"
+	TxCall       TxCategory = "call"
+	TxGovernance TxCategory = "governance"
+	TxSystem     TxCategory = "system"
+	TxStaking    TxCategory = "staking"
+	TxVoting     TxCategory = "voting"
+	TxName       TxCategory = "name"
+	TxNameCreate TxCategory = "namecreate"
+	TxNameUpdate TxCategory = "nameupdate"
+	TxEnterprise TxCategory = "enterprise"
+	TxConf       TxCategory = "conf"
+	TxCluster    TxCategory = "cluster"
+	TxDeploy     TxCategory = "deploy"
+	TxRedeploy   TxCategory = "redeploy"
+	TxMultiCall  TxCategory = "multicall"
+	TxTransfer   TxCategory = "transfer"
 )
 
 // TxCategories is the list of available categories in order of increasing weight
-var TxCategories = []TxCategory{None, Payload, Call, Governance, System, Staking, Voting, Name, NameCreate, NameUpdate, Enterprise, Conf, Cluster, Deploy, Redeploy, MultiCall}
+var TxCategories = []TxCategory{TxNone, TxPayload, TxCall, TxGovernance, TxSystem, TxStaking, TxVoting, TxName, TxNameCreate, TxNameUpdate, TxEnterprise, TxConf, TxCluster, TxDeploy, TxRedeploy, TxMultiCall}
 
 // DetectTxCategory by performing a cascade of checks with fallbacks
 func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
@@ -41,82 +40,82 @@ func DetectTxCategory(tx *types.Tx) (TxCategory, string) {
 	txRecipient := string(txBody.GetRecipient())
 
 	if txType == types.TxType_REDEPLOY {
-		return Redeploy, ""
+		return TxRedeploy, ""
 	}
 
 	if txType == types.TxType_MULTICALL {
-		return MultiCall, ""
+		return TxMultiCall, ""
 	}
 
 	if txRecipient == "" && len(txBody.Payload) > 0 {
-		return Deploy, ""
+		return TxDeploy, ""
 	}
 
 	if txRecipient == "aergo.enterprise" {
-		txCallName, err := transaction.GetCallName(tx)
+		txCallName, err := GetCallName(tx)
 		if err == nil {
 			txCallName = strings.ToLower(txCallName)
 			if strings.HasSuffix(txCallName, "cluster") {
-				return Cluster, txCallName
+				return TxCluster, txCallName
 			}
 			if strings.HasSuffix(txCallName, "conf") {
-				return Conf, txCallName
+				return TxConf, txCallName
 			}
-			return Enterprise, txCallName
+			return TxEnterprise, txCallName
 		}
-		return Enterprise, ""
+		return TxEnterprise, ""
 	}
 
 	if txRecipient == "aergo.name" {
-		txCallName, err := transaction.GetCallName(tx)
+		txCallName, err := GetCallName(tx)
 		if err == nil {
 			txCallName = strings.ToLower(txCallName)
 			if strings.HasSuffix(txCallName, "updatename") {
-				return NameUpdate, txCallName
+				return TxNameUpdate, txCallName
 			}
 			if strings.HasSuffix(txCallName, "createname") {
-				return NameCreate, txCallName
+				return TxNameCreate, txCallName
 			}
-			return Name, txCallName
+			return TxName, txCallName
 		}
-		return Name, ""
+		return TxName, ""
 	}
 
 	if txRecipient == "aergo.system" {
-		txCallName, err := transaction.GetCallName(tx)
+		txCallName, err := GetCallName(tx)
 		if err == nil {
 			txCallName = strings.ToLower(txCallName)
 			if strings.HasSuffix(txCallName, "stake") || strings.HasSuffix(txCallName, "unstake") {
-				return Staking, txCallName
+				return TxStaking, txCallName
 			}
 			if strings.HasSuffix(txCallName, "vote") || strings.HasSuffix(txCallName, "votedao") || strings.HasSuffix(txCallName, "votebp") || strings.HasSuffix(txCallName, "proposal") {
-				return Voting, txCallName
+				return TxVoting, txCallName
 			}
-			return System, txCallName
+			return TxSystem, txCallName
 		}
-		return System, ""
+		return TxSystem, ""
 	}
 
 	if txType == types.TxType_GOVERNANCE {
-		return Governance, ""
+		return TxGovernance, ""
 	}
 
-	txCallName, err := transaction.GetCallName(tx)
+	txCallName, err := GetCallName(tx)
 	if err == nil && txCallName != "" {
-		return Call, txCallName
+		return TxCall, txCallName
 	}
 
 	if len(txBody.Payload) > 0 {
-		return Payload, ""
+		return TxPayload, ""
 	}
 
 	if txType == types.TxType_TRANSFER {
-		return Transfer, ""
+		return TxTransfer, ""
 	}
 
 	if txType == types.TxType_NORMAL && len(tx.Body.Amount) > 0 && string(tx.Body.Amount) != "0" {
-		return Transfer, ""
+		return TxTransfer, ""
 	}
 
-	return None, ""
+	return TxNone, ""
 }

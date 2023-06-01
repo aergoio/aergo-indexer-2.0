@@ -5,6 +5,7 @@ import (
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 )
 
 // Start setups the indexer
@@ -210,7 +211,7 @@ func (ns *Indexer) cleanIndex() error {
 		balance := document.(*doc.EsAccountBalance)
 
 		// delete alias account balance only
-		if doc.IsBalanceNotResolved(balance.Id) == true {
+		if transaction.IsBalanceNotResolved(balance.Id) == true {
 			ns.log.Info().Str("id", balance.Id).Msg("Delete account balance")
 			ns.db.Delete(db.QueryParams{
 				IndexName: ns.indexNamePrefix + "account_balance",

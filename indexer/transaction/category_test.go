@@ -1,4 +1,4 @@
-package category
+package transaction
 
 import (
 	"math/big"
@@ -16,10 +16,10 @@ func TestDetectTxCategory(t *testing.T) {
 	}
 
 	// Redeploy
-	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_REDEPLOY}}, Redeploy, "")
+	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_REDEPLOY}}, TxRedeploy, "")
 
 	// MultiCall
-	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_MULTICALL}}, MultiCall, "")
+	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_MULTICALL}}, TxMultiCall, "")
 
 	// Deploy
 	fn_diff(&types.Tx{
@@ -28,7 +28,7 @@ func TestDetectTxCategory(t *testing.T) {
 			Recipient: nil,
 			Payload:   []byte{1, 2, 3, 4}, // deploy contract bytecode
 		},
-	}, Deploy, "")
+	}, TxDeploy, "")
 
 	// Cluster
 	fn_diff(&types.Tx{
@@ -45,7 +45,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, Cluster, "changecluster")
+	}, TxCluster, "changecluster")
 
 	// Conf
 	fn_diff(&types.Tx{
@@ -62,7 +62,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, Conf, "changeconf")
+	}, TxConf, "changeconf")
 
 	// Enterprise
 	fn_diff(&types.Tx{
@@ -76,7 +76,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, Enterprise, "appendadmin")
+	}, TxEnterprise, "appendadmin")
 
 	// NameCreate
 	fn_diff(&types.Tx{
@@ -90,7 +90,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, NameCreate, "v1createname")
+	}, TxNameCreate, "v1createname")
 
 	// NameUpdate
 	fn_diff(&types.Tx{
@@ -105,7 +105,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, NameUpdate, "v1updatename")
+	}, TxNameUpdate, "v1updatename")
 
 	// Name
 	fn_diff(&types.Tx{
@@ -119,7 +119,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, Name, "v1setowner")
+	}, TxName, "v1setowner")
 
 	// Staking
 	fn_diff(&types.Tx{
@@ -130,7 +130,7 @@ func TestDetectTxCategory(t *testing.T) {
 				"Name": "v1stake"
 			}`),
 		},
-	}, Staking, "v1stake")
+	}, TxStaking, "v1stake")
 
 	// Voting
 	fn_diff(&types.Tx{
@@ -144,12 +144,12 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, Voting, "v1votebp")
+	}, TxVoting, "v1votebp")
 
 	// System ( not exist now )
 
 	// Governance
-	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_GOVERNANCE}}, Governance, "")
+	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_GOVERNANCE}}, TxGovernance, "")
 
 	// Call
 	fn_diff(&types.Tx{
@@ -165,7 +165,7 @@ func TestDetectTxCategory(t *testing.T) {
 				]
 			}`),
 		},
-	}, Call, "invoke")
+	}, TxCall, "invoke")
 
 	// Payload
 	fn_diff(&types.Tx{
@@ -178,12 +178,12 @@ func TestDetectTxCategory(t *testing.T) {
 				"bestBlockHash": "6k8WnEKMjm7ofBP3wtQFZn3DxAD97FzxZpayAHPX9kyq"
 			}`),
 		},
-	}, Payload, "")
+	}, TxPayload, "")
 
 	// Transfer
-	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_TRANSFER, Amount: big.NewInt(100).Bytes()}}, Transfer, "")
-	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_NORMAL, Amount: big.NewInt(100).Bytes()}}, Transfer, "")
+	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_TRANSFER, Amount: big.NewInt(100).Bytes()}}, TxTransfer, "")
+	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_NORMAL, Amount: big.NewInt(100).Bytes()}}, TxTransfer, "")
 
 	// None
-	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_NORMAL}}, None, "")
+	fn_diff(&types.Tx{Body: &types.TxBody{Type: types.TxType_NORMAL}}, TxNone, "")
 }

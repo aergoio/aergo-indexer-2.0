@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 )
 
 // DocType is an interface for structs to be used as database documents
@@ -44,17 +44,17 @@ type EsBlock struct {
 // EsTx is a transaction stored in the database
 type EsTx struct {
 	*BaseEsType
-	Timestamp      time.Time           `json:"ts" db:"ts"`
-	BlockNo        uint64              `json:"blockno" db:"blockno"`
-	Account        string              `json:"from" db:"from"`
-	Recipient      string              `json:"to" db:"to"`
-	Amount         string              `json:"amount" db:"amount"`             // string of BigInt
-	AmountFloat    float32             `json:"amount_float" db:"amount_float"` // float for sorting
-	Type           string              `json:"type" db:"type"`
-	Category       category.TxCategory `json:"category" db:"category"`
-	Method         string              `json:"method" db:"method"`
-	TokenTransfers uint64              `json:"token_transfers" db:"token_transfers"`
-	Status         string              `json:"status" db:"status"`
+	Timestamp      time.Time              `json:"ts" db:"ts"`
+	BlockNo        uint64                 `json:"blockno" db:"blockno"`
+	Account        string                 `json:"from" db:"from"`
+	Recipient      string                 `json:"to" db:"to"`
+	Amount         string                 `json:"amount" db:"amount"`             // string of BigInt
+	AmountFloat    float32                `json:"amount_float" db:"amount_float"` // float for sorting
+	Type           string                 `json:"type" db:"type"`
+	Category       transaction.TxCategory `json:"category" db:"category"`
+	Method         string                 `json:"method" db:"method"`
+	TokenTransfers uint64                 `json:"token_transfers" db:"token_transfers"`
+	Status         string                 `json:"status" db:"status"`
 }
 
 // EsName is a name-address mapping stored in the database
@@ -84,17 +84,17 @@ type EsTokenTransfer struct {
 // EsToken is meta data of a token. The id is the contract address.
 type EsToken struct {
 	*BaseEsType
-	TxId           string             `json:"tx_id" db:"tx_id"`
-	BlockNo        uint64             `json:"blockno" db:"blockno"`
-	Type           category.TokenType `json:"type" db:"type"`
-	Name           string             `json:"name" db:"name"`
-	Name_lower     string             `json:"name_lower" db:"name_lower"`
-	Symbol         string             `json:"symbol" db:"symbol"`
-	Symbol_lower   string             `json:"symbol_lower" db:"symbol_lower"`
-	TokenTransfers uint64             `json:"token_transfers" db:"token_transfers"`
-	Decimals       uint8              `json:"decimals" db:"decimals"`
-	Supply         string             `json:"supply" db:"supply"`
-	SupplyFloat    float32            `json:"supply_float" db:"supply_float"`
+	TxId           string                `json:"tx_id" db:"tx_id"`
+	BlockNo        uint64                `json:"blockno" db:"blockno"`
+	Type           transaction.TokenType `json:"type" db:"type"`
+	Name           string                `json:"name" db:"name"`
+	Name_lower     string                `json:"name_lower" db:"name_lower"`
+	Symbol         string                `json:"symbol" db:"symbol"`
+	Symbol_lower   string                `json:"symbol_lower" db:"symbol_lower"`
+	TokenTransfers uint64                `json:"token_transfers" db:"token_transfers"`
+	Decimals       uint8                 `json:"decimals" db:"decimals"`
+	Supply         string                `json:"supply" db:"supply"`
+	SupplyFloat    float32               `json:"supply_float" db:"supply_float"`
 }
 
 type EsTokenUp struct {
@@ -106,12 +106,12 @@ type EsTokenUp struct {
 // EsAccountTokens is meta data of a token of an account. The id is account_token address.
 type EsAccountTokens struct {
 	*BaseEsType
-	Account      string             `json:"account" db:"account"`
-	TokenAddress string             `json:"address" db:"address"`
-	Type         category.TokenType `json:"type" db:"type"`
-	Timestamp    time.Time          `json:"ts" db:"ts"`
-	Balance      string             `json:"balance" db:"balance"`
-	BalanceFloat float32            `json:"balance_float" db:"balance_float"`
+	Account      string                `json:"account" db:"account"`
+	TokenAddress string                `json:"address" db:"address"`
+	Type         transaction.TokenType `json:"type" db:"type"`
+	Timestamp    time.Time             `json:"ts" db:"ts"`
+	Balance      string                `json:"balance" db:"balance"`
+	BalanceFloat float32               `json:"balance_float" db:"balance_float"`
 }
 
 type EsAccountTokensUp struct {
@@ -175,7 +175,8 @@ func InitEsMappings(clusterMode bool) {
 			"tx": `{
 				"settings": {
 					"number_of_shards": 50,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -218,7 +219,8 @@ func InitEsMappings(clusterMode bool) {
 			"block": `{
 				"settings": {
 					"number_of_shards": 100,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -271,7 +273,8 @@ func InitEsMappings(clusterMode bool) {
 			"token_transfer": `{
 				"settings": {
 					"number_of_shards": 30,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -311,7 +314,8 @@ func InitEsMappings(clusterMode bool) {
 			"token": `{
 				"settings": {
 					"number_of_shards": 5,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -354,7 +358,8 @@ func InitEsMappings(clusterMode bool) {
 			"account_tokens": `{
 				"settings": {
 					"number_of_shards": 10,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -413,7 +418,8 @@ func InitEsMappings(clusterMode bool) {
 			"contract": `{
 				"settings": {
 					"number_of_shards": 10,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -466,7 +472,8 @@ func InitEsMappings(clusterMode bool) {
 			"chain_info": `{
 				"settings": {
 					"number_of_shards": 10,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -494,7 +501,8 @@ func InitEsMappings(clusterMode bool) {
 			"tx": `{
 				"settings": {
 					"number_of_shards": 10,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -537,7 +545,8 @@ func InitEsMappings(clusterMode bool) {
 			"block": `{
 				"settings": {
 					"number_of_shards": 20,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -568,7 +577,8 @@ func InitEsMappings(clusterMode bool) {
 			"name": `{
 				"settings": {
 					"number_of_shards": 1,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -590,7 +600,8 @@ func InitEsMappings(clusterMode bool) {
 			"token_transfer": `{
 				"settings": {
 					"number_of_shards": 3,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -630,7 +641,8 @@ func InitEsMappings(clusterMode bool) {
 			"token": `{
 				"settings": {
 					"number_of_shards": 3,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -701,7 +713,8 @@ func InitEsMappings(clusterMode bool) {
 			"nft": `{
 				"settings": {
 					"number_of_shards": 3,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -732,7 +745,8 @@ func InitEsMappings(clusterMode bool) {
 			"contract": `{
 				"settings": {
 					"number_of_shards": 3,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -754,7 +768,8 @@ func InitEsMappings(clusterMode bool) {
 			"account_balance": `{
 				"settings": {
 					"number_of_shards": 3,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -785,7 +800,8 @@ func InitEsMappings(clusterMode bool) {
 			"chain_info": `{
 				"settings": {
 					"number_of_shards": 3,
-					"number_of_replicas": 1
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
 				},
 				"mappings": {
 					"properties": {
@@ -811,7 +827,7 @@ func InitEsMappings(clusterMode bool) {
 	}
 }
 
-func mapCategoriesToStr(categories []category.TxCategory) []string {
+func mapCategoriesToStr(categories []transaction.TxCategory) []string {
 	vsm := make([]string, len(categories))
 	for i, v := range categories {
 		vsm[i] = fmt.Sprintf("'%s'", v)
@@ -819,4 +835,4 @@ func mapCategoriesToStr(categories []category.TxCategory) []string {
 	return vsm
 }
 
-var categories = strings.Join(mapCategoriesToStr(category.TxCategories), ",")
+var categories = strings.Join(mapCategoriesToStr(transaction.TxCategories), ",")

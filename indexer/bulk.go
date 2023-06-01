@@ -6,7 +6,42 @@ import (
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 )
+
+// bulk type
+type ChanType uint
+
+const (
+	ChanType_StopBulk ChanType = iota
+	ChanType_Add
+	ChanType_Commit
+)
+
+type ChanInfo struct {
+	Type ChanType // 0:stop_bulk, 1:add, 2:commit
+	Doc  doc.DocType
+}
+
+type BlockType uint
+
+const (
+	BlockType_StopMiner BlockType = iota
+	BlockType_Bulk
+	BlockType_Sync
+)
+
+type BlockInfo struct {
+	Type   BlockType // 0:stop_miner, 1:bulk, 2:sync
+	Height uint64
+}
+
+type ChanInfoType struct {
+	Block         chan ChanInfo
+	Tx            chan ChanInfo
+	TokenTransfer chan ChanInfo
+	AccTokens     chan ChanInfo
+}
 
 // FOR BULK INSERT
 func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64) {
@@ -29,7 +64,6 @@ func (ns *Indexer) StartBulkChannel() {
 	ns.BChannel.Tx = make(chan ChanInfo)
 	ns.BChannel.TokenTransfer = make(chan ChanInfo)
 	ns.BChannel.AccTokens = make(chan ChanInfo)
-	ns.BChannel.NFT = make(chan ChanInfo)
 	ns.SynDone = make(chan bool)
 
 	// Start bulk indexers for each indices
@@ -37,7 +71,6 @@ func (ns *Indexer) StartBulkChannel() {
 	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.bulkSize, ns.batchTime, false)
 	go ns.BulkIndexer(ns.BChannel.TokenTransfer, ns.indexNamePrefix+"token_transfer", ns.bulkSize, ns.batchTime, false)
 	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.bulkSize, ns.batchTime, false)
-	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.bulkSize, ns.batchTime, false)
 
 	// Start multiple miners
 	GrpcClients := make([]*client.AergoClientController, ns.grpcNum)
@@ -74,20 +107,14 @@ func (ns *Indexer) StopBulkChannel() {
 	// Send stop messages to each bulk channels
 	ns.BChannel.Block <- ChanInfo{ChanType_StopBulk, nil}
 	ns.BChannel.Tx <- ChanInfo{ChanType_StopBulk, nil}
-	//	ns.BChannel.Name <- ChanInfo{ChanType_StopBulk,nil}
-	//	ns.BChannel.Token <- ChanInfo{ChanType_StopBulk,nil}
 	ns.BChannel.TokenTransfer <- ChanInfo{ChanType_StopBulk, nil}
 	ns.BChannel.AccTokens <- ChanInfo{ChanType_StopBulk, nil}
-	ns.BChannel.NFT <- ChanInfo{ChanType_StopBulk, nil}
 
 	// Close bulk channels
 	close(ns.BChannel.Block)
 	close(ns.BChannel.Tx)
-	// close(ns.BChannel.Name)
-	// close(ns.BChannel.Token)
 	close(ns.BChannel.TokenTransfer)
 	close(ns.BChannel.AccTokens)
-	close(ns.BChannel.NFT)
 	close(ns.SynDone)
 
 	ns.log.Info().Msg("Stop Bulk Indexer")
@@ -130,13 +157,10 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 		// Block Channel : wait other channels
 		if isBlock {
 			ns.BChannel.Tx <- ChanInfo{ChanType_Commit, nil}
-			// ns.BChannel.Name <- ChanInfo{ChanType_Commit, nil}
-			// ns.BChannel.Token <- ChanInfo{ChanType_Commit, nil}
 			ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Commit, nil}
 			ns.BChannel.AccTokens <- ChanInfo{ChanType_Commit, nil}
-			ns.BChannel.NFT <- ChanInfo{ChanType_Commit, nil}
 
-			for i := 0; i < 4; i++ {
+			for i := 0; i < 3; i++ {
 				<-ns.SynDone
 			}
 		}

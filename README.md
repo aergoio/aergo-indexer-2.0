@@ -167,12 +167,12 @@ Flags:
       --from uint           start syncing from this block number. check only
   -h, --help                help for indexer
   -H, --host string         host address of aergo server (default "localhost")
-  -M, --mode string         indexer running mode. Alternative to setting check, onsync separately. (default "all")
+  -M, --mode string         indexer running mode.(all,check,onsync) Alternative to setting check, onsync separately. (default "all")
       --onsync              onsync data in indices (default true)
   -p, --port int32          port number of aergo server (default 7845)
   -P, --prefix string       index name prefix (default "testnet")
       --to uint             stop syncing at this block number. check only
-  -W, --whitelist strings   address for indexing whitelist balance. onsync only
+  -W, --whitelist strings   address for track update account balance. onsync only
 ```
 
 Example

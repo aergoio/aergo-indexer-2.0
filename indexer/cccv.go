@@ -3,8 +3,8 @@ package indexer
 import (
 	"bytes"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/category"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -28,28 +28,25 @@ func (ns *Indexer) initCccvNft() {
 		return
 	}
 
-	// init cccv address - check, onsync, clean mode
+	// init cccv address
 	var err error
 	ns.cccvNftAddress, err = types.DecodeAddress(cccv_nft_string)
 	if err != nil {
 		return
 	}
 
-	// insert cccv record - check mode only
-	if ns.runMode == "check" {
-		document := doc.EsToken{
-			BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
-			TxId:         txid,
-			BlockNo:      blockno,
-			Name:         "cccv_nft",
-			Name_lower:   "cccv_nft",
-			Symbol:       "CNFT",
-			Symbol_lower: "cnft",
-			Type:         category.ARC2,
-			Supply:       "0",
-			SupplyFloat:  float32(0),
-		}
-
-		ns.insertToken(BlockType_Sync, document)
+	// insert cccv record
+	document := doc.EsToken{
+		BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
+		TxId:         txid,
+		BlockNo:      blockno,
+		Name:         "cccv_nft",
+		Name_lower:   "cccv_nft",
+		Symbol:       "CNFT",
+		Symbol_lower: "cnft",
+		Type:         transaction.TokenARC2,
+		Supply:       "0",
+		SupplyFloat:  float32(0),
 	}
+	ns.insertToken(BlockType_Sync, document)
 }
