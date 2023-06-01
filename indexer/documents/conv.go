@@ -78,6 +78,7 @@ func ConvToken(txDoc EsTx, contractAddress []byte, tokenType transaction.TokenTy
 		BaseEsType:     &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		TxId:           txDoc.GetID(),
 		BlockNo:        txDoc.BlockNo,
+		Creator:        txDoc.Account, // tx account --> token creator
 		TokenTransfers: uint64(0),
 		Type:           tokenType,
 		Name:           name,

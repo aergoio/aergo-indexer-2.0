@@ -86,6 +86,7 @@ type EsToken struct {
 	*BaseEsType
 	TxId           string                `json:"tx_id" db:"tx_id"`
 	BlockNo        uint64                `json:"blockno" db:"blockno"`
+	Creator        string                `json:"creator" db:"creator"`
 	Type           transaction.TokenType `json:"type" db:"type"`
 	Name           string                `json:"name" db:"name"`
 	Name_lower     string                `json:"name_lower" db:"name_lower"`
@@ -324,6 +325,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"blockno": {
 							"type": "long"
+						},
+						"creator": {
+							"type": "keyword"
 						},
 						"name": {
 							"type": "keyword"
@@ -651,6 +655,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"blockno": {
 							"type": "long"
+						},
+						"creator": {
+							"type": "keyword"
 						},
 						"name": {
 							"type": "keyword"
