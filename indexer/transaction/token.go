@@ -35,27 +35,27 @@ func MaybeTokenCreation(tx *types.Tx) TokenType {
 		}
 	}
 
-	suc := true
+	include := true
 	keywords1 := [...]string{"decimals"}
 	for _, keyword := range keywords1 {
 		if !strings.Contains(payload, keyword) {
-			suc = false
+			include = false
 			break
 		}
 	}
-	if suc {
+	if include {
 		return TokenARC1
 	}
 
-	suc = true
+	include = true
 	keywords2 := [...]string{"ownerOf"}
 	for _, keyword := range keywords2 {
 		if !strings.Contains(payload, keyword) {
-			suc = false
+			include = false
 			break
 		}
 	}
-	if suc {
+	if include {
 		return TokenARC2
 	}
 	return TokenNone

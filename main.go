@@ -30,8 +30,8 @@ var (
 	prefix           string
 	aergoAddress     string
 	cluster          bool
-	From             uint64
-	To               uint64
+	from             uint64
+	to               uint64
 	whiteListAddress []string
 	typeCccvNft      string
 
@@ -51,8 +51,8 @@ func init() {
 	fs.BoolVar(&onsyncMode, "onsync", true, "onsync data in indices")
 	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode.(all,check,onsync) Alternative to setting check, onsync separately.")
 
-	fs.Uint64Var(&From, "from", 0, "start syncing from this block number. check only")
-	fs.Uint64Var(&To, "to", 0, "stop syncing at this block number. check only")
+	fs.Uint64Var(&from, "from", 0, "start syncing from this block number. check only")
+	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
 	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for update account balance. onsync only")
 	fs.StringVar(&typeCccvNft, "cccv", "mainnet", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
 }
@@ -85,7 +85,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 	}
 
 	// start indexer
-	exitOnComplete := indx.Start(From, To)
+	exitOnComplete := indx.Start(from, to)
 	if exitOnComplete == true {
 		return
 	}
