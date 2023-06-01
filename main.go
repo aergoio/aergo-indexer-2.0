@@ -54,7 +54,7 @@ func init() {
 	fs.Uint64Var(&from, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
 	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for update account balance. onsync only")
-	fs.StringVar(&typeCccvNft, "cccv", "mainnet", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
+	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
 }
 
 func main() {
