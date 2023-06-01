@@ -40,7 +40,7 @@ func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contrac
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return TokenNone, nil, err
+		return TokenNone, nil, fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	} else if len(args) < 1 || args[0] == nil {
 		return TokenNone, nil, fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	}
@@ -108,9 +108,9 @@ func UnmarshalEventTransfer(event *types.Event) (contractAddress []byte, account
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return nil, "", "", "", err
+		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	} else if args[0] == nil || len(args) < 3 {
-		return
+		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	}
 	// get account from
 	accountFrom, ok := args[0].(string)
@@ -151,7 +151,7 @@ func UnmarshalEventBurn(event *types.Event) (contractAddress []byte, accountFrom
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return nil, "", "", "", err
+		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	} else if len(args) < 2 || args[0] == nil || args[1] == nil {
 		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	}

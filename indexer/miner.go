@@ -10,8 +10,6 @@ import (
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // IndexTxs indexes a list of transactions in bulk
@@ -206,9 +204,9 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
-		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token minted")
+		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Event mint )")
 	case transaction.EventTransfer:
-		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventMint(event)
+		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventTransfer(event)
 		if err != nil {
 			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
@@ -239,7 +237,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
-		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token transfered")
+		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Event transfer )")
 	case transaction.EventBurn:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventBurn(event)
 		if err != nil {
@@ -272,27 +270,10 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
-		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token burned")
+		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Event burn )")
 	default:
 		return
 	}
-}
-
-func (ns *Indexer) makePeerId(pubKey []byte) string {
-	if peerId, is_ok := ns.peerId.Load(string(pubKey)); is_ok == true {
-		return peerId.(string)
-	}
-	cryptoPubKey, err := crypto.UnmarshalPublicKey(pubKey)
-	if err != nil {
-		return ""
-	}
-	Id, err := peer.IDFromPublicKey(cryptoPubKey)
-	if err != nil {
-		return ""
-	}
-	peer := peer.IDB58Encode(Id)
-	ns.peerId.Store(string(pubKey), peer)
-	return peer
 }
 
 func (ns *Indexer) insertBlock(blockType BlockType, blockDoc doc.EsBlock) {
@@ -301,7 +282,7 @@ func (ns *Indexer) insertBlock(blockType BlockType, blockDoc doc.EsBlock) {
 	} else {
 		err := ns.db.Insert(blockDoc, ns.indexNamePrefix+"block")
 		if err != nil {
-			ns.log.Error().Err(err).Msg("insertBlock")
+			ns.log.Error().Err(err).Str("method", "insertBlock").Msg("error while insert")
 		}
 	}
 }
@@ -312,7 +293,7 @@ func (ns *Indexer) insertTx(blockType BlockType, txDoc doc.EsTx) {
 	} else {
 		err := ns.db.Insert(txDoc, ns.indexNamePrefix+"tx")
 		if err != nil {
-			ns.log.Error().Err(err).Msg("insertTx")
+			ns.log.Error().Err(err).Str("method", "insertTx").Msg("error while insert")
 		}
 	}
 }
@@ -334,7 +315,7 @@ func (ns *Indexer) insertName(blockType BlockType, nameDoc doc.EsName) {
 func (ns *Indexer) insertToken(blockType BlockType, tokenDoc doc.EsToken) {
 	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertToken")
+		ns.log.Error().Err(err).Str("method", "insertToken").Msg("error while insert")
 	}
 }
 
@@ -349,7 +330,7 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc doc
 	} else {
 		err := ns.db.Insert(accountTokensDoc, ns.indexNamePrefix+"account_tokens")
 		if err != nil {
-			ns.log.Error().Err(err).Msg("insertAccountTokens")
+			ns.log.Error().Err(err).Str("method", "insertAccountTokens").Msg("error while insert")
 		}
 	}
 }
@@ -358,16 +339,17 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAc
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "account_balance",
 		StringMatch: &db.StringMatchQuery{
-			Field: "_id",
+			Field: "id",
 			Value: balanceDoc.Id,
 		},
+		SortField: "id",
 	}, func() doc.DocType {
 		balance := new(doc.EsAccountBalance)
 		balance.BaseEsType = new(doc.BaseEsType)
 		return balance
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertAccountBalance")
+		ns.log.Error().Err(err).Str("method", "insertAccountBalance").Msg("error while select")
 	}
 
 	if document != nil { // 기존에 존재하는 주소라면 잔고에 상관없이 update
@@ -381,7 +363,7 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAc
 		err = ns.db.Insert(balanceDoc, ns.indexNamePrefix+"account_balance")
 	}
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertAccountBalance")
+		ns.log.Error().Err(err).Str("method", "insertAccountBalance").Msg("error while insert or update")
 	}
 
 	// stake 주소는 whitelist 에 추가
@@ -396,7 +378,7 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc doc
 	} else {
 		err := ns.db.Insert(tokenTransferDoc, ns.indexNamePrefix+"token_transfer")
 		if err != nil {
-			ns.log.Error().Err(err).Msg("insertTokenTransfer")
+			ns.log.Error().Err(err).Str("method", "insertTokenTransfer").Msg("error while insert")
 		}
 	}
 }
@@ -405,16 +387,17 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "nft",
 		StringMatch: &db.StringMatchQuery{
-			Field: "_id",
+			Field: "id",
 			Value: nftDoc.Id,
 		},
+		SortField: "id",
 	}, func() doc.DocType {
 		balance := new(doc.EsNFT)
 		balance.BaseEsType = new(doc.BaseEsType)
 		return balance
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertNft")
+		ns.log.Error().Err(err).Str("method", "insertNFT").Msg("error while select")
 	}
 
 	if document != nil { // 기존에 존재한다면 blockno 가 최신일 때만 update
@@ -425,7 +408,7 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 		err = ns.db.Insert(nftDoc, ns.indexNamePrefix+"nft")
 	}
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertNft")
+		ns.log.Error().Err(err).Str("method", "insertNFT").Msg("error while insert or update")
 	}
 }
 
@@ -439,6 +422,6 @@ func (ns *Indexer) updateToken(tokenDoc doc.EsTokenUp) {
 	*/
 	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {
-		ns.log.Error().Err(err).Msg("updateToken")
+		ns.log.Error().Err(err).Str("method", "updateToken").Msg("error while update")
 	}
 }
