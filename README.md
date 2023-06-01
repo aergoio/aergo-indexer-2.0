@@ -84,6 +84,7 @@ Field           Type        Comment
 id              string      address of token contract
 tx_id           string      tx hash 
 blockno         uint64      block number
+creator         string      token creation account
 type            string      token type (ARC1/ARC2)
 name            string      token name
 name_lower      string      token name lowercase, useful to case-insensitive search
