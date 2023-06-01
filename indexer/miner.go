@@ -204,7 +204,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
-		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Event mint )")
+		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event mint")
 	case transaction.EventTransfer:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventTransfer(event)
 		if err != nil {
@@ -237,7 +237,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
-		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Event transfer )")
+		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event transfer")
 	case transaction.EventBurn:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventBurn(event)
 		if err != nil {
@@ -270,7 +270,8 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.insertNFT(info.Type, nftDoc)
 		}
-		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Event burn )")
+		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event burn")
+
 	default:
 		return
 	}
@@ -342,7 +343,6 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAc
 			Field: "id",
 			Value: balanceDoc.Id,
 		},
-		SortField: "id",
 	}, func() doc.DocType {
 		balance := new(doc.EsAccountBalance)
 		balance.BaseEsType = new(doc.BaseEsType)
@@ -390,7 +390,6 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 			Field: "id",
 			Value: nftDoc.Id,
 		},
-		SortField: "id",
 	}, func() doc.DocType {
 		balance := new(doc.EsNFT)
 		balance.BaseEsType = new(doc.BaseEsType)
