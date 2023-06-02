@@ -152,7 +152,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 	case transaction.EventNewArc1Token, transaction.EventNewArc2Token:
 		tokenType, contractAddress, err := transaction.UnmarshalEventNewArcToken(event)
 		if err != nil {
-			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
+			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
 
@@ -178,7 +178,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 	case transaction.EventMint:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventMint(event)
 		if err != nil {
-			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
+			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
 
@@ -208,7 +208,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 	case transaction.EventTransfer:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventTransfer(event)
 		if err != nil {
-			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
+			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
 
@@ -241,7 +241,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 	case transaction.EventBurn:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventBurn(event)
 		if err != nil {
-			ns.log.Error().Err(err).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
+			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
 
@@ -283,7 +283,7 @@ func (ns *Indexer) insertBlock(blockType BlockType, blockDoc doc.EsBlock) {
 	} else {
 		err := ns.db.Insert(blockDoc, ns.indexNamePrefix+"block")
 		if err != nil {
-			ns.log.Error().Err(err).Str("method", "insertBlock").Msg("error while insert")
+			ns.log.Error().Str("Id", blockDoc.Id).Err(err).Str("method", "insertBlock").Msg("error while insert")
 		}
 	}
 }
@@ -294,7 +294,7 @@ func (ns *Indexer) insertTx(blockType BlockType, txDoc doc.EsTx) {
 	} else {
 		err := ns.db.Insert(txDoc, ns.indexNamePrefix+"tx")
 		if err != nil {
-			ns.log.Error().Err(err).Str("method", "insertTx").Msg("error while insert")
+			ns.log.Error().Err(err).Str("Id", txDoc.Id).Str("method", "insertTx").Msg("error while insert")
 		}
 	}
 }
@@ -302,21 +302,21 @@ func (ns *Indexer) insertTx(blockType BlockType, txDoc doc.EsTx) {
 func (ns *Indexer) insertContract(blockType BlockType, contractDoc doc.EsContract) {
 	err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertContract")
+		ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
 	}
 }
 
 func (ns *Indexer) insertName(blockType BlockType, nameDoc doc.EsName) {
 	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
-		ns.log.Error().Err(err).Msg("insertName")
+		ns.log.Error().Err(err).Str("Id", nameDoc.Id).Str("method", "insertName").Msg("error while insert")
 	}
 }
 
 func (ns *Indexer) insertToken(blockType BlockType, tokenDoc doc.EsToken) {
 	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
-		ns.log.Error().Err(err).Str("method", "insertToken").Msg("error while insert")
+		ns.log.Error().Err(err).Str("Id", tokenDoc.Id).Str("method", "insertToken").Msg("error while insert")
 	}
 }
 
@@ -331,7 +331,7 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc doc
 	} else {
 		err := ns.db.Insert(accountTokensDoc, ns.indexNamePrefix+"account_tokens")
 		if err != nil {
-			ns.log.Error().Err(err).Str("method", "insertAccountTokens").Msg("error while insert")
+			ns.log.Error().Err(err).Str("Id", accountTokensDoc.Id).Str("method", "insertAccountTokens").Msg("error while insert")
 		}
 	}
 }
@@ -349,7 +349,7 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAc
 		return balance
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Str("method", "insertAccountBalance").Msg("error while select")
+		ns.log.Error().Err(err).Str("Id", balanceDoc.Id).Str("method", "insertAccountBalance").Msg("error while select")
 	}
 
 	if document != nil { // 기존에 존재하는 주소라면 잔고에 상관없이 update
@@ -363,7 +363,7 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAc
 		err = ns.db.Insert(balanceDoc, ns.indexNamePrefix+"account_balance")
 	}
 	if err != nil {
-		ns.log.Error().Err(err).Str("method", "insertAccountBalance").Msg("error while insert or update")
+		ns.log.Error().Err(err).Str("Id", balanceDoc.Id).Str("method", "insertAccountBalance").Msg("error while insert or update")
 	}
 
 	// stake 주소는 whitelist 에 추가
@@ -378,7 +378,7 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc doc
 	} else {
 		err := ns.db.Insert(tokenTransferDoc, ns.indexNamePrefix+"token_transfer")
 		if err != nil {
-			ns.log.Error().Err(err).Str("method", "insertTokenTransfer").Msg("error while insert")
+			ns.log.Error().Err(err).Str("Id", tokenTransferDoc.Id).Str("method", "insertTokenTransfer").Msg("error while insert")
 		}
 	}
 }
@@ -396,7 +396,7 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 		return balance
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Str("method", "insertNFT").Msg("error while select")
+		ns.log.Error().Err(err).Str("Id", nftDoc.Id).Str("method", "insertNFT").Msg("error while select")
 	}
 
 	if document != nil { // 기존에 존재한다면 blockno 가 최신일 때만 update
@@ -407,20 +407,13 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 		err = ns.db.Insert(nftDoc, ns.indexNamePrefix+"nft")
 	}
 	if err != nil {
-		ns.log.Error().Err(err).Str("method", "insertNFT").Msg("error while insert or update")
+		ns.log.Error().Err(err).Str("Id", nftDoc.Id).Str("method", "insertNFT").Msg("error while insert or update")
 	}
 }
 
 func (ns *Indexer) updateToken(tokenDoc doc.EsTokenUp) {
-	/*
-		if blockType == BlockType_Bulk {
-			ns.BChannel.Token <- ChanInfo{ChanType_Add, tokenD}
-		} else {
-			ns.db.Insert(tokenD, ns.indexNamePrefix+"token")
-		}
-	*/
 	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {
-		ns.log.Error().Err(err).Str("method", "updateToken").Msg("error while update")
+		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")
 	}
 }
