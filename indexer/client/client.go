@@ -251,7 +251,7 @@ func (t *AergoClientController) queryContract(address []byte, name string, args 
 	case string:
 		return c, nil
 	case map[string]interface{}:
-		am, ok := convertBignumJson(c)
+		am, ok := transaction.ConvertBignumJson(c)
 		if ok {
 			return am.String(), nil
 		}
@@ -259,16 +259,4 @@ func (t *AergoClientController) queryContract(address []byte, name string, args 
 		return fmt.Sprint(c), nil
 	}
 	return string(result.Value), nil
-}
-
-func convertBignumJson(in map[string]interface{}) (*big.Int, bool) {
-	bignum, ok := in["_bignum"].(string)
-	if ok {
-		n := new(big.Int)
-		n, ok := n.SetString(bignum, 10)
-		if ok {
-			return n, true
-		}
-	}
-	return nil, false
 }
