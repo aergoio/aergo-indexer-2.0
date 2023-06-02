@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
@@ -41,8 +43,10 @@ func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contrac
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
 		return TokenNone, nil, fmt.Errorf("invalid event args | %s", event.JsonArgs)
-	} else if len(args) < 1 || args[0] == nil {
-		return TokenNone, nil, fmt.Errorf("invalid event args | %s", event.JsonArgs)
+	} else if len(args) < 1 {
+		return TokenNone, nil, fmt.Errorf("len(args) < 1 | %s", event.JsonArgs)
+	} else if args[0] == nil {
+		return TokenNone, nil, fmt.Errorf("args[0] == nil | %s", event.JsonArgs)
 	}
 
 	// get contract address
@@ -72,9 +76,13 @@ func UnmarshalEventMint(event *types.Event) (contractAddress []byte, accountFrom
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return nil, "", "", "", err
-	} else if len(args) < 2 || args[0] == nil || args[1] == nil {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
+	} else if len(args) < 2 {
+		return nil, "", "", "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
+	} else if args[0] == nil {
+		return nil, "", "", "", fmt.Errorf("args[0] == nil | %s", event.JsonArgs)
+	} else if args[1] == nil {
+		return nil, "", "", "", fmt.Errorf("args[1] == nil | %s", event.JsonArgs)
 	}
 
 	// get account from
@@ -86,9 +94,9 @@ func UnmarshalEventMint(event *types.Event) (contractAddress []byte, accountFrom
 		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
 	}
 	// get amount or id
-	amountOrId, ok = args[1].(string)
-	if !ok {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+	amountOrId, err = ParseAmountOrId(args[1])
+	if err != nil {
+		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
 	}
 
 	return contractAddress, accountFrom, accountTo, amountOrId, nil
@@ -108,30 +116,42 @@ func UnmarshalEventTransfer(event *types.Event) (contractAddress []byte, account
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
-	} else if args[0] == nil || len(args) < 3 {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
 	}
+
+	// heuristic handling which the first argument is null
+	// example : "[null,\"1111111111111111111111111\",\"1111111111111111111111111\",\"10000000000000000000000000\"]"
+	if len(args) == 4 && args[0] == nil {
+		args = args[1:]
+	}
+
+	if len(args) < 3 {
+		return nil, "", "", "", fmt.Errorf("len(args) < 3 | %s", event.JsonArgs)
+	} else if args[0] == nil {
+		return nil, "", "", "", fmt.Errorf("args[0] == nil | %s", event.JsonArgs)
+	} else if args[1] == nil {
+		return nil, "", "", "", fmt.Errorf("args[1] == nil | %s", event.JsonArgs)
+	}
+
 	// get account from
 	accountFrom, ok := args[0].(string)
 	if !ok {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
-	} else if accountFrom == "1111111111111111111111111" {
+		return nil, "", "", "", fmt.Errorf("args[0] != string | %s", event.JsonArgs)
+	} else if strings.Contains(accountFrom, "1111111111111111111111111") {
 		accountFrom = "MINT"
 	}
-
 	// get account to
 	accountTo, ok = args[1].(string)
 	if !ok {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
-	} else if accountTo == "1111111111111111111111111" {
+		return nil, "", "", "", fmt.Errorf("args[1] != string %s", event.JsonArgs)
+	} else if strings.Contains(accountTo, "1111111111111111111111111") {
 		accountTo = "BURN"
 	}
 
 	// get amount or id
-	amountOrId, ok = args[2].(string)
-	if !ok {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+	amountOrId, err = ParseAmountOrId(args[2])
+	if err != nil {
+		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
 	}
 
 	return contractAddress, accountFrom, accountTo, amountOrId, nil
@@ -151,25 +171,59 @@ func UnmarshalEventBurn(event *types.Event) (contractAddress []byte, accountFrom
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
-	} else if len(args) < 2 || args[0] == nil || args[1] == nil {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
+	} else if len(args) < 2 {
+		return nil, "", "", "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
+	} else if args[0] == nil {
+		return nil, "", "", "", fmt.Errorf("args[0] == nil | %s", event.JsonArgs)
+	} else if args[1] == nil {
+		return nil, "", "", "", fmt.Errorf("args[1] == nil | %s", event.JsonArgs)
 	}
 
 	// get account from
 	accountFrom, ok := args[0].(string)
 	if !ok {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+		return nil, "", "", "", fmt.Errorf("args[0] != string | %s", event.JsonArgs)
 	}
 
 	// get account to
 	accountTo = "BURN"
 
 	// get amount or id
-	amountOrId, ok = args[1].(string)
-	if !ok {
-		return nil, "", "", "", fmt.Errorf("invalid event args | %s", event.JsonArgs)
+	amountOrId, err = ParseAmountOrId(args[1])
+	if err != nil {
+		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
 	}
 
 	return contractAddress, accountFrom, accountTo, amountOrId, nil
+}
+
+// parse string, byte, int, map[string]interface{} to string
+func ParseAmountOrId(amountOrId interface{}) (string, error) {
+	switch data := amountOrId.(type) {
+	case string:
+		return data, nil
+	case []byte:
+		return string(data), nil
+	case int, int32, int64, uint, uint32, uint64:
+		return fmt.Sprint(data), nil
+	case map[string]interface{}:
+		am, ok := ConvertBignumJson(data)
+		if ok {
+			return am.String(), nil
+		}
+	}
+	return "", fmt.Errorf("invalid type %T", amountOrId)
+}
+
+func ConvertBignumJson(in map[string]interface{}) (*big.Int, bool) {
+	bignum, ok := in["_bignum"].(string)
+	if ok {
+		n := new(big.Int)
+		n, ok := n.SetString(bignum, 10)
+		if ok {
+			return n, true
+		}
+	}
+	return nil, false
 }
