@@ -77,7 +77,15 @@ func UnmarshalEventMint(event *types.Event) (contractAddress []byte, accountFrom
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
 		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
-	} else if len(args) < 2 {
+	}
+
+	// heuristic handling which the first argument is null
+	// example : "[null,\"1111111111111111111111111\",\"10000000000000000000000000\"]"
+	if len(args) >= 1 && args[0] == nil {
+		args = args[1:]
+	}
+
+	if len(args) < 2 {
 		return nil, "", "", "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
 	} else if args[0] == nil {
 		return nil, "", "", "", fmt.Errorf("args[0] == nil | %s", event.JsonArgs)
@@ -121,7 +129,7 @@ func UnmarshalEventTransfer(event *types.Event) (contractAddress []byte, account
 
 	// heuristic handling which the first argument is null
 	// example : "[null,\"1111111111111111111111111\",\"1111111111111111111111111\",\"10000000000000000000000000\"]"
-	if len(args) == 4 && args[0] == nil {
+	if len(args) >= 1 && args[0] == nil {
 		args = args[1:]
 	}
 
@@ -172,7 +180,15 @@ func UnmarshalEventBurn(event *types.Event) (contractAddress []byte, accountFrom
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
 		return nil, "", "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
-	} else if len(args) < 2 {
+	}
+
+	// heuristic handling which the first argument is null
+	// example : "[null,\"1111111111111111111111111\",\"10000000000000000000000000\"]"
+	if len(args) >= 1 && args[0] == nil {
+		args = args[1:]
+	}
+
+	if len(args) < 2 {
 		return nil, "", "", "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
 	} else if args[0] == nil {
 		return nil, "", "", "", fmt.Errorf("args[0] == nil | %s", event.JsonArgs)

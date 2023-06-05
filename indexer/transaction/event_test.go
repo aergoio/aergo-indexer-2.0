@@ -34,8 +34,12 @@ func TestUnmarshalEventMint(t *testing.T) {
 		require.Equal(t, expectTo, accountTo)
 		require.Equal(t, expectAmountOrId, amountOrId)
 	}
-	fn_test("[\"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU\", \"7281500000000000000\"]",
+	fn_test("[\"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU\",\"7281500000000000000\"]",
 		"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU", "7281500000000000000")
+
+	fn_test("[null,\"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU\",\"7281500000000000000\"]",
+		"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU", "7281500000000000000")
+
 }
 
 func TestUnmarshalEventTransfer(t *testing.T) {
@@ -88,6 +92,10 @@ func TestUnmarshalEventBurn(t *testing.T) {
 		require.Equal(t, expectFrom, accountFrom)
 		require.Equal(t, expectAmountOrId, amountOrId)
 	}
-	fn_test("[\"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU\", \"7281500000000000000\"]",
+	fn_test("[\"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU\",\"7281500000000000000\"]",
 		"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU", "7281500000000000000")
+
+	fn_test("[null,\"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU\",\"7281500000000000000\"]",
+		"AmgZBcmKuMJhSvN9DYi9KV7PF2DcezFvbv87PcCY3GbgpgphCXzU", "7281500000000000000")
+
 }
