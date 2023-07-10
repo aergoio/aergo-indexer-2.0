@@ -1,6 +1,7 @@
 package documents
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"strings"
@@ -49,6 +50,25 @@ func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
 		Timestamp:      blockDoc.Timestamp,
 		BlockNo:        blockDoc.BlockNo,
 		TokenTransfers: 0,
+	}
+}
+
+// ConvEvent converts Event from RPC into Elasticsearch type
+func ConvEvent(event *types.Event, tx *EsTx, blockDoc EsBlock) EsEvent {
+	blockIdx := make([]byte, 8)
+	// txIdx := make([]byte, 4)
+	// eventIdx := make([]byte, 2)
+
+	binary.BigEndian.PutUint64(blockIdx, blockDoc.BlockNo)
+	// binary.BigEndian.PutUint32(txIdx, tx)
+	// binary.BigEndian.PutUint16(eventIdx, event.Index)
+
+	return EsEvent{
+		BaseEsType: &BaseEsType{Id: transaction.EncodeAccount(event.ContractAddress)},
+		BlockId:    blockDoc.Id,
+		TxId:       tx.Id,
+		EventName:  event.EventName,
+		EventArgs:  event.JsonArgs,
 	}
 }
 

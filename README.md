@@ -5,14 +5,15 @@ This is a go program that connects to aergo server over RPC and synchronizes blo
 This creates the indices,
    1. `block`
    2. `tx`
-   3. `name`
-   4. `token`
-   5. `token_transfer`
-   6. `account_balance`
-   7. `account_tokens`
-   8. `nft`
-   9. `contract`
-  10. `chain_info`
+   3. `event`
+   4. `name`
+   5. `token`
+   6. `token_transfer`
+   7. `account_balance`
+   8. `account_tokens`
+   9. `nft`
+  10. `contract`
+  11. `chain_info`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -50,6 +51,16 @@ category        string      user-friendly category
 method          string      called function name of a contract
 token_transfers uint64      number of token transfers in this tx
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
+```
+
+event
+```
+Field           Type        Comment
+id              string      contract + block_number + tx_idx + event_idx
+block_id        string      block hash
+tx_id           string      tx hash
+event_name      string      name of event
+event_args      string      args of event
 ```
 
 name

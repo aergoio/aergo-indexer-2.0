@@ -57,6 +57,15 @@ type EsTx struct {
 	Status         string                 `json:"status" db:"status"`
 }
 
+// EsName is a contract-event mapping stored in the database
+type EsEvent struct {
+	*BaseEsType
+	BlockId   string `json:"block_id" db:"block_id"`
+	TxId      string `json:"tx_id" db:"tx_id"`
+	EventName string `json:"event_name" db:"event_name"`
+	EventArgs string `json:"event_args" db:"event_args"`
+}
+
 // EsName is a name-address mapping stored in the database
 type EsName struct {
 	*BaseEsType
@@ -245,6 +254,29 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"reward_amount": {
 							"type": "float"
+						}
+					}
+				}
+			}`,
+			"event": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"block_id": {
+							"type": "keyword"
+						},
+						"tx_id": {
+							"type": "keyword"
+						},
+						"event_name": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "keyword"
 						}
 					}
 				}
@@ -574,6 +606,29 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"reward_amount": {
 							"type": "float"
+						}
+					}
+				}
+			}`,
+			"event": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"block_id": {
+							"type": "keyword"
+						},
+						"tx_id": {
+							"type": "keyword"
+						},
+						"event_name": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "keyword"
 						}
 					}
 				}

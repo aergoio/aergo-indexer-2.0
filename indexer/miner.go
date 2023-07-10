@@ -111,6 +111,7 @@ func (ns *Indexer) MinerTx(info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, M
 	// Process Events
 	events := receipt.GetEvents()
 	for idx, event := range events {
+		// TODO : mine all events per contract
 		ns.MinerEvent(info, blockDoc, txDoc, idx, event, MinerGRPC)
 	}
 
@@ -148,6 +149,12 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byt
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
+
+	// parse event by event name
+	ns.MinerEventName(info, blockDoc, txDoc, idx, event, MinerGRPC)
+}
+
+func (ns *Indexer) MinerEventName(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, idx int, event *types.Event, MinerGRPC *client.AergoClientController) {
 	switch transaction.EventName(event.EventName) {
 	case transaction.EventNewArc1Token, transaction.EventNewArc2Token:
 		tokenType, contractAddress, err := transaction.UnmarshalEventNewArcToken(event)
