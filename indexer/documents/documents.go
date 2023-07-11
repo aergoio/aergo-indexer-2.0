@@ -44,6 +44,7 @@ type EsBlock struct {
 // EsTx is a transaction stored in the database
 type EsTx struct {
 	*BaseEsType
+	TxIdx          uint64                 `json:"tx_idx" db:"tx_idx"`
 	Timestamp      time.Time              `json:"ts" db:"ts"`
 	BlockNo        uint64                 `json:"blockno" db:"blockno"`
 	Account        string                 `json:"from" db:"from"`

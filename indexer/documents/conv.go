@@ -1,7 +1,6 @@
 package documents
 
 import (
-	"encoding/binary"
 	"fmt"
 	"math/big"
 	"strings"
@@ -32,13 +31,14 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 }
 
 // ConvTx converts Tx from RPC into Elasticsearch type
-func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
+func ConvTx(txIdx uint64, tx *types.Tx, blockDoc EsBlock) EsTx {
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
 	category, method := transaction.DetectTxCategory(tx)
 	if len(method) > 50 {
 		method = method[:50]
 	}
 	return EsTx{
+		TxIdx:          txIdx,
 		BaseEsType:     &BaseEsType{Id: base58.Encode(tx.Hash)},
 		Account:        transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
 		Recipient:      transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
@@ -54,19 +54,12 @@ func ConvTx(tx *types.Tx, blockDoc EsBlock) EsTx {
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
-func ConvEvent(event *types.Event, tx *EsTx, blockDoc EsBlock) EsEvent {
-	blockIdx := make([]byte, 8)
-	// txIdx := make([]byte, 4)
-	// eventIdx := make([]byte, 2)
-
-	binary.BigEndian.PutUint64(blockIdx, blockDoc.BlockNo)
-	// binary.BigEndian.PutUint32(txIdx, tx)
-	// binary.BigEndian.PutUint16(eventIdx, event.Index)
-
+func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
+	id := fmt.Sprintf("%s-%d-%d-%d", transaction.EncodeAndResolveAccount(event.ContractAddress, txDoc.BlockNo), blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
 	return EsEvent{
-		BaseEsType: &BaseEsType{Id: transaction.EncodeAccount(event.ContractAddress)},
+		BaseEsType: &BaseEsType{Id: id},
 		BlockId:    blockDoc.Id,
-		TxId:       tx.Id,
+		TxId:       txDoc.Id,
 		EventName:  event.EventName,
 		EventArgs:  event.JsonArgs,
 	}

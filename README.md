@@ -40,6 +40,7 @@ tx (transactions)
 ```
 Field           Type        Comment
 id              string      tx hash
+tx_idx          uint64      tx index within block
 ts              timestamp   block creation timestamp (unixnano)
 blockno         uint64      block number
 from            string      from address (base58check encoded)

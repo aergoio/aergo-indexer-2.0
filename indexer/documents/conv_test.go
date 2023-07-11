@@ -55,12 +55,12 @@ func TestConvBlock(t *testing.T) {
 }
 
 func TestConvTx(t *testing.T) {
-	fn_test := func(aergoTx *types.Tx, esBlock EsBlock, esTxExpect EsTx) {
-		esTxConv := ConvTx(aergoTx, esBlock)
+	fn_test := func(txIdx uint64, aergoTx *types.Tx, esBlock EsBlock, esTxExpect EsTx) {
+		esTxConv := ConvTx(txIdx, aergoTx, esBlock)
 		require.Equal(t, esTxExpect, esTxConv)
 	}
 
-	fn_test(&types.Tx{
+	fn_test(0, &types.Tx{
 		Hash: decodeBase58("8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"),
 		Body: &types.TxBody{
 			Account:   decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"),
@@ -72,6 +72,7 @@ func TestConvTx(t *testing.T) {
 		BlockNo:   1,
 		Timestamp: time.Unix(0, 1668652376002288214),
 	}, EsTx{
+		TxIdx:       0,
 		BaseEsType:  &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
 		Timestamp:   time.Unix(0, 1668652376002288214),
 		BlockNo:     1,
