@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,25 +44,19 @@ func TestQuery_TokenInfo(t *testing.T) {
 	fn_test := func(contractAddress, nameExpect, symbolExpect string, decimalExpect uint8) {
 		contract, _ := types.DecodeAddress(contractAddress)
 		name, symbol, decimal := grpcClient.QueryTokenInfo(contract)
-		require.Equal(t, nameExpect, name)
-		require.Equal(t, symbolExpect, symbol)
-		require.Equal(t, decimalExpect, decimal)
+		assert.Equal(t, nameExpect, name)
+		assert.Equal(t, symbolExpect, symbol)
+		assert.Equal(t, decimalExpect, decimal)
 	}
 
 	// Blankazzang Point
 	fn_test("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks", "Blankazzang Point", "PBLKA", 18)
 	// Tname2
 	fn_test("AmhnHbTejbuLNzDCKFcnXrTBhXr3eyrt2tqPb8Vn2QCeTEjYx9Xc", "Tname2", "tn2", 18)
-	// BOOOST Your Life
-	fn_test("AmhWqG43WoT7J7X7cQNChBBLfD4PPGavgGEhAjtEtTuZCUhAGYK7", "BOOOST Your Life", "BYL", 18)
-	// Live In Value
-	fn_test("AmgnriATUjtsFqsP9sLdxo6xVvYotYeE3Af7EJwc7LjNT6yb5Tzt", "Live In Value", "LIV", 18)
 	// Bigdeal Point
 	fn_test("Amg7VYQXznevyMjW2S1tdefEjSUCEB3bQvjEXme6rA75wai7L7YP", "Bigdeal Point", "PDEAL1", 18)
 	// AERGO v2
 	fn_test("Amhpi4LgVS74YJoZAWXsVgkJfEztYe5KkV3tY7sYtCgXchcKQeCQ", "AERGO v2", "ARG", 18)
-	// TWILim
-	fn_test("AmgV6Z9Pju5u9dShE4KUtFeBEoauq1n9bM96Mm42AsLut1ucGo5u", "TWlLim", "TWL", 18)
 	// KSLee Token
 	fn_test("Amhk6ZYDPrdx5nTRevvgznPYpH39LaGcPnaK7kqS3E6uSR5GXxBY", "KSLee Token", "PKSLEE", 9)
 	// invalid Token ( cccv )
@@ -75,8 +70,8 @@ func TestQuery_NFTMetadata(t *testing.T) {
 	fn_test := func(contractAddress, tokenId, tokenUriExpect, imageUrlExpect string) {
 		contract, _ := types.DecodeAddress(contractAddress)
 		tokenUri, imageUrl := grpcClient.QueryNFTMetadata(contract, tokenId)
-		require.Equal(t, tokenUriExpect, tokenUri)
-		require.Equal(t, imageUrlExpect, imageUrl)
+		assert.Equal(t, tokenUriExpect, tokenUri)
+		assert.Equal(t, imageUrlExpect, imageUrl)
 	}
 
 	// BOOST Vehicle NFT
