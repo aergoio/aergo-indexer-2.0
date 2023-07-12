@@ -1,8 +1,8 @@
 package code
 
 type CodeFetcher interface {
-	Search(contractAddress string) (code string)
-	NewAfter(timestamp int64) (codeByAddress map[string]string)
+	Get(contractAddress string) (code string)
+	GetAfter(timestamp int64) (codeByAddress map[string]string)
 }
 
 func NewCodeFetcher(url string) CodeFetcher {
@@ -18,7 +18,7 @@ type CodeFetcherUrl struct {
 	lastUpdate uint64
 }
 
-func (f *CodeFetcherUrl) Search(contractAddress string) (code string) {
+func (f *CodeFetcherUrl) Get(contractAddress string) (code string) {
 	if len(f.url) == 0 {
 		return
 	}
@@ -30,7 +30,7 @@ func (f *CodeFetcherUrl) Search(contractAddress string) (code string) {
 	return ""
 }
 
-func (f *CodeFetcherUrl) NewAfter(timestamp int64) (codeByAddress map[string]string) {
+func (f *CodeFetcherUrl) GetAfter(timestamp int64) (codeByAddress map[string]string) {
 
 	return
 }

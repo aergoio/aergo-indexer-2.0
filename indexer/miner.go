@@ -58,7 +58,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 				return true
 			})
 
-			codeByAddr := ns.codeFetcher.NewAfter(time.Now().UTC().Unix())
+			codeByAddr := ns.codeFetcher.GetAfter(time.Now().UTC().Unix())
 			for addr, code := range codeByAddr {
 				contractDoc := doc.ConvContractUp(addr, code)
 				ns.updateContract(contractDoc)

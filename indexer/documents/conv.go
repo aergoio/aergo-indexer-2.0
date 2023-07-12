@@ -75,7 +75,7 @@ func ConvContract(txDoc EsTx, contractAddress []byte, codeFetcher code.CodeFetch
 	contractAddr := transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)
 	var contractCode, status string
 	if codeFetcher != nil {
-		contractCode := codeFetcher.Search(contractAddr)
+		contractCode := codeFetcher.Get(contractAddr)
 		if len(contractCode) >= 0 {
 			status = "verified"
 		}
