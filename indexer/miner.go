@@ -57,6 +57,12 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 				}
 				return true
 			})
+
+			codeByAddr := ns.codeFetcher.NewAfter(time.Now().UTC().Unix())
+			for addr, code := range codeByAddr {
+				contractDoc := doc.ConvContractUp(addr, code)
+				ns.updateContract(contractDoc)
+			}
 		}
 	}
 }
@@ -105,7 +111,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc doc.EsBlock, t
 
 	// Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
-		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress, ns.codeFetcher)
 		ns.insertContract(info.Type, contractDoc)
 	}
 
@@ -130,7 +136,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc doc.EsBlock, t
 		ns.insertToken(info.Type, tokenDoc)
 
 		// Add Contract doc
-		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress, ns.codeFetcher)
 		ns.insertContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(receipt.ContractAddress)).Msg("Token created ( Policy 2 )")
@@ -181,7 +187,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc doc.EsBlock, txDoc 
 		ns.insertAccountTokens(info.Type, accountTokensDoc)
 
 		// Add Contract Doc
-		contractDoc := doc.ConvContract(txDoc, contractAddress)
+		contractDoc := doc.ConvContract(txDoc, contractAddress, ns.codeFetcher)
 		ns.insertContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Policy 1 )")
@@ -323,6 +329,13 @@ func (ns *Indexer) insertContract(blockType BlockType, contractDoc doc.EsContrac
 	}
 }
 
+func (ns *Indexer) updateContract(contractDoc doc.EsContractUp) {
+	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContract").Msg("error while update")
+	}
+}
+
 func (ns *Indexer) insertName(blockType BlockType, nameDoc doc.EsName) {
 	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
@@ -334,6 +347,13 @@ func (ns *Indexer) insertToken(blockType BlockType, tokenDoc doc.EsToken) {
 	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", tokenDoc.Id).Str("method", "insertToken").Msg("error while insert")
+	}
+}
+
+func (ns *Indexer) updateToken(tokenDoc doc.EsTokenUp) {
+	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")
 	}
 }
 
@@ -425,12 +445,5 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 	}
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", nftDoc.Id).Str("method", "insertNFT").Msg("error while insert or update")
-	}
-}
-
-func (ns *Indexer) updateToken(tokenDoc doc.EsTokenUp) {
-	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
-	if err != nil {
-		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")
 	}
 }
