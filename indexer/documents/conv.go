@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/code"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/mr-tron/base58"
 	"google.golang.org/protobuf/proto"
 )
 
+// ConvBlock converts Block from RPC into Elasticsearch type - 1.0
 func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 	rewardAmount := ""
 	if len(block.Header.Consensus) > 0 {
@@ -30,6 +30,7 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 	}
 }
 
+// ConvTx converts Tx from RPC into Elasticsearch type
 func ConvTx(txIdx uint64, tx *types.Tx, blockDoc EsBlock) EsTx {
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
 	category, method := transaction.DetectTxCategory(tx)
@@ -52,6 +53,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, blockDoc EsBlock) EsTx {
 	}
 }
 
+// ConvEvent converts Event from RPC into Elasticsearch type
 func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
 	id := fmt.Sprintf("%s-%d-%d-%d", transaction.EncodeAndResolveAccount(event.ContractAddress, txDoc.BlockNo), blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
 	return EsEvent{
@@ -63,35 +65,18 @@ func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
 	}
 }
 
-func ConvContractUp(contractAddress string, contractCode string) EsContractUp {
-	return EsContractUp{
-		BaseEsType: &BaseEsType{Id: contractAddress},
-		Status:     "verified",
-		Code:       contractCode,
-	}
-}
-
-func ConvContract(txDoc EsTx, contractAddress []byte, codeFetcher code.CodeFetcher) EsContract {
-	contractAddr := transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)
-	var contractCode, status string
-	if codeFetcher != nil {
-		contractCode := codeFetcher.Get(contractAddr)
-		if len(contractCode) >= 0 {
-			status = "verified"
-		}
-	}
-
+// ConvContractCreateTx creates document for token creation
+func ConvContract(txDoc EsTx, contractAddress []byte) EsContract {
 	return EsContract{
-		BaseEsType: &BaseEsType{Id: contractAddr},
+		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Creator:    txDoc.Account,
 		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
 		Timestamp:  txDoc.Timestamp,
-		Status:     status,
-		Code:       contractCode,
 	}
 }
 
+// ConvContractCreateTx creates document for token creation
 func ConvTokenUp(txDoc EsTx, contractAddress []byte, supply string, supplyFloat float32) EsTokenUp {
 	return EsTokenUp{
 		BaseEsType:  &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
@@ -100,6 +85,7 @@ func ConvTokenUp(txDoc EsTx, contractAddress []byte, supply string, supplyFloat 
 	}
 }
 
+// ConvContractCreateTx creates document for token creation
 func ConvToken(txDoc EsTx, contractAddress []byte, tokenType transaction.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32) EsToken {
 	return EsToken{
 		BaseEsType:     &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
@@ -118,6 +104,7 @@ func ConvToken(txDoc EsTx, contractAddress []byte, tokenType transaction.TokenTy
 	}
 }
 
+// ConvName parses a name transaction into Elasticsearch type
 func ConvName(tx *types.Tx, blockNo uint64) EsName {
 	var name = "error"
 	var address string

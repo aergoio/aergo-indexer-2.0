@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
-	"github.com/aergoio/aergo-indexer-2.0/indexer/code"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -19,9 +18,8 @@ import (
 
 // Indexer hold all state information
 type Indexer struct {
-	db          db.DbController
-	grpcClient  *client.AergoClientController
-	codeFetcher code.CodeFetcher
+	db         db.DbController
+	grpcClient *client.AergoClientController
 
 	stream             types.AergoRPCService_ListBlockStreamClient
 	MChannel           chan BlockInfo
@@ -84,9 +82,6 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		return nil, err
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Successfully connected to the database")
-
-	// TODO : connect code fetcher
-	svc.codeFetcher = code.NewCodeFetcher("sample_url_todo")
 
 	return svc, nil
 }

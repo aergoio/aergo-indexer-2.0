@@ -156,14 +156,6 @@ type EsContract struct {
 	Creator   string    `json:"creator" db:"creator"`
 	BlockNo   uint64    `json:"blockno" db:"blockno"`
 	Timestamp time.Time `json:"ts" db:"ts"`
-	Status    string    `json:"status" db:"status"`
-	Code      string    `json:"code" db:"code"`
-}
-
-type EsContractUp struct {
-	*BaseEsType
-	Status string `json:"status" db:"status"`
-	Code   string `json:"code" db:"code"`
 }
 
 // EsAccountBalance is meta data of a balance of an account. The id is account_balance address.
@@ -480,7 +472,6 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						}
-
 					}
 				}
 			}`,

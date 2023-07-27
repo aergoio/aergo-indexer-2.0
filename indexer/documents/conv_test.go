@@ -87,7 +87,7 @@ func TestConvTx(t *testing.T) {
 
 func TestConvContract(t *testing.T) {
 	fn_test := func(esTx EsTx, contractAddress []byte, esContractExpect EsContract) {
-		esContractConv := ConvContract(esTx, contractAddress, nil)
+		esContractConv := ConvContract(esTx, contractAddress)
 		require.Equal(t, esContractExpect, esContractConv)
 	}
 

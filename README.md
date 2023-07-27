@@ -153,8 +153,6 @@ tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
-status          string      
-code            string      original contract code
 ```
 
 chain_info
