@@ -21,6 +21,10 @@ const (
 	EventMint         EventName = "mint"
 	EventTransfer     EventName = "transfer"
 	EventBurn         EventName = "burn"
+
+	// TODO
+	EventVerifiedToken EventName = "verified_token"
+	EventVerifiedCode  EventName = "verified_code"
 )
 
 func UnmarshalEventNewArcToken(event *types.Event) (tokenType TokenType, contractAddress []byte, err error) {

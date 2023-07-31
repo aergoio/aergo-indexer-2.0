@@ -75,7 +75,7 @@ func (ns *Indexer) StartBulkChannel() {
 	// Start multiple miners
 	GrpcClients := make([]*client.AergoClientController, ns.grpcNum)
 	for i := 0; i < ns.grpcNum; i++ {
-		GrpcClients[i] = ns.WaitForClient(context.Background())
+		GrpcClients[i] = ns.WaitForServer(context.Background())
 	}
 
 	ns.RChannel = make([]chan BlockInfo, ns.minerNum)

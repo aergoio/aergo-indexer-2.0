@@ -72,7 +72,7 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// connect server
 	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Attempting to connect to the Aergo server")
-	svc.grpcClient = svc.WaitForClient(ctx)
+	svc.grpcClient = svc.WaitForServer(ctx)
 	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Successfully connected to the Aergo server")
 
 	// connect db
@@ -125,7 +125,7 @@ func (ns *Indexer) Stop() {
 	ns.log.Info().Msg("Stop Indexer")
 }
 
-func (ns *Indexer) WaitForClient(ctx context.Context) *client.AergoClientController {
+func (ns *Indexer) WaitForServer(ctx context.Context) *client.AergoClientController {
 	var err error
 	var aergoClient *client.AergoClientController
 	for {
@@ -149,6 +149,7 @@ func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbCont
 		if ok := dbController.HealthCheck(ctx); ok == true {
 			break
 		}
+		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not connect to es database, retrying")
 		time.Sleep(time.Second)
 	}
 	return dbController, nil
@@ -161,30 +162,19 @@ func (ns *Indexer) InitIndex() error {
 
 	// create index
 	for {
-		err := ns.CreateIndexIfNotExists("block")
+		err := ns.CreateIndexIfNotExists("chain_info")
 		if err == nil {
 			break
 		}
-		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not create block, retrying...")
+		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not create index, retrying...")
 		time.Sleep(time.Second)
 	}
-	ns.CreateIndexIfNotExists("tx")
-	ns.CreateIndexIfNotExists("name")
-	ns.CreateIndexIfNotExists("event")
-	ns.CreateIndexIfNotExists("token")
-	ns.CreateIndexIfNotExists("contract")
-	ns.CreateIndexIfNotExists("token_transfer")
-	ns.CreateIndexIfNotExists("account_tokens")
-	ns.CreateIndexIfNotExists("nft")
-	ns.CreateIndexIfNotExists("account_balance")
-	ns.CreateIndexIfNotExists("chain_info")
 
+	// check chain info
 	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
 	if err != nil {
 		return err
 	}
-
-	// check chain info
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
 		SortField: "version",
@@ -222,6 +212,19 @@ func (ns *Indexer) InitIndex() error {
 		chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
 		return errors.New("chain info is not matched")
 	}
+
+	// create other indexes
+	ns.CreateIndexIfNotExists("block")
+	ns.CreateIndexIfNotExists("tx")
+	ns.CreateIndexIfNotExists("name")
+	ns.CreateIndexIfNotExists("event")
+	ns.CreateIndexIfNotExists("token")
+	ns.CreateIndexIfNotExists("contract")
+	ns.CreateIndexIfNotExists("token_transfer")
+	ns.CreateIndexIfNotExists("account_tokens")
+	ns.CreateIndexIfNotExists("nft")
+	ns.CreateIndexIfNotExists("account_balance")
+
 	return nil
 }
 

@@ -65,6 +65,27 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc EsBlock
 	}
 }
 
+// ConvContractCreateTx creates document for token creation
+func ConvContract(txDoc EsTx, contractAddress []byte) EsContract {
+	return EsContract{
+		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		Creator:    txDoc.Account,
+		TxId:       txDoc.GetID(),
+		BlockNo:    txDoc.BlockNo,
+		Timestamp:  txDoc.Timestamp,
+	}
+}
+
+func ConvContractUp(contractAddress []byte, blockNo uint64, txId, status, code string) EsContractUp {
+	return EsContractUp{
+		BaseEsType:   &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, blockNo)},
+		Verified:     status,
+		VerifiedNo:   blockNo,
+		VerifiedTxid: txId,
+		VerifiedCode: code,
+	}
+}
+
 // ConvEvent converts Event from RPC into Elasticsearch type
 func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
 	id := fmt.Sprintf("%s-%d-%d-%d", transaction.EncodeAndResolveAccount(event.ContractAddress, txDoc.BlockNo), blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
@@ -74,17 +95,6 @@ func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
 		TxId:       txDoc.Id,
 		EventName:  event.EventName,
 		EventArgs:  event.JsonArgs,
-	}
-}
-
-// ConvContractCreateTx creates document for token creation
-func ConvContract(txDoc EsTx, contractAddress []byte) EsContract {
-	return EsContract{
-		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
-		Creator:    txDoc.Account,
-		TxId:       txDoc.GetID(),
-		BlockNo:    txDoc.BlockNo,
-		Timestamp:  txDoc.Timestamp,
 	}
 }
 
