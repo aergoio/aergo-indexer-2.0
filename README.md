@@ -52,6 +52,8 @@ category        string      user-friendly category
 method          string      called function name of a contract
 token_transfers uint64      number of token transfers in this tx
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
+gas_used        uint64      receipt gas used
+gas_limit       uint64      tx gas limit
 ```
 
 event
@@ -105,7 +107,12 @@ symbol_lower    string      token symbol lowercase, useful to case-insensitive s
 token_transfers uint64      number of token transfers
 decimals        uint8       decimals of token
 supply          string      Precise BigInt string representation of total supply 
-supply_float    float32     Imprecise float representation of amount, useful for sorting
+supply_float    float32     Imprecise float representation of amount, useful for sorting'
+```
+
+token_verified
+```
+
 ```
 
 account_balance
@@ -153,6 +160,8 @@ tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
+verified        bool        
+code            keyword     
 ```
 
 chain_info

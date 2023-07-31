@@ -31,8 +31,16 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 }
 
 // ConvTx converts Tx from RPC into Elasticsearch type
-func ConvTx(txIdx uint64, tx *types.Tx, blockDoc EsBlock) EsTx {
+func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc EsBlock) EsTx {
+	var status string = "NO_RECEIPT"
+	var gasUsed uint64
+	if receipt != nil {
+		status = receipt.Status
+		gasUsed = receipt.GasUsed
+	}
+
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
+	gasPrice := big.NewInt(0).SetBytes(tx.GetBody().GasPrice)
 	category, method := transaction.DetectTxCategory(tx)
 	if len(method) > 50 {
 		method = method[:50]
@@ -50,6 +58,10 @@ func ConvTx(txIdx uint64, tx *types.Tx, blockDoc EsBlock) EsTx {
 		Timestamp:      blockDoc.Timestamp,
 		BlockNo:        blockDoc.BlockNo,
 		TokenTransfers: 0,
+		Status:         status,
+		GasPrice:       gasPrice.String(),
+		GasLimit:       tx.Body.GasLimit,
+		GasUsed:        gasUsed,
 	}
 }
 

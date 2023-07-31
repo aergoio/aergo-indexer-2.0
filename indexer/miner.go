@@ -62,23 +62,17 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 }
 
 func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
-	// Get Tx doc
-	txDoc := doc.ConvTx(txIdx, tx, blockDoc)
+	// get receipt
+	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
+	if err != nil {
+		receipt = nil
+	}
+
+	// get Tx doc
+	txDoc := doc.ConvTx(txIdx, tx, receipt, blockDoc)
 
 	// add tx doc ( defer )
 	defer ns.insertTx(info.Type, txDoc)
-
-	// set tx status
-	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
-	if err != nil {
-		txDoc.Status = "NO_RECEIPT"
-		ns.log.Warn().Str("tx", txDoc.Id).Err(err).Msg("Failed to get tx receipt")
-		return
-	}
-	txDoc.Status = receipt.Status
-	if receipt.Status == "ERROR" {
-		return
-	}
 
 	// Process name transactions
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {

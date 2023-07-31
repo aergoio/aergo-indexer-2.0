@@ -56,7 +56,7 @@ func TestConvBlock(t *testing.T) {
 
 func TestConvTx(t *testing.T) {
 	fn_test := func(txIdx uint64, aergoTx *types.Tx, esBlock EsBlock, esTxExpect EsTx) {
-		esTxConv := ConvTx(txIdx, aergoTx, esBlock)
+		esTxConv := ConvTx(txIdx, aergoTx, nil, esBlock)
 		require.Equal(t, esTxExpect, esTxConv)
 	}
 
@@ -82,6 +82,10 @@ func TestConvTx(t *testing.T) {
 		AmountFloat: bigIntToFloat(big.NewInt(100), 18),
 		Type:        strconv.FormatInt(int64(types.TxType_TRANSFER), 10),
 		Category:    transaction.TxTransfer,
+		Status:      "NO_RECEIPT",
+		GasPrice:    "0",
+		GasLimit:    0,
+		GasUsed:     0,
 	})
 }
 

@@ -56,6 +56,9 @@ type EsTx struct {
 	Method         string                 `json:"method" db:"method"`
 	TokenTransfers uint64                 `json:"token_transfers" db:"token_transfers"`
 	Status         string                 `json:"status" db:"status"`
+	GasPrice       string                 `json:"gas_price" db:"gas_price"`
+	GasLimit       uint64                 `json:"gas_limit" db:"gas_limit"`
+	GasUsed        uint64                 `json:"gas_used" db:"gas_used"`
 }
 
 // EsName is a contract-event mapping stored in the database
@@ -223,6 +226,15 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"status": {
 							"type": "keyword"
+						},
+						"gas_price": {
+							"type": "keyword"
+						},
+						"gas_used": {
+							"type": "long"
+						},
+						"gas_limit": {
+							"type": "long"
 						}
 					}
 				}
