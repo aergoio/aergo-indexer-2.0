@@ -52,8 +52,9 @@ category        string      user-friendly category
 method          string      called function name of a contract
 token_transfers uint64      number of token transfers in this tx
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
-gas_used        uint64      receipt gas used
+gas_price       string      tx gas price
 gas_limit       uint64      tx gas limit
+gas_used        uint64      receipt gas used
 ```
 
 event
