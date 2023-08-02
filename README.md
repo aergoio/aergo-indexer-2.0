@@ -85,9 +85,10 @@ verified_code   keyword     verified contract code
 event
 ```
 Field           Type        Comment
-id              string      contract + block_number + tx_idx + event_idx
+id              string      block_number + tx_idx + event_idx
 block_id        string      block hash
 tx_id           string      tx hash
+contract        string      contract address
 event_name      string      name of event
 event_args      string      args of event
 ```

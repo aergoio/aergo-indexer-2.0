@@ -88,11 +88,12 @@ func ConvContractUp(contractAddress []byte, blockNo uint64, txId, status, code s
 
 // ConvEvent converts Event from RPC into Elasticsearch type
 func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
-	id := fmt.Sprintf("%s-%d-%d-%d", transaction.EncodeAndResolveAccount(event.ContractAddress, txDoc.BlockNo), blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
+	id := fmt.Sprintf("%d-%d-%d", blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
 	return EsEvent{
 		BaseEsType: &BaseEsType{Id: id},
 		BlockId:    blockDoc.Id,
 		TxId:       txDoc.Id,
+		Contract:   transaction.EncodeAndResolveAccount(event.ContractAddress, txDoc.BlockNo),
 		EventName:  event.EventName,
 		EventArgs:  event.JsonArgs,
 	}

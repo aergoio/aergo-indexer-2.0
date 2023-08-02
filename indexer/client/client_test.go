@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	// AergoServerAddress = "3.38.108.120:7845"
 	AergoServerAddress = "testnet-api.aergo.io:7845" // testnet
 )
 

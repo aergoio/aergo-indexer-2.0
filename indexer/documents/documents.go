@@ -95,6 +95,7 @@ type EsEvent struct {
 	*BaseEsType
 	BlockId   string `json:"block_id" db:"block_id"`
 	TxId      string `json:"tx_id" db:"tx_id"`
+	Contract  string `json:"contract" db:"contract"`
 	EventName string `json:"event_name" db:"event_name"`
 	EventArgs string `json:"event_args" db:"event_args"`
 }
