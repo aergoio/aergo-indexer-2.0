@@ -1,8 +1,10 @@
 package documents
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +24,7 @@ func ConvBlock(block *types.Block, blockProducer string) EsBlock {
 		BaseEsType:    &BaseEsType{Id: base58.Encode(block.Hash)},
 		Timestamp:     time.Unix(0, block.Header.Timestamp),
 		BlockNo:       block.Header.BlockNo,
+		PreviousBlock: base58.Encode(block.Header.PrevBlockHash),
 		TxCount:       uint(len(block.Body.Txs)),
 		Size:          uint64(proto.Size(block)),
 		BlockProducer: blockProducer,
@@ -45,18 +48,20 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc EsBlock
 	if len(method) > 50 {
 		method = method[:50]
 	}
+
 	return EsTx{
-		TxIdx:          txIdx,
 		BaseEsType:     &BaseEsType{Id: base58.Encode(tx.Hash)},
+		BlockNo:        blockDoc.BlockNo,
+		Timestamp:      blockDoc.Timestamp,
+		TxIdx:          txIdx,
+		Payload:        hex.EncodeToString(tx.GetBody().GetPayload()),
 		Account:        transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
 		Recipient:      transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:         amount.String(),
 		AmountFloat:    bigIntToFloat(amount, 18),
-		Type:           fmt.Sprintf("%d", tx.Body.Type),
+		Type:           strconv.FormatUint(uint64(tx.Body.Type), 10),
 		Category:       category,
 		Method:         method,
-		Timestamp:      blockDoc.Timestamp,
-		BlockNo:        blockDoc.BlockNo,
 		TokenTransfers: 0,
 		Status:         status,
 		GasPrice:       gasPrice.String(),
@@ -87,13 +92,15 @@ func ConvContractUp(contractAddress []byte, blockNo uint64, txId, status, code s
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
-func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx) EsEvent {
+func ConvEvent(event *types.Event, blockDoc EsBlock, txDoc EsTx, txIdx uint64) EsEvent {
 	id := fmt.Sprintf("%d-%d-%d", blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
 	return EsEvent{
 		BaseEsType: &BaseEsType{Id: id},
-		BlockId:    blockDoc.Id,
-		TxId:       txDoc.Id,
 		Contract:   transaction.EncodeAndResolveAccount(event.ContractAddress, txDoc.BlockNo),
+		BlockNo:    blockDoc.BlockNo,
+		TxId:       txDoc.Id,
+		TxIdx:      txIdx,
+		EventIdx:   uint64(event.EventIdx),
 		EventName:  event.EventName,
 		EventArgs:  event.JsonArgs,
 	}

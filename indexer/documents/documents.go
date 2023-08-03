@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	tx "github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 )
 
 // DocType is an interface for structs to be used as database documents
@@ -43,6 +43,7 @@ type EsBlock struct {
 	*BaseEsType
 	Timestamp     time.Time `json:"ts" db:"ts"`
 	BlockNo       uint64    `json:"no" db:"no"`
+	PreviousBlock string    `json:"previous_block" db:"previous_block"`
 	TxCount       uint      `json:"txs" db:"txs"`
 	Size          uint64    `json:"size" db:"size"`
 	BlockProducer string    `json:"block_producer" db:"block_producer"`
@@ -53,21 +54,22 @@ type EsBlock struct {
 // EsTx is a transaction stored in the database
 type EsTx struct {
 	*BaseEsType
-	TxIdx          uint64                 `json:"tx_idx" db:"tx_idx"`
-	Timestamp      time.Time              `json:"ts" db:"ts"`
-	BlockNo        uint64                 `json:"blockno" db:"blockno"`
-	Account        string                 `json:"from" db:"from"`
-	Recipient      string                 `json:"to" db:"to"`
-	Amount         string                 `json:"amount" db:"amount"`             // string of BigInt
-	AmountFloat    float32                `json:"amount_float" db:"amount_float"` // float for sorting
-	Type           string                 `json:"type" db:"type"`
-	Category       transaction.TxCategory `json:"category" db:"category"`
-	Method         string                 `json:"method" db:"method"`
-	TokenTransfers uint64                 `json:"token_transfers" db:"token_transfers"`
-	Status         string                 `json:"status" db:"status"`
-	GasPrice       string                 `json:"gas_price" db:"gas_price"`
-	GasLimit       uint64                 `json:"gas_limit" db:"gas_limit"`
-	GasUsed        uint64                 `json:"gas_used" db:"gas_used"`
+	BlockNo        uint64        `json:"blockno" db:"blockno"`
+	Timestamp      time.Time     `json:"ts" db:"ts"`
+	TxIdx          uint64        `json:"tx_idx" db:"tx_idx"`
+	Payload        string        `json:"payload" db:"payload"`
+	Account        string        `json:"from" db:"from"`
+	Recipient      string        `json:"to" db:"to"`
+	Amount         string        `json:"amount" db:"amount"`             // string of BigInt
+	AmountFloat    float32       `json:"amount_float" db:"amount_float"` // float for sorting
+	Type           string        `json:"type" db:"type"`
+	Category       tx.TxCategory `json:"category" db:"category"`
+	Method         string        `json:"method" db:"method"`
+	TokenTransfers uint64        `json:"token_transfers" db:"token_transfers"`
+	Status         string        `json:"status" db:"status"`
+	GasPrice       string        `json:"gas_price" db:"gas_price"`
+	GasLimit       uint64        `json:"gas_limit" db:"gas_limit"`
+	GasUsed        uint64        `json:"gas_used" db:"gas_used"`
 }
 
 type EsContract struct {
@@ -93,9 +95,11 @@ type EsContractUp struct {
 // EsEvent is a contract-event mapping stored in the database
 type EsEvent struct {
 	*BaseEsType
-	BlockId   string `json:"block_id" db:"block_id"`
-	TxId      string `json:"tx_id" db:"tx_id"`
 	Contract  string `json:"contract" db:"contract"`
+	BlockNo   uint64 `json:"blockno" db:"blockno"`
+	TxId      string `json:"tx_id" db:"tx_id"`
+	TxIdx     uint64 `json:"tx_idx" db:"tx_idx"`
+	EventIdx  uint64 `json:"event_idx" db:"event_idx"`
 	EventName string `json:"event_name" db:"event_name"`
 	EventArgs string `json:"event_args" db:"event_args"`
 }
@@ -112,18 +116,18 @@ type EsName struct {
 // EsToken is meta data of a token. The id is the contract address.
 type EsToken struct {
 	*BaseEsType
-	TxId           string                `json:"tx_id" db:"tx_id"`
-	BlockNo        uint64                `json:"blockno" db:"blockno"`
-	Creator        string                `json:"creator" db:"creator"`
-	Type           transaction.TokenType `json:"type" db:"type"`
-	Name           string                `json:"name" db:"name"`
-	Name_lower     string                `json:"name_lower" db:"name_lower"`
-	Symbol         string                `json:"symbol" db:"symbol"`
-	Symbol_lower   string                `json:"symbol_lower" db:"symbol_lower"`
-	TokenTransfers uint64                `json:"token_transfers" db:"token_transfers"`
-	Decimals       uint8                 `json:"decimals" db:"decimals"`
-	Supply         string                `json:"supply" db:"supply"`
-	SupplyFloat    float32               `json:"supply_float" db:"supply_float"`
+	TxId           string       `json:"tx_id" db:"tx_id"`
+	BlockNo        uint64       `json:"blockno" db:"blockno"`
+	Creator        string       `json:"creator" db:"creator"`
+	Type           tx.TokenType `json:"type" db:"type"`
+	Name           string       `json:"name" db:"name"`
+	Name_lower     string       `json:"name_lower" db:"name_lower"`
+	Symbol         string       `json:"symbol" db:"symbol"`
+	Symbol_lower   string       `json:"symbol_lower" db:"symbol_lower"`
+	TokenTransfers uint64       `json:"token_transfers" db:"token_transfers"`
+	Decimals       uint8        `json:"decimals" db:"decimals"`
+	Supply         string       `json:"supply" db:"supply"`
+	SupplyFloat    float32      `json:"supply_float" db:"supply_float"`
 }
 
 type EsTokenUp struct {
@@ -158,12 +162,12 @@ type EsTokenTransfer struct {
 // EsAccountTokens is meta data of a token of an account. The id is account_token address.
 type EsAccountTokens struct {
 	*BaseEsType
-	Account      string                `json:"account" db:"account"`
-	TokenAddress string                `json:"address" db:"address"`
-	Type         transaction.TokenType `json:"type" db:"type"`
-	Timestamp    time.Time             `json:"ts" db:"ts"`
-	Balance      string                `json:"balance" db:"balance"`
-	BalanceFloat float32               `json:"balance_float" db:"balance_float"`
+	Account      string       `json:"account" db:"account"`
+	TokenAddress string       `json:"address" db:"address"`
+	Type         tx.TokenType `json:"type" db:"type"`
+	Timestamp    time.Time    `json:"ts" db:"ts"`
+	Balance      string       `json:"balance" db:"balance"`
+	BalanceFloat float32      `json:"balance_float" db:"balance_float"`
 }
 
 type EsAccountTokensUp struct {
@@ -247,6 +251,9 @@ func InitEsMappings(clusterMode bool) {
 						"no": {
 							"type": "long"
 						},
+						"previous_block": {
+							"type": "keyword"
+						},
 						"txs": {
 							"type": "long"
 						},
@@ -273,11 +280,17 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
+						"blockno": {
+							"type": "long"
+						},
 						"ts": {
 							"type": "date"
 						},
-						"blockno": {
+						"tx_idx": {
 							"type": "long"
+						},
+						"payload": {
+							"type": "keyword"
 						},
 						"from": {
 							"type": "keyword"
@@ -361,16 +374,25 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"block_id": {
-							"type": "keyword"
+						"contract": {
+							"type": "keyword" 
+						},
+						"blockno": {
+							"type": "long"
 						},
 						"tx_id": {
 							"type": "keyword"
 						},
+						"tx_idx": {
+							"type": "long"
+						},
+						"event_idx": {
+							"type": "long"
+						},
 						"event_name": {
 							"type": "keyword"
 						},
-						"args": {
+						"event_args": {
 							"type": "keyword"
 						}
 					}
@@ -643,6 +665,9 @@ func InitEsMappings(clusterMode bool) {
 						"no": {
 							"type": "long"
 						},
+						"previous_block": {
+							"type": "keyword"
+						},
 						"txs": {
 							"type": "long"
 						},
@@ -669,11 +694,17 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
+						"blockno": {
+							"type": "long"
+						},
 						"ts": {
 							"type": "date"
 						},
-						"blockno": {
+						"tx_idx": {
 							"type": "long"
+						},
+						"payload": {
+							"type": "keyword"
 						},
 						"from": {
 							"type": "keyword"
@@ -701,6 +732,15 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"status": {
 							"type": "keyword"
+						},
+						"gas_price": {
+							"type": "keyword"
+						},
+						"gas_used": {
+							"type": "long"
+						},
+						"gas_limit": {
+							"type": "long"
 						}
 					}
 				}
@@ -748,16 +788,25 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"block_id": {
-							"type": "keyword"
+						"contract": {
+							"type": "keyword" 
+						},
+						"blockno": {
+							"type": "long"
 						},
 						"tx_id": {
 							"type": "keyword"
 						},
+						"tx_idx": {
+							"type": "long"
+						},
+						"event_idx": {
+							"type": "long"
+						},
 						"event_name": {
 							"type": "keyword"
 						},
-						"args": {
+						"event_args": {
 							"type": "keyword"
 						}
 					}
@@ -993,7 +1042,7 @@ func InitEsMappings(clusterMode bool) {
 	}
 }
 
-func mapCategoriesToStr(categories []transaction.TxCategory) []string {
+func mapCategoriesToStr(categories []tx.TxCategory) []string {
 	vsm := make([]string, len(categories))
 	for i, v := range categories {
 		vsm[i] = fmt.Sprintf("'%s'", v)
@@ -1001,4 +1050,4 @@ func mapCategoriesToStr(categories []transaction.TxCategory) []string {
 	return vsm
 }
 
-var categories = strings.Join(mapCategoriesToStr(transaction.TxCategories), ",")
+var categories = strings.Join(mapCategoriesToStr(tx.TxCategories), ",")

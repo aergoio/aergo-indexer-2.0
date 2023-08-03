@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
-	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	tx "github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -44,7 +44,7 @@ func (ns *Indexer) initCccvNft() {
 		Name_lower:   "cccv_nft",
 		Symbol:       "CNFT",
 		Symbol_lower: "cnft",
-		Type:         transaction.TokenARC2,
+		Type:         tx.TokenARC2,
 		Supply:       "0",
 		SupplyFloat:  float32(0),
 	}

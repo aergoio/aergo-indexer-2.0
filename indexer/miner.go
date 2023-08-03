@@ -106,7 +106,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc doc.EsBlock, t
 	// Process Events
 	events := receipt.GetEvents()
 	for _, event := range events {
-		ns.MinerEvent(info, blockDoc, txDoc, event, MinerGRPC)
+		ns.MinerEvent(info, blockDoc, txDoc, event, txIdx, MinerGRPC)
 	}
 
 	// POLICY 2 Token
@@ -142,9 +142,9 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byt
 	ns.insertAccountBalance(info.Type, balanceFromDoc)
 }
 
-func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
 	// mine all events per contract
-	eventDoc := doc.ConvEvent(event, blockDoc, txDoc)
+	eventDoc := doc.ConvEvent(event, blockDoc, txDoc, txIdx)
 	ns.insertEvent(info.Type, eventDoc)
 
 	// parse event by event name

@@ -40,6 +40,7 @@ Field           Type        Comment
 id              string      block hash
 ts              timestamp   block creation timestamp (unixnano)
 no              uint64      block number
+previous_block  string      previous block hash
 txs             uint        number of transactions
 size            uint64      block size in bytes
 block_producer  string      block producer peer id
@@ -51,9 +52,10 @@ tx (transactions)
 ```
 Field           Type        Comment
 id              string      tx hash
-tx_idx          uint64      tx index within block
-ts              timestamp   block creation timestamp (unixnano)
 blockno         uint64      block number
+ts              timestamp   block creation timestamp (unixnano)
+tx_idx          uint64      tx index within block
+payload         string      tx payload (hex encoded)
 from            string      from address (base58check encoded)
 to              string      to address (base58check encoded)
 amount          string      Precise BigInt string representation of amount
@@ -86,9 +88,11 @@ event
 ```
 Field           Type        Comment
 id              string      block_number + tx_idx + event_idx
-block_id        string      block hash
-tx_id           string      tx hash
 contract        string      contract address
+blockno         uint64      block number
+tx_id           string      tx hash
+tx_idx          uint64      tx idx in block
+event_idx       uint64      event idx in tx
 event_name      string      name of event
 event_args      string      args of event
 ```
