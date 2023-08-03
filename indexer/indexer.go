@@ -202,15 +202,15 @@ func (ns *Indexer) InitIndex() error {
 		if err != nil {
 			return err
 		}
-		return nil
-	}
-	chainInfoFromDb := document.(*doc.EsChainInfo)
-	if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
-		chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
-		chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
-		chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
-		chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
-		return errors.New("chain info is not matched")
+	} else {
+		chainInfoFromDb := document.(*doc.EsChainInfo)
+		if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
+			chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
+			chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
+			chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
+			chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
+			return errors.New("chain info is not matched")
+		}
 	}
 
 	// create other indexes

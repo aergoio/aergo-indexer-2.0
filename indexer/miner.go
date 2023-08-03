@@ -61,7 +61,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 	}
 }
 
-func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
 	// get receipt
 	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
 	if err != nil {
@@ -133,7 +133,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc doc.EsBlock, t
 	return
 }
 
-func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerBalance(info BlockInfo, block *doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
 	if transaction.IsBalanceNotResolved(string(address)) {
 		return
 	}
@@ -142,7 +142,7 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block doc.EsBlock, address []byt
 	ns.insertAccountBalance(info.Type, balanceFromDoc)
 }
 
-func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
 	// mine all events per contract
 	eventDoc := doc.ConvEvent(event, blockDoc, txDoc, txIdx)
 	ns.insertEvent(info.Type, eventDoc)
@@ -151,7 +151,7 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.Es
 	ns.MinerEventByName(info, blockDoc, txDoc, event, MinerGRPC)
 }
 
-func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc doc.EsBlock, txDoc doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
 	switch transaction.EventName(event.EventName) {
 	case transaction.EventNewArc1Token, transaction.EventNewArc2Token:
 		tokenType, contractAddress, err := transaction.UnmarshalEventNewArcToken(event)
@@ -189,7 +189,6 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc doc.EsBlock, txDoc 
 		// Add TokenTransfer Doc
 		tokenType, tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(contractAddress, amountOrId, ns.isCccvNft(event.ContractAddress))
 		tokenTransferDoc := doc.ConvTokenTransfer(contractAddress, txDoc, int(event.EventIdx), accountFrom, accountTo, tokenId, amount, amountFloat)
-		txDoc.TokenTransfers++
 		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Update Token Doc
@@ -222,7 +221,6 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc doc.EsBlock, txDoc 
 		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		txDoc.TokenTransfers++
 		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Add AccountTokens Doc ( update TO-Account )
@@ -255,7 +253,6 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc doc.EsBlock, txDoc 
 		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		txDoc.TokenTransfers++
 		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Update TokenUp Doc
@@ -281,7 +278,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc doc.EsBlock, txDoc 
 	}
 }
 
-func (ns *Indexer) insertBlock(blockType BlockType, blockDoc doc.EsBlock) {
+func (ns *Indexer) insertBlock(blockType BlockType, blockDoc *doc.EsBlock) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockDoc}
 	} else {
@@ -292,7 +289,7 @@ func (ns *Indexer) insertBlock(blockType BlockType, blockDoc doc.EsBlock) {
 	}
 }
 
-func (ns *Indexer) insertTx(blockType BlockType, txDoc doc.EsTx) {
+func (ns *Indexer) insertTx(blockType BlockType, txDoc *doc.EsTx) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txDoc}
 	} else {
@@ -303,35 +300,35 @@ func (ns *Indexer) insertTx(blockType BlockType, txDoc doc.EsTx) {
 	}
 }
 
-func (ns *Indexer) insertEvent(blockType BlockType, eventDoc doc.EsEvent) {
+func (ns *Indexer) insertEvent(blockType BlockType, eventDoc *doc.EsEvent) {
 	err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", eventDoc.Id).Str("method", "insertEvent").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertContract(blockType BlockType, contractDoc doc.EsContract) {
+func (ns *Indexer) insertContract(blockType BlockType, contractDoc *doc.EsContract) {
 	err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertName(blockType BlockType, nameDoc doc.EsName) {
+func (ns *Indexer) insertName(blockType BlockType, nameDoc *doc.EsName) {
 	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", nameDoc.Id).Str("method", "insertName").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertToken(blockType BlockType, tokenDoc doc.EsToken) {
+func (ns *Indexer) insertToken(blockType BlockType, tokenDoc *doc.EsToken) {
 	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", tokenDoc.Id).Str("method", "insertToken").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc doc.EsAccountTokens) {
+func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc *doc.EsAccountTokens) {
 	if blockType == BlockType_Bulk {
 		if _, ok := ns.accToken.Load(accountTokensDoc.Id); ok {
 			return
@@ -347,7 +344,7 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc doc
 	}
 }
 
-func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAccountBalance) {
+func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc *doc.EsAccountBalance) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "account_balance",
 		StringMatch: &db.StringMatchQuery{
@@ -383,7 +380,7 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc doc.EsAc
 	}
 }
 
-func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc doc.EsTokenTransfer) {
+func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc *doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
 	} else {
@@ -394,7 +391,7 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc doc
 	}
 }
 
-func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
+func (ns *Indexer) insertNFT(blockType BlockType, nftDoc *doc.EsNFT) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "nft",
 		StringMatch: &db.StringMatchQuery{
@@ -422,7 +419,7 @@ func (ns *Indexer) insertNFT(blockType BlockType, nftDoc doc.EsNFT) {
 	}
 }
 
-func (ns *Indexer) updateToken(tokenDoc doc.EsTokenUp) {
+func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUp) {
 	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {
 		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")

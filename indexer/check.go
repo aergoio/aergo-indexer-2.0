@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"io"
+	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
@@ -55,6 +56,7 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 		}
 		if err != nil {
 			ns.log.Warn().Err(err).Msg("Failed to query block numbers")
+			time.Sleep(time.Second)
 			continue
 		}
 		blockNo = block.(*doc.EsBlock).BlockNo

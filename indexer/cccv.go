@@ -36,7 +36,7 @@ func (ns *Indexer) initCccvNft() {
 	}
 
 	// insert cccv record
-	document := doc.EsToken{
+	document := &doc.EsToken{
 		BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
 		TxId:         txid,
 		BlockNo:      blockno,

@@ -24,7 +24,7 @@ func decodeAddr(addr string) []byte {
 }
 
 func TestConvBlock(t *testing.T) {
-	fn_test := func(aergoBlock *types.Block, blockProducer string, esBlockExpect EsBlock) {
+	fn_test := func(aergoBlock *types.Block, blockProducer string, esBlockExpect *EsBlock) {
 		esBlockConv := ConvBlock(aergoBlock, blockProducer)
 		require.Equal(t, esBlockExpect, esBlockConv)
 	}
@@ -42,12 +42,13 @@ func TestConvBlock(t *testing.T) {
 		Body: &types.BlockBody{
 			Txs: []*types.Tx{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}},
 		},
-	}, "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9", EsBlock{
+	}, "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9", &EsBlock{
 		BaseEsType:    &BaseEsType{Id: "AvtCKTqL3eQBCvkidbY7i4YkwbtbuResohfRKQhV5Bu"},
 		Timestamp:     time.Unix(0, 1668652376002288214),
 		BlockNo:       104524962,
 		Size:          207,
 		TxCount:       11,
+		PreviousBlock: "9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga",
 		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",
 		RewardAmount:  "160000000000000000",
@@ -55,7 +56,7 @@ func TestConvBlock(t *testing.T) {
 }
 
 func TestConvTx(t *testing.T) {
-	fn_test := func(txIdx uint64, aergoTx *types.Tx, esBlock EsBlock, esTxExpect EsTx) {
+	fn_test := func(txIdx uint64, aergoTx *types.Tx, esBlock *EsBlock, esTxExpect *EsTx) {
 		esTxConv := ConvTx(txIdx, aergoTx, nil, esBlock)
 		require.Equal(t, esTxExpect, esTxConv)
 	}
@@ -68,10 +69,10 @@ func TestConvTx(t *testing.T) {
 			Type:      types.TxType_TRANSFER,
 			Recipient: decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"),
 		},
-	}, EsBlock{
+	}, &EsBlock{
 		BlockNo:   1,
 		Timestamp: time.Unix(0, 1668652376002288214),
-	}, EsTx{
+	}, &EsTx{
 		TxIdx:       0,
 		BaseEsType:  &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
 		Timestamp:   time.Unix(0, 1668652376002288214),
@@ -90,19 +91,19 @@ func TestConvTx(t *testing.T) {
 }
 
 func TestConvContract(t *testing.T) {
-	fn_test := func(esTx EsTx, contractAddress []byte, esContractExpect EsContract) {
+	fn_test := func(esTx *EsTx, contractAddress []byte, esContractExpect *EsContract) {
 		esContractConv := ConvContract(esTx, contractAddress)
 		require.Equal(t, esContractExpect, esContractConv)
 	}
 
-	fn_test(EsTx{
+	fn_test(&EsTx{
 		BaseEsType: &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    1,
 		Account:    "AmLXGJq1GfZWRYjmNVZxCsrJodc1qC1nCXnYkkG7pQLbiWy9NMZw",
 		Type:       strconv.FormatInt(int64(types.TxType_DEPLOY), 10),
 		Category:   tx.TxDeploy,
-	}, decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"), EsContract{
+	}, decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"), &EsContract{
 		TxId:       "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8",
 		BaseEsType: &BaseEsType{Id: "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"},
 		Creator:    "AmLXGJq1GfZWRYjmNVZxCsrJodc1qC1nCXnYkkG7pQLbiWy9NMZw",
@@ -112,29 +113,29 @@ func TestConvContract(t *testing.T) {
 }
 
 func TestConvTokenUp(t *testing.T) {
-	fn_test := func(esTx EsTx, contractAddress []byte, supply string, supplyFloat float32, esTokenUpExpect EsTokenUp) {
+	fn_test := func(esTx *EsTx, contractAddress []byte, supply string, supplyFloat float32, esTokenUpExpect *EsTokenUp) {
 		esTokenUpConv := ConvTokenUp(esTx, contractAddress, supply, supplyFloat)
 		require.Equal(t, esTokenUpExpect, esTokenUpConv)
 	}
 
-	fn_test(EsTx{
+	fn_test(&EsTx{
 		BaseEsType: &BaseEsType{Id: "5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    95022525,
 		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
 		Category:   tx.TxCall,
-	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), "1", 1, EsTokenUp{
+	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), "1", 1, &EsTokenUp{
 		BaseEsType:  &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
 		Supply:      "1",
 		SupplyFloat: 1,
 	})
-	fn_test(EsTx{
+	fn_test(&EsTx{
 		BaseEsType: &BaseEsType{Id: "5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    95022525,
 		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
 		Category:   tx.TxCall,
-	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), "100000000000000", 100000000000000, EsTokenUp{
+	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), "100000000000000", 100000000000000, &EsTokenUp{
 		BaseEsType:  &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
 		Supply:      "100000000000000",
 		SupplyFloat: 100000000000000,
@@ -142,19 +143,19 @@ func TestConvTokenUp(t *testing.T) {
 }
 
 func TestConvToken(t *testing.T) {
-	fn_test := func(esTx EsTx, contractAddress []byte, tokenType tx.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32, esTokenExpect EsToken) {
+	fn_test := func(esTx *EsTx, contractAddress []byte, tokenType tx.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32, esTokenExpect *EsToken) {
 		esTokenConv := ConvToken(esTx, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
 		require.Equal(t, esTokenExpect, esTokenConv)
 	}
 
-	fn_test(EsTx{
+	fn_test(&EsTx{
 		BaseEsType: &BaseEsType{Id: "7JomfCWykxNprPnSBrh3vo2tAgsMmmvWqcTLuN7vvzQH"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    95022525,
 		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
 		Category:   tx.TxCall,
 		Account:    "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks",
-	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), tx.TokenARC1, "Blankazzang Point", "PBLKA", 18, "100000000", 100000000, EsToken{
+	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), tx.TokenARC1, "Blankazzang Point", "PBLKA", 18, "100000000", 100000000, &EsToken{
 		BaseEsType:   &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
 		TxId:         "7JomfCWykxNprPnSBrh3vo2tAgsMmmvWqcTLuN7vvzQH",
 		BlockNo:      95022525,
@@ -171,7 +172,7 @@ func TestConvToken(t *testing.T) {
 }
 
 func TestConvName(t *testing.T) {
-	fn_test := func(aergoTx *types.Tx, blockNumber uint64, esNameExpect EsName) {
+	fn_test := func(aergoTx *types.Tx, blockNumber uint64, esNameExpect *EsName) {
 		esNameConv := ConvName(aergoTx, blockNumber)
 		require.Equal(t, esNameExpect, esNameConv)
 	}
@@ -189,7 +190,7 @@ func TestConvName(t *testing.T) {
 				]
 			  }`),
 		},
-	}, 1, EsName{
+	}, 1, &EsName{
 		BaseEsType: &BaseEsType{Id: fmt.Sprintf("%s-%s", "koreanumber1", "AvtCKTqL3eQBCvkidbY7i4YkwbtbuResohfRKQhV5Bu")},
 		BlockNo:    1,
 		Name:       "koreanumber1",
@@ -199,14 +200,14 @@ func TestConvName(t *testing.T) {
 }
 
 func TestConvNFT(t *testing.T) {
-	fn_test := func(esTokenTransfer EsTokenTransfer, tokenUri string, imageUrl string, esNFTExpect EsNFT) {
+	fn_test := func(esTokenTransfer *EsTokenTransfer, tokenUri string, imageUrl string, esNFTExpect *EsNFT) {
 		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
 		esNFTConv := ConvNFT(esTokenTransfer, tokenUri, imageUrl)
 		require.Equal(t, esNFTExpect, esNFTConv)
 	}
 
 	fn_test(
-		EsTokenTransfer{
+		&EsTokenTransfer{
 			Timestamp:    time.Unix(0, 1668652376002288214),
 			BlockNo:      1,
 			TokenAddress: "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
@@ -215,7 +216,7 @@ func TestConvNFT(t *testing.T) {
 		},
 		"https://api.booost.live/nft/vehicles/OSOMDJ0SR6",
 		"https://booost-nft-prod.s3.ap-northeast-2.amazonaws.com/vehicle-cbt.png?v=2",
-		EsNFT{
+		&EsNFT{
 			BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA", "cccv_nft")},
 			TokenAddress: "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
 			TokenId:      "cccv_nft",
@@ -229,20 +230,20 @@ func TestConvNFT(t *testing.T) {
 }
 
 func TestConvTokenTransfer(t *testing.T) {
-	fn_test := func(contractAddress []byte, txDoc EsTx, idx int, from string, to string, tokenId string, amount string, amountFloat float32, esTokenTransferExpect EsTokenTransfer) {
+	fn_test := func(contractAddress []byte, txDoc *EsTx, idx int, from string, to string, tokenId string, amount string, amountFloat float32, esTokenTransferExpect *EsTokenTransfer) {
 		esTokenTransferConv := ConvTokenTransfer(contractAddress, txDoc, idx, from, to, tokenId, amount, amountFloat)
 		require.Equal(t, esTokenTransferExpect, esTokenTransferConv)
 	}
 
 	fn_test(
-		decodeAddr("Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF"), EsTx{
+		decodeAddr("Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF"), &EsTx{
 			BaseEsType: &BaseEsType{Id: "34yeCGMt2UxFqrztewP2qgJqATQVRdnsu71faJhaWdCA"},
 			Timestamp:  time.Unix(0, 1668652376002288214),
 			BlockNo:    105810874,
 			Type:       strconv.FormatInt(int64(types.TxType_FEEDELEGATION), 10),
 			Category:   tx.TxCall,
 			Account:    "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA",
-		}, 27, "MINT", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", "a6d6d055488d443d29952c1ca276b34ca_28", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", 1, EsTokenTransfer{
+		}, 27, "MINT", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", "a6d6d055488d443d29952c1ca276b34ca_28", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", 1, &EsTokenTransfer{
 			BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%d", "34yeCGMt2UxFqrztewP2qgJqATQVRdnsu71faJhaWdCA", 27)},
 			Timestamp:    time.Unix(0, 1668652376002288214),
 			BlockNo:      105810874,
@@ -259,7 +260,7 @@ func TestConvTokenTransfer(t *testing.T) {
 }
 
 func TestConvAccountTokens(t *testing.T) {
-	fn_test := func(tokenType tx.TokenType, tokenAddress string, timestamp time.Time, account string, balance string, balanceFloat float32, esAccountTokensExpect EsAccountTokens) {
+	fn_test := func(tokenType tx.TokenType, tokenAddress string, timestamp time.Time, account string, balance string, balanceFloat float32, esAccountTokensExpect *EsAccountTokens) {
 		esAccountTokensConv := ConvAccountTokens(tokenType, tokenAddress, timestamp, account, balance, balanceFloat)
 		require.Equal(t, esAccountTokensExpect, esAccountTokensConv)
 	}
@@ -268,7 +269,7 @@ func TestConvAccountTokens(t *testing.T) {
 		tx.TokenARC2,
 		"Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",
 		time.Unix(0, 1668652376002288214),
-		"AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "7364", 7364, EsAccountTokens{
+		"AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "7364", 7364, &EsAccountTokens{
 			BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%s", "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD", "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF")},
 			Account:      "AmQLCGCaNqguH9CRuvBLUoYf2dSo77wXeCWyJh5p3mRYqY8o6vZD",
 			TokenAddress: "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF",

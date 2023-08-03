@@ -54,22 +54,21 @@ type EsBlock struct {
 // EsTx is a transaction stored in the database
 type EsTx struct {
 	*BaseEsType
-	BlockNo        uint64        `json:"blockno" db:"blockno"`
-	Timestamp      time.Time     `json:"ts" db:"ts"`
-	TxIdx          uint64        `json:"tx_idx" db:"tx_idx"`
-	Payload        string        `json:"payload" db:"payload"`
-	Account        string        `json:"from" db:"from"`
-	Recipient      string        `json:"to" db:"to"`
-	Amount         string        `json:"amount" db:"amount"`             // string of BigInt
-	AmountFloat    float32       `json:"amount_float" db:"amount_float"` // float for sorting
-	Type           string        `json:"type" db:"type"`
-	Category       tx.TxCategory `json:"category" db:"category"`
-	Method         string        `json:"method" db:"method"`
-	TokenTransfers uint64        `json:"token_transfers" db:"token_transfers"`
-	Status         string        `json:"status" db:"status"`
-	GasPrice       string        `json:"gas_price" db:"gas_price"`
-	GasLimit       uint64        `json:"gas_limit" db:"gas_limit"`
-	GasUsed        uint64        `json:"gas_used" db:"gas_used"`
+	BlockNo     uint64        `json:"blockno" db:"blockno"`
+	Timestamp   time.Time     `json:"ts" db:"ts"`
+	TxIdx       uint64        `json:"tx_idx" db:"tx_idx"`
+	Payload     string        `json:"payload" db:"payload"`
+	Account     string        `json:"from" db:"from"`
+	Recipient   string        `json:"to" db:"to"`
+	Amount      string        `json:"amount" db:"amount"`             // string of BigInt
+	AmountFloat float32       `json:"amount_float" db:"amount_float"` // float for sorting
+	Type        string        `json:"type" db:"type"`
+	Category    tx.TxCategory `json:"category" db:"category"`
+	Method      string        `json:"method" db:"method"`
+	Status      string        `json:"status" db:"status"`
+	GasPrice    string        `json:"gas_price" db:"gas_price"`
+	GasLimit    uint64        `json:"gas_limit" db:"gas_limit"`
+	GasUsed     uint64        `json:"gas_used" db:"gas_used"`
 }
 
 type EsContract struct {
@@ -458,9 +457,6 @@ func InitEsMappings(clusterMode bool) {
 						"supply_float": {
 							"type": "float"
 						},
-						"token_transfers": {
-							"type": "long"
-						},
 						"type": {
 							"type": "keyword"
 						}
@@ -726,9 +722,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"method": {
 							"type": "keyword"
-						},
-						"token_transfers": {
-							"type": "long"
 						},
 						"status": {
 							"type": "keyword"
