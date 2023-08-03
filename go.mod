@@ -1,11 +1,10 @@
 module github.com/aergoio/aergo-indexer-2.0
 
-go 1.17
+go 1.19
 
 require (
 	github.com/aergoio/aergo-lib v1.0.2
 	github.com/anaskhan96/base58check v0.0.0-20181220122047-b05365d494c4
-	github.com/golang/protobuf v1.5.2
 	github.com/libp2p/go-libp2p-core v0.0.1
 	github.com/magiconair/properties v1.8.5
 	github.com/mr-tron/base58 v1.2.0
@@ -40,6 +39,7 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.17.7 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
