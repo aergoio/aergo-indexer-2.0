@@ -354,7 +354,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"verified_no": {
-							type: "long"
+							"type": "long"
 						},
 						"verified_txid": {
 							"type": "keyword"
@@ -762,7 +762,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"verified_no": {
-							type: "long"
+							"type": "long"
 						},
 						"verified_txid": {
 							"type": "keyword"
