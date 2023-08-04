@@ -1,7 +1,6 @@
 package documents
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -54,7 +53,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		BlockNo:     blockDoc.BlockNo,
 		Timestamp:   blockDoc.Timestamp,
 		TxIdx:       txIdx,
-		Payload:     hex.EncodeToString(tx.GetBody().GetPayload()),
+		Payload:     string(tx.GetBody().GetPayload()),
 		Account:     transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
 		Recipient:   transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:      amount.String(),
