@@ -55,7 +55,7 @@ id              string      tx hash
 blockno         uint64      block number
 ts              timestamp   block creation timestamp (unixnano)
 tx_idx          uint64      tx index within block
-payload         string      tx payload (hex encoded)
+payload         string      tx payload
 from            string      from address (base58check encoded)
 to              string      to address (base58check encoded)
 amount          string      Precise BigInt string representation of amount
@@ -64,6 +64,7 @@ type            string      tx type
 category        string      user-friendly category
 method          string      called function name of a contract
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
+fee_delegation  bool        fee delegation transaction 
 gas_price       string      tx gas price
 gas_limit       uint64      tx gas limit
 gas_used        uint64      receipt gas used

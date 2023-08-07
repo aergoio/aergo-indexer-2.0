@@ -36,9 +36,11 @@ func ConvBlock(block *types.Block, blockProducer string) *EsBlock {
 func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBlock) *EsTx {
 	var status string = "NO_RECEIPT"
 	var gasUsed uint64
+	var feeDelegation bool
 	if receipt != nil {
 		status = receipt.Status
 		gasUsed = receipt.GasUsed
+		feeDelegation = receipt.FeeDelegation
 	}
 
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
@@ -49,22 +51,23 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	}
 
 	return &EsTx{
-		BaseEsType:  &BaseEsType{Id: base58.Encode(tx.Hash)},
-		BlockNo:     blockDoc.BlockNo,
-		Timestamp:   blockDoc.Timestamp,
-		TxIdx:       txIdx,
-		Payload:     string(tx.GetBody().GetPayload()),
-		Account:     transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
-		Recipient:   transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
-		Amount:      amount.String(),
-		AmountFloat: bigIntToFloat(amount, 18),
-		Type:        strconv.FormatUint(uint64(tx.Body.Type), 10),
-		Category:    category,
-		Method:      method,
-		Status:      status,
-		GasPrice:    gasPrice.String(),
-		GasLimit:    tx.Body.GasLimit,
-		GasUsed:     gasUsed,
+		BaseEsType:    &BaseEsType{Id: base58.Encode(tx.Hash)},
+		BlockNo:       blockDoc.BlockNo,
+		Timestamp:     blockDoc.Timestamp,
+		TxIdx:         txIdx,
+		Payload:       string(tx.GetBody().GetPayload()),
+		Account:       transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
+		Recipient:     transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
+		Amount:        amount.String(),
+		AmountFloat:   bigIntToFloat(amount, 18),
+		Type:          strconv.FormatUint(uint64(tx.Body.Type), 10),
+		Category:      category,
+		Method:        method,
+		Status:        status,
+		FeeDelegation: feeDelegation,
+		GasPrice:      gasPrice.String(),
+		GasLimit:      tx.Body.GasLimit,
+		GasUsed:       gasUsed,
 	}
 }
 

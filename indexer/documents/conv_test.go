@@ -56,8 +56,8 @@ func TestConvBlock(t *testing.T) {
 }
 
 func TestConvTx(t *testing.T) {
-	fn_test := func(txIdx uint64, aergoTx *types.Tx, esBlock *EsBlock, esTxExpect *EsTx) {
-		esTxConv := ConvTx(txIdx, aergoTx, nil, esBlock)
+	fn_test := func(txIdx uint64, aergoTx *types.Tx, aergoReceipt *types.Receipt, esBlock *EsBlock, esTxExpect *EsTx) {
+		esTxConv := ConvTx(txIdx, aergoTx, aergoReceipt, esBlock)
 		require.Equal(t, esTxExpect, esTxConv)
 	}
 
@@ -69,24 +69,28 @@ func TestConvTx(t *testing.T) {
 			Type:      types.TxType_TRANSFER,
 			Recipient: decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"),
 		},
+	}, &types.Receipt{
+		FeeDelegation: true,
+		GasUsed:       100000,
 	}, &EsBlock{
 		BlockNo:   1,
 		Timestamp: time.Unix(0, 1668652376002288214),
 	}, &EsTx{
-		TxIdx:       0,
-		BaseEsType:  &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
-		Timestamp:   time.Unix(0, 1668652376002288214),
-		BlockNo:     1,
-		Account:     "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
-		Recipient:   "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
-		Amount:      "100",
-		AmountFloat: bigIntToFloat(big.NewInt(100), 18),
-		Type:        strconv.FormatInt(int64(types.TxType_TRANSFER), 10),
-		Category:    tx.TxTransfer,
-		Status:      "NO_RECEIPT",
-		GasPrice:    "0",
-		GasLimit:    0,
-		GasUsed:     0,
+		TxIdx:         0,
+		BaseEsType:    &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
+		Timestamp:     time.Unix(0, 1668652376002288214),
+		BlockNo:       1,
+		Account:       "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
+		Recipient:     "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
+		Amount:        "100",
+		AmountFloat:   bigIntToFloat(big.NewInt(100), 18),
+		Type:          strconv.FormatInt(int64(types.TxType_TRANSFER), 10),
+		Category:      tx.TxTransfer,
+		Status:        "",
+		FeeDelegation: true,
+		GasPrice:      "0",
+		GasLimit:      0,
+		GasUsed:       100000,
 	})
 }
 
