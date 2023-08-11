@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -23,7 +23,7 @@ func Compile(code string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	retRaw, err := ioutil.ReadAll(resp.Body)
+	retRaw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading response body: %v", err)
 	}
