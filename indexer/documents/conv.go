@@ -35,12 +35,14 @@ func ConvBlock(block *types.Block, blockProducer string) *EsBlock {
 // ConvTx converts Tx from RPC into Elasticsearch type
 func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBlock) *EsTx {
 	var status string = "NO_RECEIPT"
+	var result string
 	var gasUsed uint64
 	var feeDelegation bool
 	if receipt != nil {
 		status = receipt.Status
 		gasUsed = receipt.GasUsed
 		feeDelegation = receipt.FeeDelegation
+		result = receipt.Ret
 	}
 
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
@@ -64,6 +66,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		Category:      category,
 		Method:        method,
 		Status:        status,
+		Result:        result,
 		FeeDelegation: feeDelegation,
 		GasPrice:      gasPrice.String(),
 		GasLimit:      tx.Body.GasLimit,

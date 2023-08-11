@@ -64,6 +64,7 @@ type            string      tx type
 category        string      user-friendly category
 method          string      called function name of a contract
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
+result          string      tx result from receipt
 fee_delegation  bool        fee delegation transaction 
 gas_price       string      tx gas price
 gas_limit       uint64      tx gas limit

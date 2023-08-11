@@ -66,6 +66,7 @@ type EsTx struct {
 	Category      tx.TxCategory `json:"category" db:"category"`
 	Method        string        `json:"method" db:"method"`
 	Status        string        `json:"status" db:"status"`
+	Result        string        `json:"result" db:"result"`
 	FeeDelegation bool          `json:"fee_delegation" db:"fee_delegation"`
 	GasPrice      string        `json:"gas_price" db:"gas_price"`
 	GasLimit      uint64        `json:"gas_limit" db:"gas_limit"`
@@ -319,6 +320,9 @@ func InitEsMappings(clusterMode bool) {
 						"status": {
 							"type": "keyword"
 						},
+						"result": {
+							"type": "keyword"
+						}
 						"fee_delegation": {
 							"type": "boolean"
 						},
@@ -730,6 +734,9 @@ func InitEsMappings(clusterMode bool) {
 						"status": {
 							"type": "keyword"
 						},
+						"result": {
+							"type": "keyword"
+						}
 						"fee_delegation": {
 							"type": "boolean"
 						},
