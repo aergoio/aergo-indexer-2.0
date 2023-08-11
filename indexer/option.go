@@ -36,7 +36,7 @@ func SetPrefix(prefix string) IndexerOptionFunc {
 
 func SetNetworkTypeForCccv(initCccvNft string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.NetworkTypeForCccv = initCccvNft
+		indexer.networkTypeForCccv = initCccvNft
 		return nil
 	}
 }

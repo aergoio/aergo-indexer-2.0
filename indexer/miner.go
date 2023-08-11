@@ -47,18 +47,26 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		// Add block doc
 		ns.insertBlock(info.Type, blockDoc)
 
-		// indexing whitelist balance
-		if info.Type == BlockType_Sync && blockHeight%1000 == 0 { // onsync only
-			ns.whiteListAddresses.Range(func(k, v interface{}) bool {
-				if addr, ok := k.(string); ok {
-					if addr, err := types.DecodeAddress(addr); err == nil {
-						ns.MinerBalance(info, blockDoc, addr, MinerGRPC)
-					}
-				}
-				return true
-			})
+		if info.Type == BlockType_Sync && blockHeight%600 == 0 {
+			// update variables per 10 minute
+			ns.UpdateVariables(info, blockDoc, MinerGRPC)
 		}
 	}
+}
+
+func (ns *Indexer) UpdateVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGRPC *client.AergoClientController) {
+	// update verify code, token
+	// ns.MinerVerifyTokenContract()
+
+	// update whitelist balance
+	ns.whiteListAddresses.Range(func(k, v interface{}) bool {
+		if addr, ok := k.(string); ok {
+			if addr, err := types.DecodeAddress(addr); err == nil {
+				ns.MinerBalance(info, blockDoc, addr, minerGRPC)
+			}
+		}
+		return true
+	})
 }
 
 func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
@@ -131,15 +139,6 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	}
 
 	return
-}
-
-func (ns *Indexer) MinerBalance(info BlockInfo, block *doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
-	if transaction.IsBalanceNotResolved(string(address)) {
-		return
-	}
-	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
-	balanceFromDoc := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
-	ns.insertAccountBalance(info.Type, balanceFromDoc)
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
@@ -299,6 +298,19 @@ func (ns *Indexer) insertTx(blockType BlockType, txDoc *doc.EsTx) {
 		}
 	}
 }
+
+func (ns *Indexer) MinerBalance(info BlockInfo, block *doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
+	if transaction.IsBalanceNotResolved(string(address)) {
+		return
+	}
+	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
+	balanceFromDoc := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
+	ns.insertAccountBalance(info.Type, balanceFromDoc)
+}
+
+// func (ns *Indexer) MinerVerifyTokenContract(blockType BlockType, balanceDoc *doc.EsAccountBalance) {
+
+// }
 
 func (ns *Indexer) insertEvent(blockType BlockType, eventDoc *doc.EsEvent) {
 	err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")

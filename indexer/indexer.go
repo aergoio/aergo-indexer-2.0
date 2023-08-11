@@ -21,18 +21,15 @@ type Indexer struct {
 	db         db.DbController
 	grpcClient *client.AergoClientController
 
-	stream             types.AergoRPCService_ListBlockStreamClient
-	MChannel           chan BlockInfo
-	BChannel           ChanInfoType
-	RChannel           []chan BlockInfo
-	SynDone            chan bool
-	accToken           sync.Map
-	peerId             sync.Map
-	whiteListAddresses sync.Map
-	indexNamePrefix    string
-	aliasNamePrefix    string
-	lastHeight         uint64
-	cccvNftAddress     []byte
+	stream          types.AergoRPCService_ListBlockStreamClient
+	MChannel        chan BlockInfo
+	BChannel        ChanInfoType
+	RChannel        []chan BlockInfo
+	SynDone         chan bool
+	indexNamePrefix string
+	aliasNamePrefix string
+	lastHeight      uint64
+	cccvNftAddress  []byte
 
 	// for bulk
 	bulkSize  int32
@@ -40,14 +37,27 @@ type Indexer struct {
 	minerNum  int
 	grpcNum   int
 
+	// cache
+	accToken           sync.Map
+	peerId             sync.Map
+	whiteListAddresses sync.Map
+	verifiedToken      sync.Map
+	verifiedContract   sync.Map
+
 	// config by user
 	log                *log.Logger
 	dbAddr             string
 	serverAddr         string
 	prefix             string
 	runMode            string
-	NetworkTypeForCccv string
+	networkTypeForCccv string
+	contractVerifyAddr string
+	tokenVerifyAddr    string
 }
+
+// 시작할때 es 에서 verifiedToken / verifiedContract 목록을 가져와 메모리에 적재
+// 블록 탐색할 때 verifiedToken / verifiedContract 를 찾아 메모리 / db 에 적재
+// 일정 시간마다 메모리에 있는 verifiedToken / verifiedContract 를 조회해 변경 내역을 db 에 업데이트 ( 추가, 삭제, 갱신 )
 
 // NewIndexer creates new Indexer instance
 func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {

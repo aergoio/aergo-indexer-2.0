@@ -24,16 +24,18 @@ var (
 	checkMode  bool
 	onsyncMode bool
 
-	host             string
-	port             int32
-	dbURL            string
-	prefix           string
-	aergoAddress     string
-	cluster          bool
-	from             uint64
-	to               uint64
-	whiteListAddress []string
-	typeCccvNft      string
+	host                  string
+	port                  int32
+	dbURL                 string
+	prefix                string
+	aergoAddress          string
+	cluster               bool
+	from                  uint64
+	to                    uint64
+	whiteListAddresses    []string
+	typeCccvNft           string
+	tokenVerifyAddress    string
+	contractVerifyAddress string
 
 	logger *log.Logger
 )
@@ -53,8 +55,10 @@ func init() {
 
 	fs.Uint64Var(&from, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
-	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for update account balance. onsync only")
+	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance. onsync only")
 	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
+	fs.StringVar(&contractVerifyAddress, "contract", "c", "address for query contract code")
+	fs.StringVar(&tokenVerifyAddress, "token", "t", "address for query verified token")
 }
 
 func main() {
@@ -77,7 +81,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetNetworkTypeForCccv(typeCccvNft),
 		indexer.SetRunMode(getRunMode()),
 		indexer.SetLogger(logger),
-		indexer.SetWhiteListAddresses(whiteListAddress),
+		indexer.SetWhiteListAddresses(whiteListAddresses),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not start indexer")

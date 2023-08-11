@@ -222,6 +222,27 @@ func (t *AergoClientController) QueryNFTMetadata(contractAddress []byte, tokenId
 	return tokenUri, imageUrl
 }
 
+type TokenInfo struct {
+	Contract string
+}
+
+func (t *AergoClientController) QueryVerifyTokens(contractAddress []byte) (string, error) {
+	metadata, err := t.queryContract(contractAddress, "")
+	if err != nil {
+		return "", err
+	}
+
+	return metadata, nil
+}
+
+func (t *AergoClientController) QueryVerifyContract(contractAddress []byte) (string, error) {
+	metadata, err := t.queryContract(contractAddress, "")
+	if err != nil {
+		return "", err
+	}
+	return metadata, nil
+}
+
 func (t *AergoClientController) queryContract(address []byte, name string, args ...string) (string, error) {
 	queryinfo := map[string]interface{}{"Name": name}
 	if args != nil {
