@@ -133,6 +133,14 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 	return balance, balanceFloat
 }
 
+func (t *AergoClientController) QueryMetadataOf(contractAddress []byte, account string) string {
+	req, err := t.queryContract(contractAddress, "query", "get_metadata", account)
+	if err != nil {
+		return ""
+	}
+	return req
+}
+
 func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, amountOrId string, isCccvNft bool) (tokenType tx.TokenType, tokenId string, amount string, amountFloat float32) {
 	var err error
 	var owner string

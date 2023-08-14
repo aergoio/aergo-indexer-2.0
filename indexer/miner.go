@@ -57,9 +57,16 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 func (ns *Indexer) UpdateVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGRPC *client.AergoClientController) {
 	// update verify code, token
 	// ns.MinerVerifyTokenContract()
+	ns.addrsVerifiedToken.Range(func(k, v interface{}) bool {
+		return true
+	})
+
+	ns.addrsVerifiedContract.Range(func(k, v interface{}) bool {
+		return true
+	})
 
 	// update whitelist balance
-	ns.whiteListAddresses.Range(func(k, v interface{}) bool {
+	ns.addrsWhiteListAddr.Range(func(k, v interface{}) bool {
 		if addr, ok := k.(string); ok {
 			if addr, err := types.DecodeAddress(addr); err == nil {
 				ns.MinerBalance(info, blockDoc, addr, minerGRPC)
@@ -308,9 +315,13 @@ func (ns *Indexer) MinerBalance(info BlockInfo, block *doc.EsBlock, address []by
 	ns.insertAccountBalance(info.Type, balanceFromDoc)
 }
 
-// func (ns *Indexer) MinerVerifyTokenContract(blockType BlockType, balanceDoc *doc.EsAccountBalance) {
+func (ns *Indexer) MinerVerifyToken(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
 
-// }
+}
+
+func (ns *Indexer) MinerVerifyContract(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
+
+}
 
 func (ns *Indexer) insertEvent(blockType BlockType, eventDoc *doc.EsEvent) {
 	err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
@@ -388,7 +399,7 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc *doc.EsA
 
 	// stake 주소는 whitelist 에 추가
 	if balanceDoc.StakingFloat > 0 {
-		ns.whiteListAddresses.Store(balanceDoc.Id, true)
+		ns.addrsWhiteListAddr.Store(balanceDoc.Id, true)
 	}
 }
 

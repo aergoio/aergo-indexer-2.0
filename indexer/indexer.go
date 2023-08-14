@@ -38,11 +38,11 @@ type Indexer struct {
 	grpcNum   int
 
 	// cache
-	accToken           sync.Map
-	peerId             sync.Map
-	whiteListAddresses sync.Map
-	verifiedToken      sync.Map
-	verifiedContract   sync.Map
+	accToken              sync.Map
+	peerId                sync.Map
+	addrsWhiteListAddr    sync.Map
+	addrsVerifiedToken    sync.Map
+	addrsVerifiedContract sync.Map
 
 	// config by user
 	log                *log.Logger

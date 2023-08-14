@@ -51,7 +51,7 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		for _, addr := range whiteListAddresses {
-			indexer.whiteListAddresses.Store(addr, true)
+			indexer.addrsWhiteListAddr.Store(addr, true)
 		}
 		return nil
 	}
