@@ -48,5 +48,5 @@ func (ns *Indexer) initCccvNft() {
 		Supply:       "0",
 		SupplyFloat:  float32(0),
 	}
-	ns.insertToken(BlockType_Sync, document)
+	ns.addToken(BlockType_Sync, document)
 }

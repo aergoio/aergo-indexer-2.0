@@ -45,7 +45,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		}
 
 		// Add block doc
-		ns.insertBlock(info.Type, blockDoc)
+		ns.addBlock(info.Type, blockDoc)
 
 		if info.Type == BlockType_Sync && blockHeight%600 == 0 {
 			// update variables per 10 minute
@@ -87,12 +87,12 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	txDoc := doc.ConvTx(txIdx, tx, receipt, blockDoc)
 
 	// add tx doc ( defer )
-	defer ns.insertTx(info.Type, txDoc)
+	defer ns.addTx(info.Type, txDoc)
 
 	// Process name transactions
 	if tx.GetBody().GetType() == types.TxType_GOVERNANCE && string(tx.GetBody().GetRecipient()) == "aergo.name" {
 		nameDoc := doc.ConvName(tx, txDoc.BlockNo)
-		ns.insertName(info.Type, nameDoc)
+		ns.addName(info.Type, nameDoc)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	// Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
 		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
-		ns.insertContract(info.Type, contractDoc)
+		ns.addContract(info.Type, contractDoc)
 	}
 
 	// Process Events
@@ -136,11 +136,11 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		// Add Token doc
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(receipt.ContractAddress, ns.isCccvNft(receipt.ContractAddress))
 		tokenDoc := doc.ConvToken(txDoc, receipt.ContractAddress, tType, name, symbol, decimals, supply, supplyFloat)
-		ns.insertToken(info.Type, tokenDoc)
+		ns.addToken(info.Type, tokenDoc)
 
 		// Add Contract doc
 		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
-		ns.insertContract(info.Type, contractDoc)
+		ns.addContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(receipt.ContractAddress)).Msg("Token created ( Policy 2 )")
 	}
@@ -151,7 +151,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
 	// mine all events per contract
 	eventDoc := doc.ConvEvent(event, blockDoc, txDoc, txIdx)
-	ns.insertEvent(info.Type, eventDoc)
+	ns.addEvent(info.Type, eventDoc)
 
 	// parse event by event name
 	ns.MinerEventByName(info, blockDoc, txDoc, event, MinerGRPC)
@@ -173,16 +173,16 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		}
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
 		tokenDoc := doc.ConvToken(txDoc, contractAddress, tokenType, name, symbol, decimals, supply, supplyFloat)
-		ns.insertToken(info.Type, tokenDoc)
+		ns.addToken(info.Type, tokenDoc)
 
 		// Add AccountTokens Doc
 		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, txDoc.Account, ns.isCccvNft(contractAddress))
 		accountTokensDoc := doc.ConvAccountTokens(tokenType, transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo), txDoc.Timestamp, txDoc.Account, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensDoc)
+		ns.addAccountTokens(info.Type, accountTokensDoc)
 
 		// Add Contract Doc
 		contractDoc := doc.ConvContract(txDoc, contractAddress)
-		ns.insertContract(info.Type, contractDoc)
+		ns.addContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Policy 1 )")
 	case transaction.EventMint:
@@ -195,7 +195,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		// Add TokenTransfer Doc
 		tokenType, tokenId, amount, amountFloat := MinerGRPC.QueryOwnerOf(contractAddress, amountOrId, ns.isCccvNft(event.ContractAddress))
 		tokenTransferDoc := doc.ConvTokenTransfer(contractAddress, txDoc, int(event.EventIdx), accountFrom, accountTo, tokenId, amount, amountFloat)
-		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
+		ns.addTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Update Token Doc
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
@@ -205,13 +205,13 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		// Add AccountTokens Doc ( update TO-Account )
 		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.To, ns.isCccvNft(contractAddress))
 		accountTokensDoc := doc.ConvAccountTokens(tokenType, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.To, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensDoc)
+		ns.addAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc
 		if tokenType == transaction.TokenARC2 {
 			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(contractAddress, tokenTransferDoc.TokenId)
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
-			ns.insertNFT(info.Type, nftDoc)
+			ns.addNFT(info.Type, nftDoc)
 		}
 		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event mint")
 	case transaction.EventTransfer:
@@ -227,23 +227,23 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
+		ns.addTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Add AccountTokens Doc ( update TO-Account )
 		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.To, ns.isCccvNft(contractAddress))
 		accountTokensDoc := doc.ConvAccountTokens(tokenType, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.To, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensDoc)
+		ns.addAccountTokens(info.Type, accountTokensDoc)
 
 		// Add AccountTokens Doc ( update FROM-Account )
 		balance, balanceFloat = MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.From, ns.isCccvNft(contractAddress))
 		accountTokensDoc = doc.ConvAccountTokens(tokenType, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.From, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensDoc)
+		ns.addAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc ( update NFT )
 		if tokenType == transaction.TokenARC2 {
 			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(contractAddress, tokenId)
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
-			ns.insertNFT(info.Type, nftDoc)
+			ns.addNFT(info.Type, nftDoc)
 		}
 		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event transfer")
 	case transaction.EventBurn:
@@ -259,7 +259,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		if tokenTransferDoc.Amount == "" {
 			return
 		}
-		ns.insertTokenTransfer(info.Type, tokenTransferDoc)
+		ns.addTokenTransfer(info.Type, tokenTransferDoc)
 
 		// Update TokenUp Doc
 		supply, supplyFloat := MinerGRPC.QueryTotalSupply(contractAddress, ns.isCccvNft(contractAddress))
@@ -269,13 +269,13 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		// Add AccountTokens Doc ( update FROM-Account )
 		balance, balanceFloat := MinerGRPC.QueryBalanceOf(contractAddress, tokenTransferDoc.From, ns.isCccvNft(contractAddress))
 		accountTokensDoc := doc.ConvAccountTokens(tokenType, tokenTransferDoc.TokenAddress, tokenTransferDoc.Timestamp, tokenTransferDoc.From, balance, balanceFloat)
-		ns.insertAccountTokens(info.Type, accountTokensDoc)
+		ns.addAccountTokens(info.Type, accountTokensDoc)
 
 		// Add NFT Doc
 		if tokenType == transaction.TokenARC2 {
 			tokenUri, imageUrl := MinerGRPC.QueryNFTMetadata(contractAddress, tokenId)
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
-			ns.insertNFT(info.Type, nftDoc)
+			ns.addNFT(info.Type, nftDoc)
 		}
 		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event burn")
 
@@ -284,7 +284,27 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 	}
 }
 
-func (ns *Indexer) insertBlock(blockType BlockType, blockDoc *doc.EsBlock) {
+func (ns *Indexer) MinerBalance(info BlockInfo, block *doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
+	if transaction.IsBalanceNotResolved(string(address)) {
+		return
+	}
+	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
+	balanceFromDoc := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
+	ns.addAccountBalance(info.Type, balanceFromDoc)
+}
+
+func (ns *Indexer) MinerVerifyToken(info BlockInfo, address, account []byte, MinerGRPC *client.AergoClientController) {
+	data := MinerGRPC.QueryMetadataOf(address, account)
+	_ = data
+}
+
+func (ns *Indexer) MinerVerifyContract(info BlockInfo, address, account []byte, MinerGRPC *client.AergoClientController) {
+	data := MinerGRPC.QueryMetadataOf(address, account)
+	_ = data
+}
+
+// add logic
+func (ns *Indexer) addBlock(blockType BlockType, blockDoc *doc.EsBlock) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockDoc}
 	} else {
@@ -295,7 +315,7 @@ func (ns *Indexer) insertBlock(blockType BlockType, blockDoc *doc.EsBlock) {
 	}
 }
 
-func (ns *Indexer) insertTx(blockType BlockType, txDoc *doc.EsTx) {
+func (ns *Indexer) addTx(blockType BlockType, txDoc *doc.EsTx) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txDoc}
 	} else {
@@ -305,53 +325,35 @@ func (ns *Indexer) insertTx(blockType BlockType, txDoc *doc.EsTx) {
 		}
 	}
 }
-
-func (ns *Indexer) MinerBalance(info BlockInfo, block *doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
-	if transaction.IsBalanceNotResolved(string(address)) {
-		return
-	}
-	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
-	balanceFromDoc := doc.ConvAccountBalance(info.Height, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
-	ns.insertAccountBalance(info.Type, balanceFromDoc)
-}
-
-func (ns *Indexer) MinerVerifyToken(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
-
-}
-
-func (ns *Indexer) MinerVerifyContract(info BlockInfo, address []byte, MinerGRPC *client.AergoClientController) {
-
-}
-
-func (ns *Indexer) insertEvent(blockType BlockType, eventDoc *doc.EsEvent) {
+func (ns *Indexer) addEvent(blockType BlockType, eventDoc *doc.EsEvent) {
 	err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", eventDoc.Id).Str("method", "insertEvent").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertContract(blockType BlockType, contractDoc *doc.EsContract) {
+func (ns *Indexer) addContract(blockType BlockType, contractDoc *doc.EsContract) {
 	err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertName(blockType BlockType, nameDoc *doc.EsName) {
+func (ns *Indexer) addName(blockType BlockType, nameDoc *doc.EsName) {
 	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", nameDoc.Id).Str("method", "insertName").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertToken(blockType BlockType, tokenDoc *doc.EsToken) {
+func (ns *Indexer) addToken(blockType BlockType, tokenDoc *doc.EsToken) {
 	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", tokenDoc.Id).Str("method", "insertToken").Msg("error while insert")
 	}
 }
 
-func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc *doc.EsAccountTokens) {
+func (ns *Indexer) addAccountTokens(blockType BlockType, accountTokensDoc *doc.EsAccountTokens) {
 	if blockType == BlockType_Bulk {
 		if _, ok := ns.accToken.Load(accountTokensDoc.Id); ok {
 			return
@@ -367,7 +369,7 @@ func (ns *Indexer) insertAccountTokens(blockType BlockType, accountTokensDoc *do
 	}
 }
 
-func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc *doc.EsAccountBalance) {
+func (ns *Indexer) addAccountBalance(blockType BlockType, balanceDoc *doc.EsAccountBalance) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "account_balance",
 		StringMatch: &db.StringMatchQuery{
@@ -403,7 +405,7 @@ func (ns *Indexer) insertAccountBalance(blockType BlockType, balanceDoc *doc.EsA
 	}
 }
 
-func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc *doc.EsTokenTransfer) {
+func (ns *Indexer) addTokenTransfer(blockType BlockType, tokenTransferDoc *doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
 		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
 	} else {
@@ -414,7 +416,7 @@ func (ns *Indexer) insertTokenTransfer(blockType BlockType, tokenTransferDoc *do
 	}
 }
 
-func (ns *Indexer) insertNFT(blockType BlockType, nftDoc *doc.EsNFT) {
+func (ns *Indexer) addNFT(blockType BlockType, nftDoc *doc.EsNFT) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "nft",
 		StringMatch: &db.StringMatchQuery{
