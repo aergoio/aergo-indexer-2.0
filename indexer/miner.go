@@ -38,7 +38,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 			}
 		}
 		// Get Block doc
-		blockDoc := doc.ConvBlock(block, ns.getPeerId(block.Header.PubKey))
+		blockDoc := doc.ConvBlock(block, ns.cache.getPeerId(block.Header.PubKey))
 		for i, tx := range block.Body.Txs {
 			txIdx := uint64(i)
 			ns.MinerTx(txIdx, info, blockDoc, tx, MinerGRPC)
@@ -49,31 +49,9 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 
 		// update variables per 10 minutes
 		if info.Type == BlockType_Sync && blockHeight%600 == 0 {
-			ns.refreshVariables(info, blockDoc, MinerGRPC)
+			ns.cache.refreshVariables(info, blockDoc, MinerGRPC)
 		}
 	}
-}
-
-func (ns *Indexer) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGRPC *client.AergoClientController) {
-	// update verify token
-	ns.addrsVerifiedToken.Range(func(k, v interface{}) bool {
-		return true
-	})
-
-	// update verify code
-	ns.addrsVerifiedContract.Range(func(k, v interface{}) bool {
-		return true
-	})
-
-	// update whitelist balance
-	ns.addrsWhiteListAddr.Range(func(k, v interface{}) bool {
-		if addr, ok := k.(string); ok {
-			if addr, err := types.DecodeAddress(addr); err == nil {
-				ns.MinerBalance(blockDoc, addr, minerGRPC)
-			}
-		}
-		return true
-	})
 }
 
 func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
@@ -306,7 +284,7 @@ func (ns *Indexer) MinerVerifyContract(address, account []byte, MinerGRPC *clien
 // add logic
 func (ns *Indexer) addBlock(blockType BlockType, blockDoc *doc.EsBlock) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.Block <- ChanInfo{ChanType_Add, blockDoc}
+		ns.bulk.BChannel.Block <- ChanInfo{ChanType_Add, blockDoc}
 	} else {
 		err := ns.db.Insert(blockDoc, ns.indexNamePrefix+"block")
 		if err != nil {
@@ -317,7 +295,7 @@ func (ns *Indexer) addBlock(blockType BlockType, blockDoc *doc.EsBlock) {
 
 func (ns *Indexer) addTx(blockType BlockType, txDoc *doc.EsTx) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.Tx <- ChanInfo{ChanType_Add, txDoc}
+		ns.bulk.BChannel.Tx <- ChanInfo{ChanType_Add, txDoc}
 	} else {
 		err := ns.db.Insert(txDoc, ns.indexNamePrefix+"tx")
 		if err != nil {
@@ -355,11 +333,8 @@ func (ns *Indexer) addToken(tokenDoc *doc.EsToken) {
 
 func (ns *Indexer) addAccountTokens(blockType BlockType, accountTokensDoc *doc.EsAccountTokens) {
 	if blockType == BlockType_Bulk {
-		if _, ok := ns.accToken.Load(accountTokensDoc.Id); ok {
-			return
-		} else {
-			ns.BChannel.AccTokens <- ChanInfo{ChanType_Add, accountTokensDoc}
-			ns.accToken.Store(accountTokensDoc.Id, true)
+		if ns.cache.getAccTokens(accountTokensDoc.Id) != true {
+			ns.bulk.BChannel.AccTokens <- ChanInfo{ChanType_Add, accountTokensDoc}
 		}
 	} else {
 		err := ns.db.Insert(accountTokensDoc, ns.indexNamePrefix+"account_tokens")
@@ -401,13 +376,13 @@ func (ns *Indexer) addAccountBalance(balanceDoc *doc.EsAccountBalance) {
 
 	// stake 주소는 whitelist 에 추가
 	if balanceDoc.StakingFloat > 0 {
-		ns.addrsWhiteListAddr.Store(balanceDoc.Id, true)
+		ns.cache.addrsWhiteListAddr.Store(balanceDoc.Id, true)
 	}
 }
 
 func (ns *Indexer) addTokenTransfer(blockType BlockType, tokenTransferDoc *doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
-		ns.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
+		ns.bulk.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
 	} else {
 		err := ns.db.Insert(tokenTransferDoc, ns.indexNamePrefix+"token_transfer")
 		if err != nil {
@@ -449,15 +424,4 @@ func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUp) {
 	if err != nil {
 		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")
 	}
-}
-
-func (ns *Indexer) getPeerId(pubKey []byte) string {
-	// if exist, return peerId
-	if peerId, exist := ns.peerId.Load(string(pubKey)); exist == true {
-		return peerId.(string)
-	}
-	// if not exist, make peerId
-	peerId := transaction.MakePeerId(pubKey)
-	ns.peerId.Store(string(pubKey), peerId)
-	return peerId
 }

@@ -25,7 +25,7 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 
 func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 	ns.log.Info().Uint64("startFrom", startFrom).Uint64("stopAt", stopAt).Msg("Check Block range")
-	ns.StartBulkChannel()
+	ns.bulk.StartBulkChannel()
 
 	var block doc.DocType
 	var err error
@@ -72,17 +72,17 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 		}
 		if blockNo < prevBlockNo-1 {
 			missingBlocks = missingBlocks + (prevBlockNo - blockNo - 1)
-			ns.InsertBlocksInRange(blockNo+1, prevBlockNo-1)
+			ns.bulk.InsertBlocksInRange(blockNo+1, prevBlockNo-1)
 		}
 		prevBlockNo = blockNo
 	}
 
 	if blockNo != startFrom && prevBlockNo > startFrom {
 		missingBlocks = missingBlocks + (prevBlockNo - startFrom)
-		ns.InsertBlocksInRange(startFrom, prevBlockNo-1)
+		ns.bulk.InsertBlocksInRange(startFrom, prevBlockNo-1)
 	}
 
-	ns.StopBulkChannel()
+	ns.bulk.StopBulkChannel()
 	ns.log.Info().Uint64("missing", missingBlocks).Msg("Done with consistency check")
 }
 

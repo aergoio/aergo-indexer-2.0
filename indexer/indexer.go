@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
@@ -16,33 +15,7 @@ import (
 
 // Indexer hold all state information
 type Indexer struct {
-	db         db.DbController
-	grpcClient *client.AergoClientController
-
-	stream          types.AergoRPCService_ListBlockStreamClient
-	MChannel        chan BlockInfo
-	BChannel        ChanInfoType
-	RChannel        []chan BlockInfo
-	SynDone         chan bool
-	indexNamePrefix string
-	aliasNamePrefix string
-	lastHeight      uint64
-	cccvNftAddress  []byte
-
-	// for bulk
-	bulkSize  int32
-	batchTime time.Duration
-	minerNum  int
-	grpcNum   int
-
-	// cache
-	accToken              sync.Map
-	peerId                sync.Map
-	addrsWhiteListAddr    sync.Map
-	addrsVerifiedToken    sync.Map
-	addrsVerifiedContract sync.Map
-
-	// config by user
+	// config
 	log                *log.Logger
 	dbAddr             string
 	serverAddr         string
@@ -51,6 +24,21 @@ type Indexer struct {
 	networkTypeForCccv string
 	contractVerifyAddr string
 	tokenVerifyAddr    string
+	indexNamePrefix    string
+	aliasNamePrefix    string
+	lastHeight         uint64
+	cccvNftAddress     []byte
+	bulkSize           int32
+	batchTime          time.Duration
+	minerNum           int
+	grpcNum            int
+	whitelistAddresses []string
+
+	db         db.DbController
+	grpcClient *client.AergoClientController
+	stream     types.AergoRPCService_ListBlockStreamClient
+	bulk       *Bulk
+	cache      *Cache
 }
 
 // 임시 : 지울 주석
@@ -91,6 +79,12 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		return nil, err
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Successfully connected to the database")
+
+	// set bulk
+	svc.bulk = NewBulk(svc, svc.bulkSize, svc.batchTime, svc.minerNum, svc.grpcNum)
+
+	// set cache
+	svc.cache = NewCache(svc, svc.whitelistAddresses)
 
 	return svc, nil
 }
@@ -180,10 +174,33 @@ func (ns *Indexer) InitIndex() error {
 	}
 
 	// check chain info
+	err := ns.ValidChainInfo()
+	if err != nil {
+		ns.log.Error().Err(err).Msg("Chain info is not valid. please check aergo server info or reset")
+		return err
+	}
+
+	// create other indexes
+	ns.CreateIndexIfNotExists("block")
+	ns.CreateIndexIfNotExists("tx")
+	ns.CreateIndexIfNotExists("name")
+	ns.CreateIndexIfNotExists("event")
+	ns.CreateIndexIfNotExists("token")
+	ns.CreateIndexIfNotExists("contract")
+	ns.CreateIndexIfNotExists("token_transfer")
+	ns.CreateIndexIfNotExists("account_tokens")
+	ns.CreateIndexIfNotExists("nft")
+	ns.CreateIndexIfNotExists("account_balance")
+
+	return nil
+}
+
+func (ns *Indexer) ValidChainInfo() error {
 	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
 	if err != nil {
 		return err
 	}
+
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
 		SortField: "version",
@@ -195,7 +212,7 @@ func (ns *Indexer) InitIndex() error {
 		return chainInfo
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Msg("Could not query chain info, add new one.")
+		ns.log.Info().Err(err).Msg("Could not query chain info, add new one.")
 	}
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
@@ -221,19 +238,6 @@ func (ns *Indexer) InitIndex() error {
 			return errors.New("chain info is not matched")
 		}
 	}
-
-	// create other indexes
-	ns.CreateIndexIfNotExists("block")
-	ns.CreateIndexIfNotExists("tx")
-	ns.CreateIndexIfNotExists("name")
-	ns.CreateIndexIfNotExists("event")
-	ns.CreateIndexIfNotExists("token")
-	ns.CreateIndexIfNotExists("contract")
-	ns.CreateIndexIfNotExists("token_transfer")
-	ns.CreateIndexIfNotExists("account_tokens")
-	ns.CreateIndexIfNotExists("nft")
-	ns.CreateIndexIfNotExists("account_balance")
-
 	return nil
 }
 
