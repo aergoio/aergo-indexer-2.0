@@ -32,8 +32,8 @@ var (
 	cluster               bool
 	from                  uint64
 	to                    uint64
+	cccvNftServerType     string
 	whiteListAddresses    []string
-	typeCccvNft           string
 	tokenVerifyAddress    string
 	contractVerifyAddress string
 
@@ -56,7 +56,7 @@ func init() {
 	fs.Uint64Var(&from, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
 	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance. onsync only")
-	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
+	fs.StringVar(&cccvNftServerType, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
 	fs.StringVarP(&contractVerifyAddress, "contract", "c", "", "address for query contract code")
 	fs.StringVarP(&tokenVerifyAddress, "token", "t", "", "address for query verified token")
 }
@@ -78,7 +78,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetServerAddr(getServerAddress()),
 		indexer.SetDBAddr(dbURL),
 		indexer.SetPrefix(prefix),
-		indexer.SetNetworkTypeForCccv(typeCccvNft),
+		indexer.SetNetworkTypeForCccv(cccvNftServerType),
 		indexer.SetRunMode(getRunMode()),
 		indexer.SetLogger(logger),
 		indexer.SetWhiteListAddresses(whiteListAddresses),
