@@ -10,9 +10,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGetData(t *testing.T) {
+	data, err := GetCode("https://github.com/aergoio/ARC2NFT/raw/master/src/ARC2-Mintable.lua")
+	require.NoError(t, err)
+	fmt.Println(data)
+}
+
 func TestCompile(t *testing.T) {
 	code := readLuaCode("type_arrayarg.lua")
-	byteCode, err := Compile(code)
+	byteCode, err := CompileCode(code)
+	require.NoError(t, err)
+	fmt.Println(len(byteCode), byteCode)
+	fmt.Println(string(byteCode))
+}
+
+func TestGetDataAndCompile(t *testing.T) {
+	code, err := GetCode("https://github.com/aergoio/ARC2NFT/raw/master/src/ARC2-Mintable.lua")
+	require.NoError(t, err)
+	fmt.Println(code)
+	byteCode, err := CompileCode(code)
 	require.NoError(t, err)
 	fmt.Println(len(byteCode), byteCode)
 	fmt.Println(string(byteCode))

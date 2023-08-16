@@ -12,7 +12,7 @@ import (
 )
 
 type Cache struct {
-	idx *Indexer
+	idxer *Indexer
 
 	accToken              sync.Map
 	peerId                sync.Map
@@ -21,9 +21,12 @@ type Cache struct {
 	addrsVerifiedContract sync.Map
 }
 
-func NewCache(idx *Indexer, whitelistAddresses []string) *Cache {
-	cache := &Cache{idx: idx}
-	for _, whitelistAddr := range whitelistAddresses {
+func NewCache(idxer *Indexer) *Cache {
+	cache := &Cache{
+		idxer: idxer,
+	}
+
+	for _, whitelistAddr := range idxer.whitelistAddresses {
 		cache.addrsWhiteListAddr.Store(whitelistAddr, true)
 	}
 	return cache
@@ -32,8 +35,8 @@ func NewCache(idx *Indexer, whitelistAddresses []string) *Cache {
 // register staking account to white list. ( staking addresses receive rewards by block creation )
 func (c *Cache) registerVariables() {
 	// register whitelist
-	scroll := c.idx.db.Scroll(db.QueryParams{
-		IndexName: c.idx.indexNamePrefix + "account_balance",
+	scroll := c.idxer.db.Scroll(db.QueryParams{
+		IndexName: c.idxer.indexNamePrefix + "account_balance",
 		SortField: "staking_float",
 		Size:      10000,
 		From:      10000,
@@ -57,11 +60,19 @@ func (c *Cache) registerVariables() {
 func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGRPC *client.AergoClientController) {
 	// update verify token
 	ns.addrsVerifiedToken.Range(func(k, v interface{}) bool {
+		if tokenAddress, ok := k.(string); ok {
+			metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, tokenAddress)
+			ns.idxer.MinerVerifyToken(tokenAddress, metadata, minerGRPC)
+		}
 		return true
 	})
 
 	// update verify code
 	ns.addrsVerifiedContract.Range(func(k, v interface{}) bool {
+		if contractAddress, ok := k.(string); ok {
+			metadata := minerGRPC.QueryMetadataOf(ns.idxer.contractVerifyAddr, contractAddress)
+			ns.idxer.MinerVerifyContract(contractAddress, metadata, minerGRPC)
+		}
 		return true
 	})
 
@@ -69,7 +80,7 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	ns.addrsWhiteListAddr.Range(func(k, v interface{}) bool {
 		if addr, ok := k.(string); ok {
 			if addr, err := types.DecodeAddress(addr); err == nil {
-				ns.idx.MinerBalance(blockDoc, addr, minerGRPC)
+				ns.idxer.MinerBalance(blockDoc, addr, minerGRPC)
 			}
 		}
 		return true

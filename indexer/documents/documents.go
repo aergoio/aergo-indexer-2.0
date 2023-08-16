@@ -80,17 +80,15 @@ type EsContract struct {
 	BlockNo      uint64    `json:"blockno" db:"blockno"`
 	Timestamp    time.Time `json:"ts" db:"ts"`
 	Verified     string    `json:"verified" db:"verified"`
-	VerifiedNo   uint64    `json:"verified_no" db:"verified_no"`
-	VerifiedTxid string    `json:"verified_txid" db:"verified_txid"`
 	VerifiedCode string    `json:"verified_code" db:"verified_code"`
 }
 
 type EsContractUp struct {
 	*BaseEsType
-	Verified     string `json:"verified" db:"verified"`
-	VerifiedNo   uint64 `json:"verified_no" db:"verified_no"`
-	VerifiedTxid string `json:"verified_txid" db:"verified_txid"`
-	VerifiedCode string `json:"verified_code" db:"verified_code"`
+	Verified          string `json:"verified" db:"verified"`
+	Payload           string `json:"payload" db:"payload"`
+	VeritiedTokenAddr string `json:"verified_token_addr" db:"verified_token_addr"`
+	VerifiedCode      string `json:"verified_code" db:"verified_code"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -139,10 +137,13 @@ type EsTokenUp struct {
 
 type EsTokenVerified struct {
 	*BaseEsType
-	Status      string `json:"status" db:"status"`
-	HomepageUrl string `json:"homepage_url" db:"homepage_url"`
-	ImageUrl    string `json:"image_url" db:"image_url"`
-	Comment     string `json:"comment" db:"comment"`
+	TokenAddress string `json:"token_addr" db:"token_addr"`
+	Owner        string `json:"owner" db:"owner"`
+	Comment      string `json:"comment" db:"comment"`
+	Email        string `json:"email" db:"email"`
+	RegDate      string `json:"regdate" db:"regdate"`
+	ImageUrl     string `json:"image_url" db:"image_url"`
+	HomepageUrl  string `json:"homepage_url" db:"homepage_url"`
 }
 
 // EsTokenTransfer is a transfer of a token
@@ -479,16 +480,25 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"status": {
+						"token_address": {
+							"type": "keyword"
+						},
+						"owner": {
+							"type": "keyword"
+						},
+						"comment": {
+							"type": "keyword"
+						},
+						"email": {
+							"type": "keyword"
+						},
+						"regdate": {
 							"type": "keyword"
 						},
 						"homepage_url": {
 							"type": "keyword"
 						},
 						"image_url": {
-							"type": "keyword"
-						},
-						"comment": {
 							"type": "keyword"
 						}
 					}
@@ -897,16 +907,25 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"status": {
+						"token_address": {
+							"type": "keyword"
+						},
+						"owner": {
+							"type": "keyword"
+						},
+						"comment": {
+							"type": "keyword"
+						},
+						"email": {
+							"type": "keyword"
+						},
+						"regdate": {
 							"type": "keyword"
 						},
 						"homepage_url": {
 							"type": "keyword"
 						},
 						"image_url": {
-							"type": "keyword"
-						},
-						"comment": {
 							"type": "keyword"
 						}
 					}

@@ -133,8 +133,8 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 	return balance, balanceFloat
 }
 
-func (t *AergoClientController) QueryMetadataOf(contractAddress []byte, account string) string {
-	req, err := t.queryContract(contractAddress, "get_metadata", account)
+func (t *AergoClientController) QueryMetadataOf(contractAddress []byte, tokenAddress string) string {
+	req, err := t.queryContract(contractAddress, "get_metadata", tokenAddress)
 	if err != nil {
 		fmt.Println(err)
 		return ""

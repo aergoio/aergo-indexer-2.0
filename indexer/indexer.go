@@ -22,8 +22,6 @@ type Indexer struct {
 	prefix             string
 	runMode            string
 	networkTypeForCccv string
-	contractVerifyAddr string
-	tokenVerifyAddr    string
 	indexNamePrefix    string
 	aliasNamePrefix    string
 	lastHeight         uint64
@@ -33,6 +31,8 @@ type Indexer struct {
 	minerNum           int
 	grpcNum            int
 	whitelistAddresses []string
+	tokenVerifyAddr    []byte
+	contractVerifyAddr []byte
 
 	db         db.DbController
 	grpcClient *client.AergoClientController
@@ -81,10 +81,10 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Successfully connected to the database")
 
 	// set bulk
-	svc.bulk = NewBulk(svc, svc.bulkSize, svc.batchTime, svc.minerNum, svc.grpcNum)
+	svc.bulk = NewBulk(svc)
 
 	// set cache
-	svc.cache = NewCache(svc, svc.whitelistAddresses)
+	svc.cache = NewCache(svc)
 
 	return svc, nil
 }
@@ -186,6 +186,7 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("name")
 	ns.CreateIndexIfNotExists("event")
 	ns.CreateIndexIfNotExists("token")
+	ns.CreateIndexIfNotExists("token_verified")
 	ns.CreateIndexIfNotExists("contract")
 	ns.CreateIndexIfNotExists("token_transfer")
 	ns.CreateIndexIfNotExists("account_tokens")

@@ -131,8 +131,32 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.
 	eventDoc := doc.ConvEvent(event, blockDoc, txDoc, txIdx)
 	ns.addEvent(eventDoc)
 
+	// parse event by contract address
+	ns.MinerEventByAddr(blockDoc, txDoc, event, MinerGRPC)
+
 	// parse event by event name
 	ns.MinerEventByName(info, blockDoc, txDoc, event, MinerGRPC)
+}
+
+func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
+
+	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.tokenVerifyAddr) == true {
+		tokenAddr, err := transaction.UnmarshalEventVerifyToken(event)
+		if err != nil {
+			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
+			return
+		}
+		ns.cache.addrsVerifiedToken.Store(tokenAddr, true)
+	}
+	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.contractVerifyAddr) == true {
+		contractAddr, err := transaction.UnmarshalEventVerifyContract(event)
+		if err != nil {
+			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
+			return
+		}
+		ns.cache.addrsVerifiedContract.Store(contractAddr, true)
+	}
+
 }
 
 func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
@@ -256,7 +280,6 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 			ns.addNFT(nftDoc)
 		}
 		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event burn")
-
 	default:
 		return
 	}
@@ -271,14 +294,23 @@ func (ns *Indexer) MinerBalance(block *doc.EsBlock, address []byte, MinerGRPC *c
 	ns.addAccountBalance(balanceFromDoc)
 }
 
-func (ns *Indexer) MinerVerifyToken(address []byte, account string, MinerGRPC *client.AergoClientController) {
-	data := MinerGRPC.QueryMetadataOf(address, account)
-	_ = data
+func (ns *Indexer) MinerVerifyToken(tokenAddr, metadata string, MinerGRPC *client.AergoClientController) {
+	contractAddr, owner, comment, email, regDate, homepageUrl, imageUrl, err := transaction.UnmarshalMetadataVerifyToken(metadata)
+	if err != nil {
+		ns.log.Error().Err(err).Str("method", "verifyToken").Msg("Failed to unmarshal metadata")
+		return
+	}
+	tokenVerifiedDoc := doc.ConvTokenVerified(contractAddr, tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl)
+	ns.addTokenVerified(tokenVerifiedDoc)
 }
 
-func (ns *Indexer) MinerVerifyContract(address []byte, account string, MinerGRPC *client.AergoClientController) {
-	data := MinerGRPC.QueryMetadataOf(address, account)
-	_ = data
+func (ns *Indexer) MinerVerifyContract(contractAddress, metadata string, MinerGRPC *client.AergoClientController) {
+	// contractAddr, codeUrl, owner, err := transaction.UnmarshalMetadataVerifyContract(metadata)
+	// if err != nil {
+	// ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
+	// return
+	// }
+
 }
 
 // add logic
@@ -328,6 +360,13 @@ func (ns *Indexer) addToken(tokenDoc *doc.EsToken) {
 	err := ns.db.Insert(tokenDoc, ns.indexNamePrefix+"token")
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", tokenDoc.Id).Str("method", "insertToken").Msg("error while insert")
+	}
+}
+
+func (ns *Indexer) addTokenVerified(tokenVerifiedDoc *doc.EsTokenVerified) {
+	err := ns.db.Insert(tokenVerifiedDoc, ns.indexNamePrefix+"token_verified")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", tokenVerifiedDoc.Id).Str("method", "insertToken").Msg("error while insert")
 	}
 }
 

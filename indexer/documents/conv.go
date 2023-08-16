@@ -85,12 +85,10 @@ func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	}
 }
 
-func ConvContractUp(contractAddress []byte, blockNo uint64, txId, status, code string) *EsContractUp {
+func ConvContractUp(contractAddress []byte, verified, code string) *EsContractUp {
 	return &EsContractUp{
-		BaseEsType:   &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, blockNo)},
-		Verified:     status,
-		VerifiedNo:   blockNo,
-		VerifiedTxid: txId,
+		BaseEsType:   &BaseEsType{Id: transaction.EncodeAccount(contractAddress)},
+		Verified:     verified,
 		VerifiedCode: code,
 	}
 }
@@ -110,7 +108,6 @@ func ConvEvent(event *types.Event, blockDoc *EsBlock, txDoc *EsTx, txIdx uint64)
 	}
 }
 
-// ConvContractCreateTx creates document for token creation
 func ConvTokenUp(txDoc *EsTx, contractAddress []byte, supply string, supplyFloat float32) *EsTokenUp {
 	return &EsTokenUp{
 		BaseEsType:  &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
@@ -119,7 +116,6 @@ func ConvTokenUp(txDoc *EsTx, contractAddress []byte, supply string, supplyFloat
 	}
 }
 
-// ConvContractCreateTx creates document for token creation
 func ConvToken(txDoc *EsTx, contractAddress []byte, tokenType transaction.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32) *EsToken {
 	return &EsToken{
 		BaseEsType:     &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
@@ -135,6 +131,19 @@ func ConvToken(txDoc *EsTx, contractAddress []byte, tokenType transaction.TokenT
 		Decimals:       decimals,
 		Supply:         supply,
 		SupplyFloat:    supplyFloat,
+	}
+}
+
+func ConvTokenVerified(contractAddress, tokenAddress, owner, comment, email, regDate, homepageUrl, imageUrl string) *EsTokenVerified {
+	return &EsTokenVerified{
+		BaseEsType:   &BaseEsType{Id: contractAddress},
+		TokenAddress: tokenAddress,
+		Owner:        owner,
+		Comment:      comment,
+		Email:        email,
+		RegDate:      regDate,
+		ImageUrl:     imageUrl,
+		HomepageUrl:  homepageUrl,
 	}
 }
 

@@ -79,10 +79,6 @@ tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
-verified        string      verified status
-verified_no     uint64      verified block number
-verified_txid   string      verified transaction hash
-verified_code   keyword     verified contract code
 ```
 
 event
@@ -128,11 +124,14 @@ supply_float    float32     Imprecise float representation of amount, useful for
 
 token_verified
 ```
-id              string      address of token contract
-status          string      verified token status
+id              string      address of contract
+token_address   string      address of token
+owner           string      address of token owner
+comment         string      verified token comment
+email           string      email of token owner
+regdate         string      registration date (YYMMDD)
 homepage_url    string      verified token homepage url
 image_url       string      verified token image url
-comment         string      verified token comment
 ```
 
 token_transfer

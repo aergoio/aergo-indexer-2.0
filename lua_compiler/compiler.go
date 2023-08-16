@@ -15,7 +15,26 @@ const (
 	url = "https://luac.aergo.io/compile"
 )
 
-func Compile(code string) ([]byte, error) {
+func GetCode(url string) (code string, err error) {
+	// HTTP GET 요청 보내기
+	response, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("Error sending request: %v", err)
+	}
+	defer response.Body.Close()
+
+	// 응답 본문 읽기
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", fmt.Errorf("Error reading response body: %v", err)
+	}
+
+	// 문자열로 변환하여 출력
+	content := string(body)
+	return content, nil
+}
+
+func CompileCode(code string) ([]byte, error) {
 	data := []byte(base64.StdEncoding.EncodeToString([]byte(code)))
 	resp, err := http.Post(url, "text/plain", bytes.NewBuffer(data))
 	if err != nil {

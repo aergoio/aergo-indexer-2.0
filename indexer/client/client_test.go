@@ -15,7 +15,7 @@ const (
 	AergoServerAddress = "192.168.0.102:7845" // testnet
 )
 
-func TestQuery_VerifyMetadata(t *testing.T) {
+func TestQuery_VerifyMetadata_token(t *testing.T) {
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 	require.NoError(t, err)
 
@@ -23,6 +23,22 @@ func TestQuery_VerifyMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	res := grpcClient.QueryMetadataOf(addr, "STV0001")
+	fmt.Println(res)
+
+	addr, err = types.DecodeAddress("AmgyJRePyPDf4YSMubNpmwnKwr4LAfMUrKbGrkZHYSA3kTLqN28a")
+	require.NoError(t, err)
+	name, symbol, decimal := grpcClient.QueryTokenInfo(addr)
+	fmt.Println(name, "|", symbol, "|", decimal)
+}
+
+func TestQuery_VerifyMetadata_contract(t *testing.T) {
+	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
+	require.NoError(t, err)
+
+	addr, err := types.DecodeAddress("AmfwsNZc6jmLoeJvSNTxy2c3QUtjjsDCRxjnhVZH91q9aELiAN2K")
+	require.NoError(t, err)
+
+	res := grpcClient.QueryMetadataOf(addr, "SCV0001")
 	fmt.Println(res)
 }
 

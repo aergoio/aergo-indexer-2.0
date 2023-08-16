@@ -218,6 +218,38 @@ func UnmarshalEventBurn(event *types.Event) (contractAddress []byte, accountFrom
 	return contractAddress, accountFrom, accountTo, amountOrId, nil
 }
 
+func UnmarshalEventVerifyToken(event *types.Event) (tokenAddress string, err error) {
+	var args []interface{}
+	err = json.Unmarshal([]byte(event.JsonArgs), &args)
+	if err != nil {
+		return "", fmt.Errorf("%v | %s", err, event.JsonArgs)
+	}
+	if len(args) < 2 {
+		return "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
+	}
+	tokenAddress, ok := args[1].(string)
+	if !ok {
+		return "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
+	}
+	return tokenAddress, nil
+}
+
+func UnmarshalEventVerifyContract(event *types.Event) (tokenAddress string, err error) {
+	var args []interface{}
+	err = json.Unmarshal([]byte(event.JsonArgs), &args)
+	if err != nil {
+		return "", fmt.Errorf("%v | %s", err, event.JsonArgs)
+	}
+	if len(args) < 2 {
+		return "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
+	}
+	tokenAddress, ok := args[1].(string)
+	if !ok {
+		return "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
+	}
+	return tokenAddress, nil
+}
+
 // parse string, byte, int, map[string]interface{} to string
 func ParseAmountOrId(amountOrId interface{}) (string, error) {
 	switch data := amountOrId.(type) {

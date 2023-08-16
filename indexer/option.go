@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
 )
 
@@ -51,6 +52,21 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.whitelistAddresses = whiteListAddresses
+		return nil
+	}
+}
+
+func SetVerifyTokenAddress(verifyTokenAddress string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if verifyTokenAddress == "" {
+			return nil
+		}
+		raw, err := types.DecodeAddress(verifyTokenAddress)
+		if err != nil {
+			return err
+		}
+
+		indexer.tokenVerifyAddr = raw
 		return nil
 	}
 }
