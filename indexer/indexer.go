@@ -12,8 +12,6 @@ import (
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // Indexer hold all state information
@@ -55,6 +53,7 @@ type Indexer struct {
 	tokenVerifyAddr    string
 }
 
+// 임시 : 지울 주석
 // 시작할때 es 에서 verifiedToken / verifiedContract 목록을 가져와 메모리에 적재
 // 블록 탐색할 때 verifiedToken / verifiedContract 를 찾아 메모리 / db 에 적재
 // 일정 시간마다 메모리에 있는 verifiedToken / verifiedContract 를 조회해 변경 내역을 db 에 업데이트 ( 추가, 삭제, 갱신 )
@@ -317,21 +316,4 @@ func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 		return 0, errors.New("best block not found")
 	}
 	return block.(*doc.EsBlock).BlockNo, nil
-}
-
-func (ns *Indexer) makePeerId(pubKey []byte) string {
-	if peerId, is_ok := ns.peerId.Load(string(pubKey)); is_ok == true {
-		return peerId.(string)
-	}
-	cryptoPubKey, err := crypto.UnmarshalPublicKey(pubKey)
-	if err != nil {
-		return ""
-	}
-	Id, err := peer.IDFromPublicKey(cryptoPubKey)
-	if err != nil {
-		return ""
-	}
-	peer := peer.IDB58Encode(Id)
-	ns.peerId.Store(string(pubKey), peer)
-	return peer
 }
