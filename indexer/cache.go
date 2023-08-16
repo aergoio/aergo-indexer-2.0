@@ -52,7 +52,7 @@ func (c *Cache) registerVariables() {
 			break
 		}
 		if tokenVerified, ok := document.(*doc.EsTokenVerified); ok {
-			c.addrsWhiteListAddr.Store(tokenVerified.TokenAddress, true)
+			c.storeVerifiedToken(tokenVerified.TokenAddress)
 		}
 	}
 
@@ -76,7 +76,7 @@ func (c *Cache) registerVariables() {
 			break
 		}
 		if balance, ok := document.(*doc.EsAccountBalance); ok && balance.StakingFloat >= 10000 {
-			c.addrsWhiteListAddr.Store(balance.Id, true)
+			c.storeWhiteList(balance.Id)
 		}
 	}
 }
@@ -86,7 +86,7 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	ns.addrsVerifiedToken.Range(func(k, v interface{}) bool {
 		if tokenAddress, ok := k.(string); ok {
 			metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, tokenAddress)
-			ns.idxer.MinerVerifyToken(tokenAddress, metadata, minerGRPC)
+			ns.idxer.MinerTokenVerified(tokenAddress, metadata, minerGRPC)
 		}
 		return true
 	})
@@ -95,7 +95,7 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	ns.addrsVerifiedContract.Range(func(k, v interface{}) bool {
 		if contractAddress, ok := k.(string); ok {
 			metadata := minerGRPC.QueryMetadataOf(ns.idxer.contractVerifyAddr, contractAddress)
-			ns.idxer.MinerVerifyContract(contractAddress, metadata, minerGRPC)
+			ns.idxer.MinerContractVerified(contractAddress, metadata, minerGRPC)
 		}
 		return true
 	})
@@ -128,4 +128,12 @@ func (c *Cache) getAccTokens(id string) (exist bool) {
 		c.accToken.Store(id, true)
 	}
 	return exist
+}
+
+func (c *Cache) storeVerifiedToken(id string) {
+	c.addrsVerifiedToken.Store(id, true)
+}
+
+func (c *Cache) storeWhiteList(id string) {
+	c.addrsWhiteListAddr.Store(id, true)
 }
