@@ -116,7 +116,6 @@ name            string      token name
 name_lower      string      token name lowercase, useful to case-insensitive search
 symbol          string      token symbol
 symbol_lower    string      token symbol lowercase, useful to case-insensitive search
-token_transfers uint64      number of token transfers
 decimals        uint8       decimals of token
 supply          string      Precise BigInt string representation of total supply 
 supply_float    float32     Imprecise float representation of amount, useful for sorting
@@ -132,6 +131,12 @@ email           string      email of token owner
 regdate         string      registration date (YYMMDD)
 homepage_url    string      verified token homepage url
 image_url       string      verified token image url
+name            string      token name
+name_lower      string      token name lowercase, useful to case-insensitive search
+symbol          string      token symbol
+symbol_lower    string      token symbol lowercase, useful to case-insensitive search
+total_supply    string      Precise BigInt string representation of total supply 
+total_transfer  string      total transfer count about token
 ```
 
 token_transfer

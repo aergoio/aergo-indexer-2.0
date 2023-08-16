@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	AergoServerAddress = "192.168.0.102:7845" // testnet
+	AergoServerAddress = "localhost:7845" // testnet
 )
 
 func TestQuery_VerifyMetadata_token(t *testing.T) {

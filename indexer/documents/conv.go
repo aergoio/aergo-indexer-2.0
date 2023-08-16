@@ -118,32 +118,38 @@ func ConvTokenUp(txDoc *EsTx, contractAddress []byte, supply string, supplyFloat
 
 func ConvToken(txDoc *EsTx, contractAddress []byte, tokenType transaction.TokenType, name string, symbol string, decimals uint8, supply string, supplyFloat float32) *EsToken {
 	return &EsToken{
-		BaseEsType:     &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
-		TxId:           txDoc.GetID(),
-		BlockNo:        txDoc.BlockNo,
-		Creator:        txDoc.Account, // tx account --> token creator
-		TokenTransfers: uint64(0),
-		Type:           tokenType,
-		Name:           name,
-		Name_lower:     strings.ToLower(name),
-		Symbol:         symbol,
-		Symbol_lower:   strings.ToLower(symbol),
-		Decimals:       decimals,
-		Supply:         supply,
-		SupplyFloat:    supplyFloat,
+		BaseEsType:   &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		TxId:         txDoc.GetID(),
+		BlockNo:      txDoc.BlockNo,
+		Creator:      txDoc.Account, // tx account --> token creator
+		Type:         tokenType,
+		Name:         name,
+		Name_lower:   strings.ToLower(name),
+		Symbol:       symbol,
+		Symbol_lower: strings.ToLower(symbol),
+		Decimals:     decimals,
+		Supply:       supply,
+		SupplyFloat:  supplyFloat,
 	}
 }
 
-func ConvTokenVerified(contractAddress, tokenAddress, owner, comment, email, regDate, homepageUrl, imageUrl string) *EsTokenVerified {
+func ConvTokenVerified(tokenDoc *EsToken, tokenAddress, owner, comment, email, regDate, homepageUrl, imageUrl string, totalTransfer uint64) *EsTokenVerified {
 	return &EsTokenVerified{
-		BaseEsType:   &BaseEsType{Id: contractAddress},
-		TokenAddress: tokenAddress,
-		Owner:        owner,
-		Comment:      comment,
-		Email:        email,
-		RegDate:      regDate,
-		ImageUrl:     imageUrl,
-		HomepageUrl:  homepageUrl,
+		BaseEsType:    &BaseEsType{Id: tokenDoc.Id},
+		Type:          string(tokenDoc.Type),
+		Name:          tokenDoc.Name,
+		Name_lower:    tokenDoc.Name_lower,
+		Symbol:        tokenDoc.Symbol,
+		Symbol_lower:  tokenDoc.Symbol_lower,
+		TotalSupply:   tokenDoc.Supply,
+		TokenAddress:  tokenAddress,
+		Owner:         owner,
+		Comment:       comment,
+		Email:         email,
+		RegDate:       regDate,
+		ImageUrl:      imageUrl,
+		HomepageUrl:   homepageUrl,
+		TotalTransfer: totalTransfer,
 	}
 }
 

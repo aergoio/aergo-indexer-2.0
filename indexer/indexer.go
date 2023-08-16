@@ -2,13 +2,11 @@ package indexer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
-	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
 )
@@ -40,11 +38,6 @@ type Indexer struct {
 	bulk       *Bulk
 	cache      *Cache
 }
-
-// 임시 : 지울 주석
-// 시작할때 es 에서 verifiedToken / verifiedContract 목록을 가져와 메모리에 적재
-// 블록 탐색할 때 verifiedToken / verifiedContract 를 찾아 메모리 / db 에 적재
-// 일정 시간마다 메모리에 있는 verifiedToken / verifiedContract 를 조회해 변경 내역을 db 에 업데이트 ( 추가, 삭제, 갱신 )
 
 // NewIndexer creates new Indexer instance
 func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
@@ -80,10 +73,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Successfully connected to the database")
 
-	// set bulk
+	// set bulk, cache
 	svc.bulk = NewBulk(svc)
-
-	// set cache
 	svc.cache = NewCache(svc)
 
 	return svc, nil
@@ -99,7 +90,7 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 	}
 
 	ns.initCccvNft()
-	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
+	ns.lastHeight = uint64(ns.GetBestBlock()) - 1
 
 	switch ns.runMode {
 	case "all":
@@ -196,104 +187,8 @@ func (ns *Indexer) InitIndex() error {
 	return nil
 }
 
-func (ns *Indexer) ValidChainInfo() error {
-	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
-	if err != nil {
-		return err
-	}
-
-	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
-		IndexName: ns.indexNamePrefix + "chain_info",
-		SortField: "version",
-		SortAsc:   true,
-		From:      0,
-	}, func() doc.DocType {
-		chainInfo := new(doc.EsChainInfo)
-		chainInfo.BaseEsType = new(doc.BaseEsType)
-		return chainInfo
-	})
-	if err != nil {
-		ns.log.Info().Err(err).Msg("Could not query chain info, add new one.")
-	}
-	if document == nil { // if empty in db, put new chain info
-		chainInfo := doc.EsChainInfo{
-			BaseEsType: &doc.BaseEsType{
-				Id: chainInfoFromNode.Id.Magic,
-			},
-			Mainnet:   chainInfoFromNode.Id.Mainnet,
-			Public:    chainInfoFromNode.Id.Public,
-			Consensus: chainInfoFromNode.Id.Consensus,
-			Version:   uint64(chainInfoFromNode.Id.Version),
-		}
-		err = ns.db.Insert(&chainInfo, ns.indexNamePrefix+"chain_info")
-		if err != nil {
-			return err
-		}
-	} else {
-		chainInfoFromDb := document.(*doc.EsChainInfo)
-		if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
-			chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
-			chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
-			chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
-			chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
-			return errors.New("chain info is not matched")
-		}
-	}
-	return nil
-}
-
-// CreateIndexIfNotExists creates the indices and aliases in ES
-func (ns *Indexer) CreateIndexIfNotExists(documentType string) error {
-	aliasName := ns.aliasNamePrefix + documentType
-
-	// Check for existing index to find out current indexNamePrefix
-	exists, indexNamePrefix, err := ns.db.GetExistingIndexPrefix(aliasName, documentType)
-	if err != nil {
-		ns.log.Error().Err(err).Msg("Error when checking for alias")
-		return err
-	}
-
-	if exists {
-		ns.log.Info().Str("aliasName", aliasName).Str("indexNamePrefix", indexNamePrefix).Msg("Alias found")
-		ns.indexNamePrefix = indexNamePrefix
-		return nil
-	}
-
-	// Create new index
-	indexName := ns.indexNamePrefix + documentType
-	err = ns.db.CreateIndex(indexName, documentType)
-	if err != nil {
-		ns.log.Error().Err(err).Str("indexName", indexName).Msg("Error when creating index")
-		return err
-	} else {
-		ns.log.Info().Str("indexName", indexName).Msg("Created index")
-	}
-
-	// Update alias
-	err = ns.db.UpdateAlias(aliasName, indexName)
-	if err != nil {
-		ns.log.Error().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
-		return err
-	} else {
-		ns.log.Info().Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
-	}
-	return nil
-}
-
-// UpdateAliasForType updates aliases
-func (ns *Indexer) UpdateAliasForType(documentType string) {
-	aliasName := ns.aliasNamePrefix + documentType
-	indexName := ns.indexNamePrefix + documentType
-	err := ns.db.UpdateAlias(aliasName, indexName)
-	if err != nil {
-		ns.log.Warn().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
-	} else {
-		ns.log.Info().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
-	}
-}
-
-// GetBestBlockFromClient retrieves the current best block from the aergo client
-func (ns *Indexer) GetBestBlockFromClient() uint64 {
+// GetBestBlock retrieves the current best block from the aergo client
+func (ns *Indexer) GetBestBlock() uint64 {
 	blockNo, err := ns.grpcClient.GetBestBlock()
 	if err != nil {
 		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
@@ -301,24 +196,4 @@ func (ns *Indexer) GetBestBlockFromClient() uint64 {
 	} else {
 		return blockNo
 	}
-}
-
-// GetBestBlockFromDb retrieves the current best block from the db
-func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
-	block, err := ns.db.SelectOne(db.QueryParams{
-		IndexName: ns.indexNamePrefix + "block",
-		SortField: "no",
-		SortAsc:   false,
-	}, func() doc.DocType {
-		block := new(doc.EsBlock)
-		block.BaseEsType = new(doc.BaseEsType)
-		return block
-	})
-	if err != nil {
-		return 0, err
-	}
-	if block == nil {
-		return 0, errors.New("best block not found")
-	}
-	return block.(*doc.EsBlock).BlockNo, nil
 }

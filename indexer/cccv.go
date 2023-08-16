@@ -29,11 +29,7 @@ func (ns *Indexer) initCccvNft() {
 	}
 
 	// init cccv address
-	var err error
-	ns.cccvNftAddress, err = types.DecodeAddress(cccv_nft_string)
-	if err != nil {
-		return
-	}
+	ns.cccvNftAddress, _ = types.DecodeAddress(cccv_nft_string)
 
 	// insert cccv record
 	document := &doc.EsToken{

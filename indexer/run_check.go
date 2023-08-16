@@ -14,7 +14,7 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 	ns.log.Info().Uint64("from", startFrom).Uint64("to", stopAt).Msg("Start Check...")
 
 	if stopAt == 0 {
-		stopAt = ns.GetBestBlockFromClient() - 1
+		stopAt = ns.GetBestBlock() - 1
 	}
 	ns.fixIndex(startFrom, stopAt)
 	err := ns.cleanIndex()
