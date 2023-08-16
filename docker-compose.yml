@@ -20,39 +20,39 @@ services:
       options:
         max-file: "7"
         max-size: "10m"
-  # kibana:
-  #   image: docker.elastic.co/kibana/kibana:7.15.2
-  #   container_name: kibana
-  #   ports:
-  #     - 5601:5601
-  #   environment:
-  #     ELASTICSEARCH_URL: http://es:9200
-  #     ELASTICSEARCH_HOSTS: http://es:9200
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-file: "7"
-  #       max-size: "10m"
-  # indexer:
-  #   container_name: indexer
-  #   image: indexer
-  #   build:
-  #    context: ./
-  #    dockerfile: Dockerfile
-  #   ports:
-  #    - 8000:8000
-  #   privileged: true
-  #   command: indexer
-  #     - --aergo=localhost:7845
-  #     - --dburl=localhost:9200
-  #     - --prefix=testnet
-  #     - --mode=all
-  #     - --from=0
-  #     - --to=0
-  #     - --cluster=false
-  #   network_mode: host
-  #   depends_on:
-  #     - elasticsearch
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.15.2
+    container_name: kibana
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es:9200
+      ELASTICSEARCH_HOSTS: http://es:9200
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "7"
+        max-size: "10m"
+  indexer:
+    container_name: indexer
+    image: indexer
+    build:
+     context: ./
+     dockerfile: Dockerfile
+    ports:
+     - 8000:8000
+    privileged: true
+    command: indexer
+      - --aergo=localhost:7845
+      - --dburl=localhost:9200
+      - --prefix=testnet
+      - --mode=all
+      - --from=0
+      - --to=0
+      - --cluster=false
+    network_mode: host
+    depends_on:
+      - elasticsearch
 volumes:
   el_data:
     driver: local

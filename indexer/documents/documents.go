@@ -137,7 +137,7 @@ type EsTokenUp struct {
 
 type EsTokenVerified struct {
 	*BaseEsType
-	TokenAddress string `json:"token_addr" db:"token_addr"`
+	TokenAddress string `json:"token_address" db:"token_address"`
 	Owner        string `json:"owner" db:"owner"`
 	Comment      string `json:"comment" db:"comment"`
 	Email        string `json:"email" db:"email"`

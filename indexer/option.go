@@ -56,7 +56,7 @@ func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	}
 }
 
-func SetVerifyTokenAddress(verifyTokenAddress string) IndexerOptionFunc {
+func SetTokenVerifyAddress(verifyTokenAddress string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		if verifyTokenAddress == "" {
 			return nil
@@ -67,6 +67,21 @@ func SetVerifyTokenAddress(verifyTokenAddress string) IndexerOptionFunc {
 		}
 
 		indexer.tokenVerifyAddr = raw
+		return nil
+	}
+}
+
+func SetContractVerifyAddress(verifyContractAddress string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if verifyContractAddress == "" {
+			return nil
+		}
+		raw, err := types.DecodeAddress(verifyContractAddress)
+		if err != nil {
+			return err
+		}
+
+		indexer.contractVerifyAddr = raw
 		return nil
 	}
 }

@@ -34,12 +34,36 @@ func NewCache(idxer *Indexer) *Cache {
 
 // register staking account to white list. ( staking addresses receive rewards by block creation )
 func (c *Cache) registerVariables() {
-	// register whitelist
+	// register verify token
 	scroll := c.idxer.db.Scroll(db.QueryParams{
+		IndexName: c.idxer.indexNamePrefix + "token_verified",
+		SortField: "token_address",
+		Size:      10,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		balance := new(doc.EsTokenVerified)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if tokenVerified, ok := document.(*doc.EsTokenVerified); ok {
+			c.addrsWhiteListAddr.Store(tokenVerified.TokenAddress, true)
+		}
+	}
+
+	// register verify contract
+
+	// register whitelist
+	scroll = c.idxer.db.Scroll(db.QueryParams{
 		IndexName: c.idxer.indexNamePrefix + "account_balance",
 		SortField: "staking_float",
 		Size:      10000,
-		From:      10000,
+		From:      0,
 		SortAsc:   true,
 	}, func() doc.DocType {
 		balance := new(doc.EsAccountBalance)

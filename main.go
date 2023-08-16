@@ -57,8 +57,8 @@ func init() {
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
 	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance. onsync only")
 	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
-	fs.StringVar(&contractVerifyAddress, "contract", "c", "address for query contract code")
-	fs.StringVar(&tokenVerifyAddress, "token", "t", "address for query verified token")
+	fs.StringVarP(&contractVerifyAddress, "contract", "c", "", "address for query contract code")
+	fs.StringVarP(&tokenVerifyAddress, "token", "t", "", "address for query verified token")
 }
 
 func main() {
@@ -82,6 +82,8 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetRunMode(getRunMode()),
 		indexer.SetLogger(logger),
 		indexer.SetWhiteListAddresses(whiteListAddresses),
+		indexer.SetTokenVerifyAddress(tokenVerifyAddress),
+		indexer.SetContractVerifyAddress(contractVerifyAddress),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not start indexer")
