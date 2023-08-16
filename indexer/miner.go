@@ -271,12 +271,12 @@ func (ns *Indexer) MinerBalance(block *doc.EsBlock, address []byte, MinerGRPC *c
 	ns.addAccountBalance(balanceFromDoc)
 }
 
-func (ns *Indexer) MinerVerifyToken(address, account []byte, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerVerifyToken(address []byte, account string, MinerGRPC *client.AergoClientController) {
 	data := MinerGRPC.QueryMetadataOf(address, account)
 	_ = data
 }
 
-func (ns *Indexer) MinerVerifyContract(address, account []byte, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerVerifyContract(address []byte, account string, MinerGRPC *client.AergoClientController) {
 	data := MinerGRPC.QueryMetadataOf(address, account)
 	_ = data
 }

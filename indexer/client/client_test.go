@@ -12,8 +12,19 @@ import (
 )
 
 const (
-	AergoServerAddress = "testnet-api.aergo.io:7845" // testnet
+	AergoServerAddress = "192.168.0.102:7845" // testnet
 )
+
+func TestQuery_VerifyMetadata(t *testing.T) {
+	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
+	require.NoError(t, err)
+
+	addr, err := types.DecodeAddress("AmgXmpsPn3o8mBuZiD4K4CMCogVs3g1YcGdjp1MdHrtNQMhzvxXh")
+	require.NoError(t, err)
+
+	res := grpcClient.QueryMetadataOf(addr, "STV0001")
+	fmt.Println(res)
+}
 
 func TestQuery_BalanceOf(t *testing.T) {
 	ctx := context.Background()
