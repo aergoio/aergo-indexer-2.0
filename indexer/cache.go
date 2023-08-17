@@ -69,7 +69,7 @@ func (c *Cache) registerVariables() {
 		SortAsc:   true,
 		StringMatch: &db.StringMatchQuery{
 			Field: "verified_status",
-			Value: "verified",
+			Value: string(TokenVerified),
 		},
 	}, func() doc.DocType {
 		contract := new(doc.EsContract)
