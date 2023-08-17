@@ -45,7 +45,6 @@ func init() {
 	fs.StringVarP(&host, "host", "H", "localhost", "host address of aergo server")
 	fs.Int32VarP(&port, "port", "p", 7845, "port number of aergo server")
 	fs.StringVarP(&aergoAddress, "aergo", "A", "", "host and port of aergo server. Alternative to setting host and port separately.")
-	fs.StringVarP(&aergoAddress, "aergo", "A", "192.168.0.102:7845", "host and port of aergo server. Alternative to setting host and port separately.")
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
 	fs.StringVarP(&prefix, "prefix", "P", "testnet", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
@@ -56,10 +55,10 @@ func init() {
 
 	fs.Uint64Var(&from, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
-	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance. onsync only")
 	fs.StringVar(&cccvNftServerType, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
-	fs.StringVarP(&contractVerifyAddress, "contract", "c", "", "address for query contract code")
+	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance.")
 	fs.StringVarP(&tokenVerifyAddress, "token", "t", "", "address for query verified token")
+	fs.StringVarP(&contractVerifyAddress, "contract", "c", "", "address for query contract code")
 }
 
 func main() {
