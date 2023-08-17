@@ -82,17 +82,17 @@ type EsContract struct {
 	Timestamp time.Time `json:"ts" db:"ts"`
 	Payload   string    `json:"payload" db:"payload"`
 
-	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
-	VerifiedCode   string `json:"verified_code" db:"verified_code"`
+	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+	Code           string `json:"code" db:"code"`
 }
 
 type EsContractUp struct {
 	*BaseEsType
 	Payload        string `json:"payload" db:"payload"`
-	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
-	VerifiedCode   string `json:"verified_code" db:"verified_code"`
+	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+	Code           string `json:"code" db:"code"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -380,13 +380,13 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"verified": {
+						"payload": {
 							"type": "keyword"
 						},
-						"verified_no": {
-							"type": "long"
+						"verified_status": {
+							"type": "keyword"
 						},
-						"verified_txid": {
+						"verified_token": {
 							"type": "keyword"
 						},
 						"verified_code": {
@@ -854,13 +854,13 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"verified": {
+						"payload": {
 							"type": "keyword"
 						},
-						"verified_no": {
-							"type": "long"
+						"verified_status": {
+							"type": "keyword"
 						},
-						"verified_txid": {
+						"verified_token": {
 							"type": "keyword"
 						},
 						"verified_code": {

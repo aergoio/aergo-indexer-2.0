@@ -312,7 +312,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *cli
 		totalTransfer = 0
 	}
 
-	tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(TokenVerified), tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
+	tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(Verified), tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
 	ns.updateTokenVerified(tokenVerifiedDoc)
 }
 
@@ -332,7 +332,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, metadata string, MinerGRPC *
 		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to compile code")
 	}
 
-	contractUpDoc := doc.ConvContractUp(contractAddr, "verified", string(bytecode), codeUrl, code, owner)
+	contractUpDoc := doc.ConvContractUp(contractAddr, string(Verified), string(bytecode), codeUrl, code, owner)
 
 	// TODO : Compile and compare
 	ns.updateContract(contractUpDoc)

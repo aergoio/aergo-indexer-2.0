@@ -36,9 +36,9 @@ type ChanInfoType struct {
 	AccTokens     chan ChanInfo
 }
 
-type TokenStatus string
+type VerifiedStatus string
 
 const (
-	TokenEmpty    TokenStatus = ""
-	TokenVerified TokenStatus = "verified"
+	Empty    VerifiedStatus = ""
+	Verified VerifiedStatus = "verified"
 )

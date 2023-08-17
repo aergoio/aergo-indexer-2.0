@@ -93,7 +93,7 @@ func ConvContractUp(contractAddress string, status, payload, token, owner, code 
 		Payload:        payload,
 		VerifiedToken:  token,
 		VerifiedStatus: status,
-		VerifiedCode:   code,
+		Code:           code,
 	}
 }
 
