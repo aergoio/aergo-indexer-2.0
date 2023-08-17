@@ -128,32 +128,40 @@ type EsToken struct {
 	Symbol       string       `json:"symbol" db:"symbol"`
 	Symbol_lower string       `json:"symbol_lower" db:"symbol_lower"`
 	Decimals     uint8        `json:"decimals" db:"decimals"`
-	Supply       string       `json:"supply" db:"supply"`
-	SupplyFloat  float32      `json:"supply_float" db:"supply_float"`
+
+	// update values
+	Supply      string  `json:"supply" db:"supply"`
+	SupplyFloat float32 `json:"supply_float" db:"supply_float"`
+
+	// verified values
+	VerifiedStatus string `json:"verified_status" db:"verified_status"`
+	TokenAddress   string `json:"token_address" db:"token_address"`
+	Owner          string `json:"owner" db:"owner"`
+	Comment        string `json:"comment" db:"comment"`
+	Email          string `json:"email" db:"email"`
+	RegDate        string `json:"regdate" db:"regdate"`
+	ImageUrl       string `json:"image_url" db:"image_url"`
+	HomepageUrl    string `json:"homepage_url" db:"homepage_url"`
+	TotalTransfer  uint64 `json:"total_transfer" db:"total_transfer"`
 }
 
-type EsTokenUp struct {
+type EsTokenUpSupply struct {
 	*BaseEsType
 	Supply      string  `json:"supply" db:"supply"`
 	SupplyFloat float32 `json:"supply_float" db:"supply_float"`
 }
 
-type EsTokenVerified struct {
+type EsTokenUpVerified struct {
 	*BaseEsType
-	TokenAddress  string `json:"token_address" db:"token_address"`
-	Owner         string `json:"owner" db:"owner"`
-	Comment       string `json:"comment" db:"comment"`
-	Email         string `json:"email" db:"email"`
-	RegDate       string `json:"regdate" db:"regdate"`
-	ImageUrl      string `json:"image_url" db:"image_url"`
-	HomepageUrl   string `json:"homepage_url" db:"homepage_url"`
-	Name          string `json:"name" db:"name"`
-	Name_lower    string `json:"name_lower" db:"name_lower"`
-	Symbol        string `json:"symbol" db:"symbol"`
-	Symbol_lower  string `json:"symbol_lower" db:"symbol_lower"`
-	Type          string `json:"type" db:"type"`
-	TotalSupply   string `json:"total_supply" db:"total_supply"`
-	TotalTransfer uint64 `json:"total_transfer" db:"total_transfer"`
+	VerifiedStatus string `json:"verified_status" db:"verified_status"`
+	TokenAddress   string `json:"token_address" db:"token_address"`
+	Owner          string `json:"owner" db:"owner"`
+	Comment        string `json:"comment" db:"comment"`
+	Email          string `json:"email" db:"email"`
+	RegDate        string `json:"regdate" db:"regdate"`
+	ImageUrl       string `json:"image_url" db:"image_url"`
+	HomepageUrl    string `json:"homepage_url" db:"homepage_url"`
+	TotalTransfer  uint64 `json:"total_transfer" db:"total_transfer"`
 }
 
 // EsTokenTransfer is a transfer of a token
@@ -458,6 +466,9 @@ func InitEsMappings(clusterMode bool) {
 						"creator": {
 							"type": "keyword"
 						},
+						"type": {
+							"type": "keyword"
+						},
 						"name": {
 							"type": "keyword"
 						},
@@ -479,8 +490,32 @@ func InitEsMappings(clusterMode bool) {
 						"supply_float": {
 							"type": "float"
 						},
-						"type": {
+						"verified_status": {
 							"type": "keyword"
+						},
+						"token_address": {
+							"type": "keyword"
+						},
+						"owner": {
+							"type": "keyword"
+						},
+						"comment": {
+							"type": "keyword"
+						},
+						"email": {
+							"type": "keyword"
+						},
+						"regdate": {
+							"type": "keyword"
+						},
+						"homepage_url": {
+							"type": "keyword"
+						},
+						"image_url": {
+							"type": "keyword"
+						},
+						"total_transfer": {
+							"type": "long"
 						}
 					}
 				}
@@ -906,6 +941,9 @@ func InitEsMappings(clusterMode bool) {
 						"creator": {
 							"type": "keyword"
 						},
+						"type": {
+							"type": "keyword"
+						},
 						"name": {
 							"type": "keyword"
 						},
@@ -927,23 +965,9 @@ func InitEsMappings(clusterMode bool) {
 						"supply_float": {
 							"type": "float"
 						},
-						"token_transfers": {
-							"type": "long"
-						},
-						"type": {
+						"verified_status": {
 							"type": "keyword"
-						}
-					}
-				}
-			}`,
-			"token_verified": `{
-				"settings": {
-					"number_of_shards": 5,
-					"number_of_replicas": 1,
-					"index.max_result_window": 100000
-				},
-				"mappings": {
-					"properties": {
+						},
 						"token_address": {
 							"type": "keyword"
 						},
@@ -963,24 +987,6 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"image_url": {
-							"type": "keyword"
-						},
-						"name": {
-							"type": "keyword"
-						},
-						"name_lower": {
-							"type": "keyword"
-						},
-						"symbol": {
-							"type": "keyword"
-						},
-						"symbol_lower": {
-							"type": "keyword"
-						},
-						"type": {
-							"type": "keyword"
-						},
-						"total_supply": {
 							"type": "keyword"
 						},
 						"total_transfer": {

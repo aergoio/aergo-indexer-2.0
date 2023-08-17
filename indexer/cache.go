@@ -36,22 +36,26 @@ func NewCache(idxer *Indexer) *Cache {
 func (c *Cache) registerVariables() {
 	// register verify token
 	scroll := c.idxer.db.Scroll(db.QueryParams{
-		IndexName: c.idxer.indexNamePrefix + "token_verified",
-		SortField: "token_address",
-		Size:      10,
+		IndexName: c.idxer.indexNamePrefix + "token",
+		SortField: "blockno",
+		Size:      100,
 		From:      0,
 		SortAsc:   true,
+		StringMatch: &db.StringMatchQuery{
+			Field: "verified",
+			Value: string(TokenVerified),
+		},
 	}, func() doc.DocType {
-		balance := new(doc.EsTokenVerified)
-		balance.BaseEsType = new(doc.BaseEsType)
-		return balance
+		token := new(doc.EsToken)
+		token.BaseEsType = new(doc.BaseEsType)
+		return token
 	})
 	for {
 		document, err := scroll.Next()
 		if err == io.EOF {
 			break
 		}
-		if tokenVerified, ok := document.(*doc.EsTokenVerified); ok {
+		if tokenVerified, ok := document.(*doc.EsToken); ok {
 			c.storeVerifiedToken(tokenVerified.TokenAddress)
 		}
 	}
@@ -60,7 +64,7 @@ func (c *Cache) registerVariables() {
 	scroll = c.idxer.db.Scroll(db.QueryParams{
 		IndexName: c.idxer.indexNamePrefix + "contract",
 		SortField: "blockno",
-		Size:      10,
+		Size:      100,
 		From:      0,
 		SortAsc:   true,
 		StringMatch: &db.StringMatchQuery{
@@ -68,9 +72,9 @@ func (c *Cache) registerVariables() {
 			Value: "verified",
 		},
 	}, func() doc.DocType {
-		balance := new(doc.EsContract)
-		balance.BaseEsType = new(doc.BaseEsType)
-		return balance
+		contract := new(doc.EsContract)
+		contract.BaseEsType = new(doc.BaseEsType)
+		return contract
 	})
 	for {
 		document, err := scroll.Next()

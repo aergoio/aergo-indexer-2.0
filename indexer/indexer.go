@@ -179,7 +179,6 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("name")
 	ns.CreateIndexIfNotExists("event")
 	ns.CreateIndexIfNotExists("token")
-	ns.CreateIndexIfNotExists("token_verified")
 	ns.CreateIndexIfNotExists("contract")
 	ns.CreateIndexIfNotExists("token_transfer")
 	ns.CreateIndexIfNotExists("account_tokens")

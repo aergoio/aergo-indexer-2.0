@@ -43,6 +43,7 @@ func (ns *Indexer) initCccvNft() {
 		Type:         tx.TokenARC2,
 		Supply:       "0",
 		SupplyFloat:  float32(0),
+		Decimals:     0,
 	}
 	ns.addToken(document)
 }

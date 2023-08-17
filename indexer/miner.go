@@ -312,8 +312,8 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *cli
 		totalTransfer = 0
 	}
 
-	tokenVerifiedDoc := doc.ConvTokenVerified(tokenDoc, tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
-	ns.addTokenVerified(tokenVerifiedDoc)
+	tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(TokenVerified), tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
+	ns.updateTokenVerified(tokenVerifiedDoc)
 }
 
 func (ns *Indexer) MinerContractVerified(tokenAddr, metadata string, MinerGRPC *client.AergoClientController) {

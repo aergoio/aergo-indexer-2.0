@@ -112,11 +112,26 @@ func ConvEvent(event *types.Event, blockDoc *EsBlock, txDoc *EsTx, txIdx uint64)
 	}
 }
 
-func ConvTokenUp(txDoc *EsTx, contractAddress []byte, supply string, supplyFloat float32) *EsTokenUp {
-	return &EsTokenUp{
+func ConvTokenUp(txDoc *EsTx, contractAddress []byte, supply string, supplyFloat float32) *EsTokenUpSupply {
+	return &EsTokenUpSupply{
 		BaseEsType:  &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Supply:      supply,
 		SupplyFloat: supplyFloat,
+	}
+}
+
+func ConvTokenUpVerified(tokenDoc *EsToken, status, tokenAddress, owner, comment, email, regDate, homepageUrl, imageUrl string, totalTransfer uint64) *EsTokenUpVerified {
+	return &EsTokenUpVerified{
+		BaseEsType:     &BaseEsType{Id: tokenDoc.Id},
+		VerifiedStatus: status,
+		TokenAddress:   tokenAddress,
+		Owner:          owner,
+		Comment:        comment,
+		Email:          email,
+		RegDate:        regDate,
+		ImageUrl:       imageUrl,
+		HomepageUrl:    homepageUrl,
+		TotalTransfer:  totalTransfer,
 	}
 }
 
@@ -134,26 +149,6 @@ func ConvToken(txDoc *EsTx, contractAddress []byte, tokenType transaction.TokenT
 		Decimals:     decimals,
 		Supply:       supply,
 		SupplyFloat:  supplyFloat,
-	}
-}
-
-func ConvTokenVerified(tokenDoc *EsToken, tokenAddress, owner, comment, email, regDate, homepageUrl, imageUrl string, totalTransfer uint64) *EsTokenVerified {
-	return &EsTokenVerified{
-		BaseEsType:    &BaseEsType{Id: tokenDoc.Id},
-		Type:          string(tokenDoc.Type),
-		Name:          tokenDoc.Name,
-		Name_lower:    tokenDoc.Name_lower,
-		Symbol:        tokenDoc.Symbol,
-		Symbol_lower:  tokenDoc.Symbol_lower,
-		TotalSupply:   tokenDoc.Supply,
-		TokenAddress:  tokenAddress,
-		Owner:         owner,
-		Comment:       comment,
-		Email:         email,
-		RegDate:       regDate,
-		ImageUrl:      imageUrl,
-		HomepageUrl:   homepageUrl,
-		TotalTransfer: totalTransfer,
 	}
 }
 

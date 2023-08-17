@@ -35,3 +35,10 @@ type ChanInfoType struct {
 	TokenTransfer chan ChanInfo
 	AccTokens     chan ChanInfo
 }
+
+type TokenStatus string
+
+const (
+	TokenEmpty    TokenStatus = ""
+	TokenVerified TokenStatus = "verified"
+)

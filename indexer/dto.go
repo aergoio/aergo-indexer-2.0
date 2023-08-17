@@ -54,13 +54,6 @@ func (ns *Indexer) addToken(tokenDoc *doc.EsToken) {
 	}
 }
 
-func (ns *Indexer) addTokenVerified(tokenVerifiedDoc *doc.EsTokenVerified) {
-	err := ns.db.Insert(tokenVerifiedDoc, ns.indexNamePrefix+"token_verified")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", tokenVerifiedDoc.Id).Str("method", "insertToken").Msg("error while insert")
-	}
-}
-
 func (ns *Indexer) addAccountTokens(blockType BlockType, accountTokensDoc *doc.EsAccountTokens) {
 	if blockType == BlockType_Bulk {
 		if ns.cache.getAccTokens(accountTokensDoc.Id) != true {
@@ -138,7 +131,14 @@ func (ns *Indexer) addNFT(nftDoc *doc.EsNFT) {
 	}
 }
 
-func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUp) {
+func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUpSupply) {
+	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")
+	}
+}
+
+func (ns *Indexer) updateTokenVerified(tokenDoc *doc.EsTokenUpVerified) {
 	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {
 		ns.log.Error().Str("Id", tokenDoc.Id).Err(err).Str("method", "updateToken").Msg("error while update")

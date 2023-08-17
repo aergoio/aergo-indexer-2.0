@@ -10,11 +10,10 @@ This creates the indices,
    5. `event`
    6. `name`
    7. `token`
-   8. `token_verified`
-   9. `token_transfer`
-  10. `account_tokens`
-  11. `account_balance`
-  12. `nft`
+   8. `token_transfer`
+   9. `account_tokens`
+  10. `account_balance`
+  11. `nft`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -123,25 +122,15 @@ symbol_lower    string      token symbol lowercase, useful to case-insensitive s
 decimals        uint8       decimals of token
 supply          string      Precise BigInt string representation of total supply 
 supply_float    float32     Imprecise float representation of amount, useful for sorting
-```
-
-token_verified
-```
-id              string      address of contract
+verified_status string      verified status
 token_address   string      address of token
-type            string      token type (ARC1/ARC2)
 owner           string      address of token owner
 comment         string      verified token comment
 email           string      email of token owner
 regdate         string      registration date (YYMMDD)
 homepage_url    string      verified token homepage url
 image_url       string      verified token image url
-name            string      token name
-name_lower      string      token name lowercase, useful to case-insensitive search
-symbol          string      token symbol
-symbol_lower    string      token symbol lowercase, useful to case-insensitive search
-total_supply    string      Precise BigInt string representation of total supply 
-total_transfer  string      total transfer count about token
+total_transfer  uint64      total transfer count about token
 ```
 
 token_transfer
