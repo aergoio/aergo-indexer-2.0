@@ -46,6 +46,7 @@ type EsBlock struct {
 	PreviousBlock string    `json:"previous_block" db:"previous_block"`
 	TxCount       uint64    `json:"txs" db:"txs"`
 	Size          uint64    `json:"size" db:"size"`
+	Coinbase      string    `json:"coinbase" db:"coinbase"`
 	BlockProducer string    `json:"block_producer" db:"block_producer"`
 	RewardAccount string    `json:"reward_account" db:"reward_account"`
 	RewardAmount  string    `json:"reward_amount" db:"reward_amount"`
@@ -270,6 +271,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"size": {
 							"type": "long"
+						},
+						"coinbase": {
+							"type": "keyword"
 						},
 						"block_producer": {
 							"type": "keyword"
@@ -717,6 +721,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"size": {
 							"type": "long"
+						},
+						"coinbase": {
+							"type": "keyword"
 						},
 						"block_producer": {
 							"type": "keyword"

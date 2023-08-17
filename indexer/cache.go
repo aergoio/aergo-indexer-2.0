@@ -57,6 +57,30 @@ func (c *Cache) registerVariables() {
 	}
 
 	// register verify contract
+	scroll = c.idxer.db.Scroll(db.QueryParams{
+		IndexName: c.idxer.indexNamePrefix + "contract",
+		SortField: "blockno",
+		Size:      10,
+		From:      0,
+		SortAsc:   true,
+		StringMatch: &db.StringMatchQuery{
+			Field: "verified_status",
+			Value: "verified",
+		},
+	}, func() doc.DocType {
+		balance := new(doc.EsContract)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if contract, ok := document.(*doc.EsContract); ok {
+			c.storeVerifiedContract(contract.VerifiedToken)
+		}
+	}
 
 	// register whitelist
 	scroll = c.idxer.db.Scroll(db.QueryParams{
@@ -132,6 +156,10 @@ func (c *Cache) getAccTokens(id string) (exist bool) {
 
 func (c *Cache) storeVerifiedToken(id string) {
 	c.addrsVerifiedToken.Store(id, true)
+}
+
+func (c *Cache) storeVerifiedContract(id string) {
+	c.addrsVerifiedContract.Store(id, true)
 }
 
 func (c *Cache) storeWhiteList(id string) {

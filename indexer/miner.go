@@ -8,6 +8,7 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	"github.com/aergoio/aergo-indexer-2.0/lua_compiler"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -47,7 +48,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		ns.addBlock(info.Type, blockDoc)
 
 		// update variables per 10 minutes
-		if info.Type == BlockType_Sync && blockHeight%10 == 0 {
+		if info.Type == BlockType_Sync && blockHeight%600 == 0 {
 			ns.cache.refreshVariables(info, blockDoc, MinerGRPC)
 		}
 	}
@@ -144,7 +145,7 @@ func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, even
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.addrsVerifiedToken.Store(tokenAddr, true)
+		ns.cache.storeVerifiedToken(tokenAddr)
 	}
 	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.contractVerifyAddr) == true {
 		contractAddr, err := transaction.UnmarshalEventVerifyContract(event)
@@ -152,7 +153,7 @@ func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, even
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.addrsVerifiedContract.Store(contractAddr, true)
+		ns.cache.storeVerifiedContract(contractAddr)
 	}
 
 }
@@ -315,13 +316,24 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *cli
 	ns.addTokenVerified(tokenVerifiedDoc)
 }
 
-// TODO
-func (ns *Indexer) MinerContractVerified(contractAddress, metadata string, MinerGRPC *client.AergoClientController) {
-	// contractAddr, codeUrl, owner, err := transaction.UnmarshalMetadataVerifyContract(metadata)
-	// if err != nil {
-	// 	ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
-	// 	return
-	// }
-	// code := lua_compiler.GetCode(url)
+func (ns *Indexer) MinerContractVerified(tokenAddr, metadata string, MinerGRPC *client.AergoClientController) {
+	contractAddr, codeUrl, owner, err := transaction.UnmarshalMetadataVerifyContract(metadata)
+	if err != nil {
+		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
+		return
+	}
+	code, err := lua_compiler.GetCode(codeUrl)
+	if err != nil {
+		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
+	}
 
+	bytecode, err := lua_compiler.CompileCode(code)
+	if err != nil {
+		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to compile code")
+	}
+
+	contractUpDoc := doc.ConvContractUp(contractAddr, "verified", string(bytecode), codeUrl, code, owner)
+
+	// TODO : Compile and compare
+	ns.updateContract(contractUpDoc)
 }

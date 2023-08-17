@@ -145,6 +145,13 @@ func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUp) {
 	}
 }
 
+func (ns *Indexer) updateContract(contractDoc *doc.EsContractUp) {
+	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContract").Msg("error while update")
+	}
+}
+
 func (ns *Indexer) getNFT(id string) (nftDoc *doc.EsNFT, err error) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "nft",

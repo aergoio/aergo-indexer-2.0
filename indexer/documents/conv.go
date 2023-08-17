@@ -26,8 +26,9 @@ func ConvBlock(block *types.Block, blockProducer string) *EsBlock {
 		PreviousBlock: base58.Encode(block.Header.PrevBlockHash),
 		TxCount:       uint64(len(block.Body.Txs)),
 		Size:          uint64(proto.Size(block)),
+		Coinbase:      transaction.EncodeAndResolveAccount(block.Header.CoinbaseAccount, block.Header.BlockNo),
 		BlockProducer: blockProducer,
-		RewardAccount: transaction.EncodeAndResolveAccount(block.Header.CoinbaseAccount, block.Header.BlockNo),
+		RewardAccount: transaction.EncodeAndResolveAccount(block.Header.Consensus, block.Header.BlockNo),
 		RewardAmount:  rewardAmount,
 	}
 }
@@ -86,9 +87,9 @@ func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	}
 }
 
-func ConvContractUp(contractAddress []byte, payload, token, status, code string) *EsContractUp {
+func ConvContractUp(contractAddress string, status, payload, token, owner, code string) *EsContractUp {
 	return &EsContractUp{
-		BaseEsType:     &BaseEsType{Id: transaction.EncodeAccount(contractAddress)},
+		BaseEsType:     &BaseEsType{Id: contractAddress},
 		Payload:        payload,
 		VerifiedToken:  token,
 		VerifiedStatus: status,

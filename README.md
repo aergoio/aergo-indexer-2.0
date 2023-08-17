@@ -43,6 +43,7 @@ no              uint64      block number
 previous_block  string      previous block hash
 txs             uint        number of transactions
 size            uint64      block size in bytes
+coinbase        string      coinbase account
 block_producer  string      block producer peer id
 reward_account  string      reward account
 reward_amount   string      reward amount
@@ -128,6 +129,7 @@ token_verified
 ```
 id              string      address of contract
 token_address   string      address of token
+type            string      token type (ARC1/ARC2)
 owner           string      address of token owner
 comment         string      verified token comment
 email           string      email of token owner
