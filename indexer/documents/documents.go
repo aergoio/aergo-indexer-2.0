@@ -44,7 +44,7 @@ type EsBlock struct {
 	Timestamp     time.Time `json:"ts" db:"ts"`
 	BlockNo       uint64    `json:"no" db:"no"`
 	PreviousBlock string    `json:"previous_block" db:"previous_block"`
-	TxCount       uint      `json:"txs" db:"txs"`
+	TxCount       uint64    `json:"txs" db:"txs"`
 	Size          uint64    `json:"size" db:"size"`
 	BlockProducer string    `json:"block_producer" db:"block_producer"`
 	RewardAccount string    `json:"reward_account" db:"reward_account"`
@@ -75,20 +75,23 @@ type EsTx struct {
 
 type EsContract struct {
 	*BaseEsType
-	TxId         string    `json:"tx_id" db:"tx_id"`
-	Creator      string    `json:"creator" db:"creator"`
-	BlockNo      uint64    `json:"blockno" db:"blockno"`
-	Timestamp    time.Time `json:"ts" db:"ts"`
-	Verified     string    `json:"verified" db:"verified"`
-	VerifiedCode string    `json:"verified_code" db:"verified_code"`
+	TxId      string    `json:"tx_id" db:"tx_id"`
+	Creator   string    `json:"creator" db:"creator"`
+	BlockNo   uint64    `json:"blockno" db:"blockno"`
+	Timestamp time.Time `json:"ts" db:"ts"`
+	Payload   string    `json:"payload" db:"payload"`
+
+	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+	VerifiedStatus string `json:"verified_status" db:"verified_status"`
+	VerifiedCode   string `json:"verified_code" db:"verified_code"`
 }
 
 type EsContractUp struct {
 	*BaseEsType
-	Verified          string `json:"verified" db:"verified"`
-	Payload           string `json:"payload" db:"payload"`
-	VeritiedTokenAddr string `json:"verified_token_addr" db:"verified_token_addr"`
-	VerifiedCode      string `json:"verified_code" db:"verified_code"`
+	Payload        string `json:"payload" db:"payload"`
+	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+	VerifiedStatus string `json:"verified_status" db:"verified_status"`
+	VerifiedCode   string `json:"verified_code" db:"verified_code"`
 }
 
 // EsEvent is a contract-event mapping stored in the database

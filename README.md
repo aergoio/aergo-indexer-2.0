@@ -79,6 +79,9 @@ tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
+verified        string      verified status
+code            string      verified contract code
+bytecode        string      compiled bytecode
 ```
 
 event

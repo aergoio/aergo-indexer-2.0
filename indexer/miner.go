@@ -319,8 +319,9 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *cli
 func (ns *Indexer) MinerContractVerified(contractAddress, metadata string, MinerGRPC *client.AergoClientController) {
 	// contractAddr, codeUrl, owner, err := transaction.UnmarshalMetadataVerifyContract(metadata)
 	// if err != nil {
-	// ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
-	// return
+	// 	ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
+	// 	return
 	// }
+	// code := lua_compiler.GetCode(url)
 
 }
