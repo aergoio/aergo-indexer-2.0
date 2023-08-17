@@ -336,7 +336,7 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"result": {
 							"type": "keyword"
-						}
+						},
 						"fee_delegation": {
 							"type": "boolean"
 						},
@@ -783,7 +783,7 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"result": {
 							"type": "keyword"
-						}
+						},
 						"fee_delegation": {
 							"type": "boolean"
 						},
