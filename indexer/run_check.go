@@ -2,10 +2,11 @@ package indexer
 
 import (
 	"io"
+	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
-	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	tx "github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 )
 
 // Start setups the indexer
@@ -13,7 +14,7 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 	ns.log.Info().Uint64("from", startFrom).Uint64("to", stopAt).Msg("Start Check...")
 
 	if stopAt == 0 {
-		stopAt = ns.GetBestBlockFromClient() - 1
+		stopAt = ns.GetBestBlock() - 1
 	}
 	ns.fixIndex(startFrom, stopAt)
 	err := ns.cleanIndex()
@@ -24,7 +25,7 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 
 func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 	ns.log.Info().Uint64("startFrom", startFrom).Uint64("stopAt", stopAt).Msg("Check Block range")
-	ns.StartBulkChannel()
+	ns.bulk.StartBulkChannel()
 
 	var block doc.DocType
 	var err error
@@ -55,6 +56,7 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 		}
 		if err != nil {
 			ns.log.Warn().Err(err).Msg("Failed to query block numbers")
+			time.Sleep(time.Second)
 			continue
 		}
 		blockNo = block.(*doc.EsBlock).BlockNo
@@ -70,17 +72,17 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 		}
 		if blockNo < prevBlockNo-1 {
 			missingBlocks = missingBlocks + (prevBlockNo - blockNo - 1)
-			ns.InsertBlocksInRange(blockNo+1, prevBlockNo-1)
+			ns.bulk.InsertBlocksInRange(blockNo+1, prevBlockNo-1)
 		}
 		prevBlockNo = blockNo
 	}
 
 	if blockNo != startFrom && prevBlockNo > startFrom {
 		missingBlocks = missingBlocks + (prevBlockNo - startFrom)
-		ns.InsertBlocksInRange(startFrom, prevBlockNo-1)
+		ns.bulk.InsertBlocksInRange(startFrom, prevBlockNo-1)
 	}
 
-	ns.StopBulkChannel()
+	ns.bulk.StopBulkChannel()
 	ns.log.Info().Uint64("missing", missingBlocks).Msg("Done with consistency check")
 }
 
@@ -211,7 +213,7 @@ func (ns *Indexer) cleanIndex() error {
 		balance := document.(*doc.EsAccountBalance)
 
 		// delete alias account balance only
-		if transaction.IsBalanceNotResolved(balance.Id) == true {
+		if tx.IsBalanceNotResolved(balance.Id) == true {
 			ns.log.Info().Str("id", balance.Id).Msg("Delete account balance")
 			ns.db.Delete(db.QueryParams{
 				IndexName: ns.indexNamePrefix + "account_balance",

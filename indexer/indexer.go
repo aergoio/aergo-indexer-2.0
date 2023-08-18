@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
@@ -12,41 +11,34 @@ import (
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // Indexer hold all state information
 type Indexer struct {
-	db         db.DbController
-	grpcClient *client.AergoClientController
-
-	stream             types.AergoRPCService_ListBlockStreamClient
-	MChannel           chan BlockInfo
-	BChannel           ChanInfoType
-	RChannel           []chan BlockInfo
-	SynDone            chan bool
-	accToken           sync.Map
-	peerId             sync.Map
-	whiteListAddresses sync.Map
-	indexNamePrefix    string
-	aliasNamePrefix    string
-	lastHeight         uint64
-	cccvNftAddress     []byte
-
-	// for bulk
-	bulkSize  int32
-	batchTime time.Duration
-	minerNum  int
-	grpcNum   int
-
-	// config by user
+	// config
 	log                *log.Logger
 	dbAddr             string
 	serverAddr         string
 	prefix             string
 	runMode            string
-	NetworkTypeForCccv string
+	networkTypeForCccv string
+	indexNamePrefix    string
+	aliasNamePrefix    string
+	lastHeight         uint64
+	cccvNftAddress     []byte
+	bulkSize           int32
+	batchTime          time.Duration
+	minerNum           int
+	grpcNum            int
+	whitelistAddresses []string
+	tokenVerifyAddr    []byte
+	contractVerifyAddr []byte
+
+	db         db.DbController
+	grpcClient *client.AergoClientController
+	stream     types.AergoRPCService_ListBlockStreamClient
+	bulk       *Bulk
+	cache      *Cache
 }
 
 // NewIndexer creates new Indexer instance
@@ -72,7 +64,7 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// connect server
 	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Attempting to connect to the Aergo server")
-	svc.grpcClient = svc.WaitForClient(ctx)
+	svc.grpcClient = svc.WaitForServer(ctx)
 	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Successfully connected to the Aergo server")
 
 	// connect db
@@ -82,6 +74,10 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 		return nil, err
 	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Successfully connected to the database")
+
+	// set bulk, cache
+	svc.bulk = NewBulk(svc)
+	svc.cache = NewCache(svc)
 
 	return svc, nil
 }
@@ -96,7 +92,7 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 	}
 
 	ns.initCccvNft()
-	ns.lastHeight = uint64(ns.GetBestBlockFromClient()) - 1
+	ns.lastHeight = uint64(ns.GetBestBlock()) - 1
 
 	switch ns.runMode {
 	case "all":
@@ -125,7 +121,7 @@ func (ns *Indexer) Stop() {
 	ns.log.Info().Msg("Stop Indexer")
 }
 
-func (ns *Indexer) WaitForClient(ctx context.Context) *client.AergoClientController {
+func (ns *Indexer) WaitForServer(ctx context.Context) *client.AergoClientController {
 	var err error
 	var aergoClient *client.AergoClientController
 	for {
@@ -149,6 +145,7 @@ func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbCont
 		if ok := dbController.HealthCheck(ctx); ok == true {
 			break
 		}
+		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not connect to es database, retrying")
 		time.Sleep(time.Second)
 	}
 	return dbController, nil
@@ -161,29 +158,53 @@ func (ns *Indexer) InitIndex() error {
 
 	// create index
 	for {
-		err := ns.CreateIndexIfNotExists("block")
+		err := ns.CreateIndexIfNotExists("chain_info")
 		if err == nil {
 			break
 		}
-		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not create block, retrying...")
+		ns.log.Info().Str("serverAddr", ns.serverAddr).Err(err).Msg("Could not create index, retrying...")
 		time.Sleep(time.Second)
 	}
+
+	// check chain info
+	err := ns.ValidChainInfo()
+	if err != nil {
+		ns.log.Error().Err(err).Msg("Chain info is not valid. please check aergo server info or reset")
+		return err
+	}
+
+	// create other indexes
+	ns.CreateIndexIfNotExists("block")
 	ns.CreateIndexIfNotExists("tx")
 	ns.CreateIndexIfNotExists("name")
+	ns.CreateIndexIfNotExists("event")
 	ns.CreateIndexIfNotExists("token")
 	ns.CreateIndexIfNotExists("contract")
 	ns.CreateIndexIfNotExists("token_transfer")
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
-	ns.CreateIndexIfNotExists("chain_info")
 
+	return nil
+}
+
+// GetBestBlock retrieves the current best block from the aergo client
+func (ns *Indexer) GetBestBlock() uint64 {
+	blockNo, err := ns.grpcClient.GetBestBlock()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
+		return 0
+	} else {
+		return blockNo
+	}
+}
+
+func (ns *Indexer) ValidChainInfo() error {
 	chainInfoFromNode, err := ns.grpcClient.GetChainInfo() // get chain info from node
 	if err != nil {
 		return err
 	}
 
-	// check chain info
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
 		SortField: "version",
@@ -195,7 +216,7 @@ func (ns *Indexer) InitIndex() error {
 		return chainInfo
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Msg("Could not query chain info, add new one.")
+		ns.log.Info().Err(err).Msg("Could not query chain info, add new one.")
 	}
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
@@ -211,17 +232,29 @@ func (ns *Indexer) InitIndex() error {
 		if err != nil {
 			return err
 		}
-		return nil
-	}
-	chainInfoFromDb := document.(*doc.EsChainInfo)
-	if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
-		chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
-		chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
-		chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
-		chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
-		return errors.New("chain info is not matched")
+	} else {
+		chainInfoFromDb := document.(*doc.EsChainInfo)
+		if chainInfoFromDb.Id != chainInfoFromNode.Id.Magic ||
+			chainInfoFromDb.Consensus != chainInfoFromNode.Id.Consensus ||
+			chainInfoFromDb.Public != chainInfoFromNode.Id.Public ||
+			chainInfoFromDb.Mainnet != chainInfoFromNode.Id.Mainnet ||
+			chainInfoFromDb.Version != uint64(chainInfoFromNode.Id.Version) { // valid chain info
+			return errors.New("chain info is not matched")
+		}
 	}
 	return nil
+}
+
+// UpdateAliasForType updates aliases
+func (ns *Indexer) UpdateAliasForType(documentType string) {
+	aliasName := ns.aliasNamePrefix + documentType
+	indexName := ns.indexNamePrefix + documentType
+	err := ns.db.UpdateAlias(aliasName, indexName)
+	if err != nil {
+		ns.log.Warn().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
+	} else {
+		ns.log.Info().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
+	}
 }
 
 // CreateIndexIfNotExists creates the indices and aliases in ES
@@ -262,29 +295,6 @@ func (ns *Indexer) CreateIndexIfNotExists(documentType string) error {
 	return nil
 }
 
-// UpdateAliasForType updates aliases
-func (ns *Indexer) UpdateAliasForType(documentType string) {
-	aliasName := ns.aliasNamePrefix + documentType
-	indexName := ns.indexNamePrefix + documentType
-	err := ns.db.UpdateAlias(aliasName, indexName)
-	if err != nil {
-		ns.log.Warn().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Error when updating alias")
-	} else {
-		ns.log.Info().Err(err).Str("aliasName", aliasName).Str("indexName", indexName).Msg("Updated alias")
-	}
-}
-
-// GetBestBlockFromClient retrieves the current best block from the aergo client
-func (ns *Indexer) GetBestBlockFromClient() uint64 {
-	blockNo, err := ns.grpcClient.GetBestBlock()
-	if err != nil {
-		ns.log.Warn().Err(err).Msg("Failed to query node's block height")
-		return 0
-	} else {
-		return blockNo
-	}
-}
-
 // GetBestBlockFromDb retrieves the current best block from the db
 func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 	block, err := ns.db.SelectOne(db.QueryParams{
@@ -303,21 +313,4 @@ func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 		return 0, errors.New("best block not found")
 	}
 	return block.(*doc.EsBlock).BlockNo, nil
-}
-
-func (ns *Indexer) makePeerId(pubKey []byte) string {
-	if peerId, is_ok := ns.peerId.Load(string(pubKey)); is_ok == true {
-		return peerId.(string)
-	}
-	cryptoPubKey, err := crypto.UnmarshalPublicKey(pubKey)
-	if err != nil {
-		return ""
-	}
-	Id, err := peer.IDFromPublicKey(cryptoPubKey)
-	if err != nil {
-		return ""
-	}
-	peer := peer.IDB58Encode(Id)
-	ns.peerId.Store(string(pubKey), peer)
-	return peer
 }

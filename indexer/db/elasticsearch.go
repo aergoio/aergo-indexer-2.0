@@ -190,7 +190,6 @@ func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentTyp
 func (esdb *ElasticsearchDbController) Scroll(params QueryParams, createDocument CreateDocFunction) ScrollInstance {
 	fsc := elastic.NewFetchSourceContext(true).Include(params.SelectFields...)
 
-	// seo
 	scroll := esdb.client.Scroll(params.IndexName)
 	if params.SortField != "" {
 		query := elastic.NewRangeQuery(params.SortField)
@@ -202,6 +201,10 @@ func (esdb *ElasticsearchDbController) Scroll(params QueryParams, createDocument
 		}
 		scroll = scroll.Query(query)
 	}
+	if params.StringMatch != nil {
+		scroll = scroll.Query(elastic.NewMatchQuery(params.StringMatch.Field, params.StringMatch.Value))
+	}
+
 	scroll = scroll.Size(params.Size).Sort(params.SortField, params.SortAsc).FetchSourceContext(fsc)
 	return &EsScrollInstance{
 		scrollService:  scroll,

@@ -3,16 +3,17 @@
 This is a go program that connects to aergo server over RPC and synchronizes blockchain metadata with a database. It supports Elasticsearch.
 
 This creates the indices,
-   1. `block`
-   2. `tx`
-   3. `name`
-   4. `token`
-   5. `token_transfer`
-   6. `account_balance`
-   7. `account_tokens`
-   8. `nft`
-   9. `contract`
-  10. `chain_info`
+   1. `chain_info`
+   2. `block`
+   3. `tx`
+   4. `contract`
+   5. `event`
+   6. `name`
+   7. `token`
+   8. `token_transfer`
+   9. `account_tokens`
+  10. `account_balance`
+  11. `nft`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -22,14 +23,26 @@ When using Elasticsearch, multiple indexing instances can be run concurrently us
 
 ## Indexed data
 
+chain_info
+```
+Field           Type        Comment
+id              string      chain magic id
+public          bool        is public chain
+mainnet         bool        is mainnet
+consensus       string      consensus info
+version         uint64      version info
+```
+
 block
 ```
 Field           Type        Comment
 id              string      block hash
 ts              timestamp   block creation timestamp (unixnano)
 no              uint64      block number
+previous_block  string      previous block hash
 txs             uint        number of transactions
 size            uint64      block size in bytes
+coinbase        string      coinbase account
 block_producer  string      block producer peer id
 reward_account  string      reward account
 reward_amount   string      reward amount
@@ -39,8 +52,11 @@ tx (transactions)
 ```
 Field           Type        Comment
 id              string      tx hash
-ts              timestamp   block creation timestamp (unixnano)
 blockno         uint64      block number
+block_id        string      block hash
+ts              timestamp   block creation timestamp (unixnano)
+tx_idx          uint64      tx index within block
+payload         string      tx payload
 from            string      from address (base58check encoded)
 to              string      to address (base58check encoded)
 amount          string      Precise BigInt string representation of amount
@@ -48,8 +64,40 @@ amount_float    float32     Imprecise float representation of amount, useful for
 type            string      tx type
 category        string      user-friendly category
 method          string      called function name of a contract
-token_transfers uint64      number of token transfers in this tx
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
+result          string      tx result from receipt
+fee_delegation  bool        fee delegation transaction 
+gas_price       string      tx gas price
+gas_limit       uint64      tx gas limit
+gas_used        uint64      receipt gas used
+nonce           uint64      receipt nonce
+```
+
+contract
+```
+Field           Type        Comment
+id              string      contract address
+tx_id           string      tx hash
+creator         string      creators address
+blockno         uint64      block number
+ts              timestamp   last updated timestamp (unixnano)
+payload         string      compiled bytecode
+verified_status string      verified status
+verified_token  string      verified token address
+code            string      verified contract code
+```
+
+event
+```
+Field           Type        Comment
+id              string      block_number + tx_idx + event_idx
+contract        string      contract address
+blockno         uint64      block number
+tx_id           string      tx hash
+tx_idx          uint64      tx idx in block
+event_idx       uint64      event idx in tx
+event_name      string      name of event
+event_args      string      args of event
 ```
 
 name
@@ -60,6 +108,32 @@ name            string      name
 address         string      address (base58check encoded)
 blockno         uint64      block in which name was updated
 tx              string      tx in which name was updated
+```
+
+token
+```
+Field           Type        Comment
+id              string      address of token contract
+tx_id           string      tx hash 
+blockno         uint64      block number
+creator         string      token creation account
+type            string      token type (ARC1/ARC2)
+name            string      token name
+name_lower      string      token name lowercase, useful to case-insensitive search
+symbol          string      token symbol
+symbol_lower    string      token symbol lowercase, useful to case-insensitive search
+decimals        uint8       decimals of token
+supply          string      Precise BigInt string representation of total supply 
+supply_float    float32     Imprecise float representation of amount, useful for sorting
+verified_status string      verified status
+token_address   string      address of token
+owner           string      address of token owner
+comment         string      verified token comment
+email           string      email of token owner
+regdate         string      registration date (YYMMDD)
+homepage_url    string      verified token homepage url
+image_url       string      verified token image url
+total_transfer  uint64      total transfer count about token
 ```
 
 token_transfer
@@ -76,24 +150,6 @@ sender          string      tx sender address (base58check encoded)
 amount          string      Precise BigInt string representation of amount
 amount_float    float32     Imprecise float representation of amount, useful for sorting
 token_id        string      NFD id (for ARC2)
-```
-
-token
-```
-Field           Type        Comment
-id              string      address of token contract
-tx_id           string      tx hash 
-blockno         uint64      block number
-creator         string      token creation account
-type            string      token type (ARC1/ARC2)
-name            string      token name
-name_lower      string      token name lowercase, useful to case-insensitive search
-symbol          string      token symbol
-symbol_lower    string      token symbol lowercase, useful to case-insensitive search
-token_transfers uint64      number of token transfers
-decimals        uint8       decimals of token
-supply          string      Precise BigInt string representation of total supply 
-supply_float    float32     Imprecise float representation of amount, useful for sorting
 ```
 
 account_balance
@@ -131,26 +187,6 @@ blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
 token_uri       string      token uri
 image_url       string      image url
-```
-
-contract
-```
-Field           Type        Comment
-id              string      contract address
-tx_id           string      tx hash
-creator         string      creators address
-blockno         uint64      block number
-ts              timestamp   last updated timestamp (unixnano)
-```
-
-chain_info
-```
-Field           Type        Comment
-id              string      chain magic id
-public          bool        is public chain
-mainnet         bool        is mainnet
-consensus       string      consensus info
-version         uint64      version info
 ```
 
 ## Usage

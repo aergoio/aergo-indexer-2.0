@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
 )
 
@@ -36,7 +37,7 @@ func SetPrefix(prefix string) IndexerOptionFunc {
 
 func SetNetworkTypeForCccv(initCccvNft string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.NetworkTypeForCccv = initCccvNft
+		indexer.networkTypeForCccv = initCccvNft
 		return nil
 	}
 }
@@ -50,9 +51,37 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		for _, addr := range whiteListAddresses {
-			indexer.whiteListAddresses.Store(addr, true)
+		indexer.whitelistAddresses = whiteListAddresses
+		return nil
+	}
+}
+
+func SetTokenVerifyAddress(verifyTokenAddress string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if verifyTokenAddress == "" {
+			return nil
 		}
+		raw, err := types.DecodeAddress(verifyTokenAddress)
+		if err != nil {
+			return err
+		}
+
+		indexer.tokenVerifyAddr = raw
+		return nil
+	}
+}
+
+func SetContractVerifyAddress(verifyContractAddress string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if verifyContractAddress == "" {
+			return nil
+		}
+		raw, err := types.DecodeAddress(verifyContractAddress)
+		if err != nil {
+			return err
+		}
+
+		indexer.contractVerifyAddr = raw
 		return nil
 	}
 }

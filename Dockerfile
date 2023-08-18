@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.17-alpine AS builder
+FROM golang:1.19-alpine AS builder
 RUN apk update && apk upgrade --no-cache && apk add make
 WORKDIR /aergo-indexer
 

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	tx "github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"google.golang.org/grpc"
 )
@@ -133,7 +133,16 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 	return balance, balanceFloat
 }
 
-func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, amountOrId string, isCccvNft bool) (tokenType transaction.TokenType, tokenId string, amount string, amountFloat float32) {
+func (t *AergoClientController) QueryMetadataOf(contractAddress []byte, tokenAddress string) string {
+	req, err := t.queryContract(contractAddress, "get_metadata", tokenAddress)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	return req
+}
+
+func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, amountOrId string, isCccvNft bool) (tokenType tx.TokenType, tokenId string, amount string, amountFloat float32) {
 	var err error
 	var owner string
 
@@ -144,7 +153,7 @@ func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, amountOrId 
 		owner, err = t.queryContract(contractAddress, "ownerOf", amountOrId)
 	}
 	if err == nil { // ARC 2
-		tokenType = transaction.TokenARC2
+		tokenType = tx.TokenARC2
 		tokenId = amountOrId
 		amountFloat = 1.0
 		// ARC2.tokenTransfer.Amount --> nft.Account (ownerOf)
@@ -154,7 +163,7 @@ func (t *AergoClientController) QueryOwnerOf(contractAddress []byte, amountOrId 
 			amount = "BURN"
 		}
 	} else { // ARC 1
-		tokenType = transaction.TokenARC1
+		tokenType = tx.TokenARC1
 		if AmountFloat, err := strconv.ParseFloat(amountOrId, 32); err == nil {
 			amountFloat = float32(AmountFloat)
 			amount = amountOrId
@@ -222,6 +231,27 @@ func (t *AergoClientController) QueryNFTMetadata(contractAddress []byte, tokenId
 	return tokenUri, imageUrl
 }
 
+type TokenInfo struct {
+	Contract string
+}
+
+func (t *AergoClientController) QueryVerifyTokens(contractAddress []byte) (string, error) {
+	metadata, err := t.queryContract(contractAddress, "")
+	if err != nil {
+		return "", err
+	}
+
+	return metadata, nil
+}
+
+func (t *AergoClientController) QueryVerifyContract(contractAddress []byte) (string, error) {
+	metadata, err := t.queryContract(contractAddress, "")
+	if err != nil {
+		return "", err
+	}
+	return metadata, nil
+}
+
 func (t *AergoClientController) queryContract(address []byte, name string, args ...string) (string, error) {
 	queryinfo := map[string]interface{}{"Name": name}
 	if args != nil {
@@ -251,7 +281,7 @@ func (t *AergoClientController) queryContract(address []byte, name string, args 
 	case string:
 		return c, nil
 	case map[string]interface{}:
-		am, ok := transaction.ConvertBignumJson(c)
+		am, ok := tx.ConvertBignumJson(c)
 		if ok {
 			return am.String(), nil
 		}

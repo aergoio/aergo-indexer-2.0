@@ -24,16 +24,18 @@ var (
 	checkMode  bool
 	onsyncMode bool
 
-	host             string
-	port             int32
-	dbURL            string
-	prefix           string
-	aergoAddress     string
-	cluster          bool
-	from             uint64
-	to               uint64
-	whiteListAddress []string
-	typeCccvNft      string
+	host                  string
+	port                  int32
+	dbURL                 string
+	prefix                string
+	aergoAddress          string
+	cluster               bool
+	from                  uint64
+	to                    uint64
+	cccvNftServerType     string
+	whiteListAddresses    []string
+	tokenVerifyAddress    string
+	contractVerifyAddress string
 
 	logger *log.Logger
 )
@@ -53,8 +55,10 @@ func init() {
 
 	fs.Uint64Var(&from, "from", 0, "start syncing from this block number. check only")
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number. check only")
-	fs.StringSliceVarP(&whiteListAddress, "whitelist", "W", []string{}, "address for update account balance. onsync only")
-	fs.StringVar(&typeCccvNft, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
+	fs.StringVar(&cccvNftServerType, "cccv", "", "indexing cccv nft by network type ( mainnet or testnet ). only use for cccv")
+	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance.")
+	fs.StringVarP(&tokenVerifyAddress, "token", "t", "", "address for query verified token")
+	fs.StringVarP(&contractVerifyAddress, "contract", "c", "", "address for query contract code")
 }
 
 func main() {
@@ -74,10 +78,12 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetServerAddr(getServerAddress()),
 		indexer.SetDBAddr(dbURL),
 		indexer.SetPrefix(prefix),
-		indexer.SetNetworkTypeForCccv(typeCccvNft),
+		indexer.SetNetworkTypeForCccv(cccvNftServerType),
 		indexer.SetRunMode(getRunMode()),
 		indexer.SetLogger(logger),
-		indexer.SetWhiteListAddresses(whiteListAddress),
+		indexer.SetWhiteListAddresses(whiteListAddresses),
+		indexer.SetTokenVerifyAddress(tokenVerifyAddress),
+		indexer.SetContractVerifyAddress(contractVerifyAddress),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not start indexer")

@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
-	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	tx "github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -15,7 +15,7 @@ func (ns *Indexer) isCccvNft(contractAddress []byte) bool {
 func (ns *Indexer) initCccvNft() {
 	var cccv_nft_string, txid string
 	var blockno uint64
-	switch ns.NetworkTypeForCccv {
+	switch ns.networkTypeForCccv {
 	case "mainnet":
 		cccv_nft_string = "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
 		txid = "9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL"
@@ -29,14 +29,10 @@ func (ns *Indexer) initCccvNft() {
 	}
 
 	// init cccv address
-	var err error
-	ns.cccvNftAddress, err = types.DecodeAddress(cccv_nft_string)
-	if err != nil {
-		return
-	}
+	ns.cccvNftAddress, _ = types.DecodeAddress(cccv_nft_string)
 
 	// insert cccv record
-	document := doc.EsToken{
+	document := &doc.EsToken{
 		BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
 		TxId:         txid,
 		BlockNo:      blockno,
@@ -44,9 +40,10 @@ func (ns *Indexer) initCccvNft() {
 		Name_lower:   "cccv_nft",
 		Symbol:       "CNFT",
 		Symbol_lower: "cnft",
-		Type:         transaction.TokenARC2,
+		Type:         tx.TokenARC2,
 		Supply:       "0",
 		SupplyFloat:  float32(0),
+		Decimals:     0,
 	}
-	ns.insertToken(BlockType_Sync, document)
+	ns.addToken(document)
 }
