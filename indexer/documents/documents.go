@@ -321,7 +321,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "keyword"
+							"type": "text"
 						},
 						"from": {
 							"type": "keyword"
@@ -395,7 +395,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"payload": {
-							"type": "keyword"
+							"type": "text"
 						},
 						"verified_status": {
 							"type": "keyword"
@@ -407,7 +407,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"code": {
-							"type": "keyword"
+							"type": "text"
 						}
 					}
 				}
@@ -810,7 +810,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "keyword"
+							"type": "text"
 						},
 						"from": {
 							"type": "keyword"
@@ -884,7 +884,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"payload": {
-							"type": "keyword"
+							"type": "text"
 						},
 						"verified_status": {
 							"type": "keyword"
@@ -896,7 +896,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"code": {
-							"type": "keyword"
+							"type": "text"
 						}
 					}
 				}
