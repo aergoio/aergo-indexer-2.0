@@ -64,7 +64,7 @@ type EsTx struct {
 	Recipient     string        `json:"to" db:"to"`
 	Amount        string        `json:"amount" db:"amount"`             // string of BigInt
 	AmountFloat   float32       `json:"amount_float" db:"amount_float"` // float for sorting
-	Type          string        `json:"type" db:"type"`
+	Type          uint64        `json:"type" db:"type"`
 	Category      tx.TxCategory `json:"category" db:"category"`
 	Method        string        `json:"method" db:"method"`
 	Status        string        `json:"status" db:"status"`
@@ -336,7 +336,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "float"
 						},
 						"type": {
-							"type": "keyword"
+							"type": "long"
 						},
 						"category": {
 							"type": "keyword"
@@ -825,7 +825,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "float"
 						},
 						"type": {
-							"type": "keyword"
+							"type": "long"
 						},
 						"category": {
 							"type": "keyword"

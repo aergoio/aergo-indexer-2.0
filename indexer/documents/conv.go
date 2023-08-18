@@ -3,7 +3,6 @@ package documents
 import (
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +73,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		Recipient:     transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:        amount.String(),
 		AmountFloat:   bigIntToFloat(amount, 18),
-		Type:          strconv.FormatUint(uint64(tx.Body.Type), 10),
+		Type:          uint64(tx.Body.Type),
 		Category:      category,
 		Method:        method,
 		Status:        status,

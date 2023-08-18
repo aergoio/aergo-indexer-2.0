@@ -3,7 +3,6 @@ package documents
 import (
 	"fmt"
 	"math/big"
-	"strconv"
 	"testing"
 	"time"
 
@@ -84,7 +83,7 @@ func TestConvTx(t *testing.T) {
 		Recipient:     "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
 		Amount:        "100",
 		AmountFloat:   bigIntToFloat(big.NewInt(100), 18),
-		Type:          strconv.FormatInt(int64(types.TxType_TRANSFER), 10),
+		Type:          uint64(types.TxType_TRANSFER),
 		Category:      tx.TxTransfer,
 		Status:        "",
 		FeeDelegation: true,
@@ -105,7 +104,7 @@ func TestConvContract(t *testing.T) {
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    1,
 		Account:    "AmLXGJq1GfZWRYjmNVZxCsrJodc1qC1nCXnYkkG7pQLbiWy9NMZw",
-		Type:       strconv.FormatInt(int64(types.TxType_DEPLOY), 10),
+		Type:       uint64(types.TxType_DEPLOY),
 		Category:   tx.TxDeploy,
 	}, decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"), &EsContract{
 		TxId:       "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8",
@@ -126,7 +125,7 @@ func TestConvTokenUp(t *testing.T) {
 		BaseEsType: &BaseEsType{Id: "5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    95022525,
-		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
+		Type:       uint64(types.TxType_CALL),
 		Category:   tx.TxCall,
 	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), "1", 1, &EsTokenUpSupply{
 		BaseEsType:  &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
@@ -137,7 +136,7 @@ func TestConvTokenUp(t *testing.T) {
 		BaseEsType: &BaseEsType{Id: "5Cd2ofFgwFQKSU9H4mDctKLCoQcrcAsY8XXcozCL6a2u"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    95022525,
-		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
+		Type:       uint64(types.TxType_CALL),
 		Category:   tx.TxCall,
 	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), "100000000000000", 100000000000000, &EsTokenUpSupply{
 		BaseEsType:  &BaseEsType{Id: "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"},
@@ -156,7 +155,7 @@ func TestConvToken(t *testing.T) {
 		BaseEsType: &BaseEsType{Id: "7JomfCWykxNprPnSBrh3vo2tAgsMmmvWqcTLuN7vvzQH"},
 		Timestamp:  time.Unix(0, 1668652376002288214),
 		BlockNo:    95022525,
-		Type:       strconv.FormatInt(int64(types.TxType_CALL), 10),
+		Type:       uint64(types.TxType_CALL),
 		Category:   tx.TxCall,
 		Account:    "AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks",
 	}, decodeAddr("AmhUUoFqF4GxjFxxUZrRUieUCRoWnBHT9ESekVAFbif3jU4Zo5ks"), tx.TokenARC1, "Blankazzang Point", "PBLKA", 18, "100000000", 100000000, &EsToken{
@@ -244,7 +243,7 @@ func TestConvTokenTransfer(t *testing.T) {
 			BaseEsType: &BaseEsType{Id: "34yeCGMt2UxFqrztewP2qgJqATQVRdnsu71faJhaWdCA"},
 			Timestamp:  time.Unix(0, 1668652376002288214),
 			BlockNo:    105810874,
-			Type:       strconv.FormatInt(int64(types.TxType_FEEDELEGATION), 10),
+			Type:       uint64(types.TxType_FEEDELEGATION),
 			Category:   tx.TxCall,
 			Account:    "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA",
 		}, 27, "MINT", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", "a6d6d055488d443d29952c1ca276b34ca_28", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", 1, &EsTokenTransfer{

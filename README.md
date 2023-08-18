@@ -61,7 +61,7 @@ from            string      from address (base58check encoded)
 to              string      to address (base58check encoded)
 amount          string      Precise BigInt string representation of amount
 amount_float    float32     Imprecise float representation of amount, useful for sorting
-type            string      tx type
+type            uint64      tx type
 category        string      user-friendly category
 method          string      called function name of a contract
 status          string      tx status from receipt (CREATED/SUCCESS/ERROR)
