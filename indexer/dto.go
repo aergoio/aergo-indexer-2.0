@@ -152,26 +152,25 @@ func (ns *Indexer) updateContract(contractDoc *doc.EsContractUp) {
 	}
 }
 
-func (ns *Indexer) getNFT(id string) (nftDoc *doc.EsNFT, err error) {
+func (ns *Indexer) getContract(id string) (contractDoc *doc.EsContract, err error) {
 	document, err := ns.db.SelectOne(db.QueryParams{
-		IndexName: ns.indexNamePrefix + "nft",
+		IndexName: ns.indexNamePrefix + "contract",
 		StringMatch: &db.StringMatchQuery{
-			Field: "id",
+			Field: "_id",
 			Value: id,
 		},
 	}, func() doc.DocType {
-		nft := new(doc.EsNFT)
-		nft.BaseEsType = new(doc.BaseEsType)
-		return nft
+		contract := new(doc.EsContract)
+		contract.BaseEsType = new(doc.BaseEsType)
+		return contract
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Str("Id", id).Str("method", "getNFT").Msg("error while select")
+		ns.log.Error().Err(err).Str("Id", id).Str("method", "getContract").Msg("error while select")
 		return nil, err
-	}
-	if document == nil {
+	} else if document == nil {
 		return nil, nil
 	}
-	return document.(*doc.EsNFT), nil
+	return document.(*doc.EsContract), nil
 }
 
 func (ns *Indexer) getToken(id string) (tokenDoc *doc.EsToken, err error) {
@@ -193,6 +192,28 @@ func (ns *Indexer) getToken(id string) (tokenDoc *doc.EsToken, err error) {
 		return nil, nil
 	}
 	return document.(*doc.EsToken), nil
+}
+
+func (ns *Indexer) getNFT(id string) (nftDoc *doc.EsNFT, err error) {
+	document, err := ns.db.SelectOne(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "nft",
+		StringMatch: &db.StringMatchQuery{
+			Field: "id",
+			Value: id,
+		},
+	}, func() doc.DocType {
+		nft := new(doc.EsNFT)
+		nft.BaseEsType = new(doc.BaseEsType)
+		return nft
+	})
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", id).Str("method", "getNFT").Msg("error while select")
+		return nil, err
+	}
+	if document == nil {
+		return nil, nil
+	}
+	return document.(*doc.EsNFT), nil
 }
 
 func (ns *Indexer) cntTokenTransfer(id string) (ttCnt uint64, err error) {

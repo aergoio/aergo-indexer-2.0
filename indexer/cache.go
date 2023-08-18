@@ -56,7 +56,9 @@ func (c *Cache) registerVariables() {
 			break
 		}
 		if tokenVerified, ok := document.(*doc.EsToken); ok {
-			c.storeVerifiedToken(tokenVerified.TokenAddress)
+			if tokenVerified.TokenAddress != "" {
+				c.storeVerifiedToken(tokenVerified.TokenAddress)
+			}
 		}
 	}
 

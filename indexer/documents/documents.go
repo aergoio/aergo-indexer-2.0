@@ -84,6 +84,7 @@ type EsContract struct {
 
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+	CodeUrl        string `json:"code_url" db:"code_url"`
 	Code           string `json:"code" db:"code"`
 }
 
@@ -92,6 +93,7 @@ type EsContractUp struct {
 	Payload        string `json:"payload" db:"payload"`
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+	CodeUrl        string `json:"code_url" db:"code_url"`
 	Code           string `json:"code" db:"code"`
 }
 
@@ -389,7 +391,10 @@ func InitEsMappings(clusterMode bool) {
 						"verified_token": {
 							"type": "keyword"
 						},
-						"verified_code": {
+						"code_url": {
+							"type": "keyword"
+						},
+						"code": {
 							"type": "keyword"
 						}
 					}
@@ -863,7 +868,10 @@ func InitEsMappings(clusterMode bool) {
 						"verified_token": {
 							"type": "keyword"
 						},
-						"verified_code": {
+						"code_url": {
+							"type": "keyword"
+						},
+						"code": {
 							"type": "keyword"
 						}
 					}

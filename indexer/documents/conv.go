@@ -87,12 +87,13 @@ func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	}
 }
 
-func ConvContractUp(contractAddress string, status, payload, token, owner, code string) *EsContractUp {
+func ConvContractUp(contractAddress string, status, payload, token, codeUrl, code string) *EsContractUp {
 	return &EsContractUp{
 		BaseEsType:     &BaseEsType{Id: contractAddress},
 		Payload:        payload,
 		VerifiedToken:  token,
 		VerifiedStatus: status,
+		CodeUrl:        codeUrl,
 		Code:           code,
 	}
 }

@@ -48,7 +48,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		ns.addBlock(info.Type, blockDoc)
 
 		// update variables per 10 minutes
-		if info.Type == BlockType_Sync && blockHeight%600 == 0 {
+		if info.Type == BlockType_Sync && blockHeight%10 == 0 {
 			ns.cache.refreshVariables(info, blockDoc, MinerGRPC)
 		}
 	}
@@ -317,23 +317,50 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *cli
 }
 
 func (ns *Indexer) MinerContractVerified(tokenAddr, metadata string, MinerGRPC *client.AergoClientController) {
-	contractAddr, codeUrl, owner, err := transaction.UnmarshalMetadataVerifyContract(metadata)
+	contractAddr, codeUrl, _, err := transaction.UnmarshalMetadataVerifyContract(metadata)
 	if err != nil {
 		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
 		return
 	}
+
+	contractDoc, err := ns.getContract(contractAddr)
+	if err != nil || contractDoc == nil {
+		ns.log.Error().Err(err).Msg("contractDoc is not exist. wait until contractDoc added")
+		return
+	}
+	// skip if codeUrl not changed
+	if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
+		ns.log.Debug().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("codeUrl is not changed, skip")
+		return
+	}
+
 	code, err := lua_compiler.GetCode(codeUrl)
 	if err != nil {
 		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
 	}
 
-	bytecode, err := lua_compiler.CompileCode(code)
-	if err != nil {
-		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to compile code")
-	}
+	// TODO : valid bytecode
+	/*
+		bytecode, err := lua_compiler.CompileCode(code)
+		if err != nil {
+			ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to compile code")
+		}
 
-	contractUpDoc := doc.ConvContractUp(contractAddr, string(Verified), string(bytecode), codeUrl, code, owner)
-
-	// TODO : Compile and compare
+		// compare bytecode and payload
+		var status string
+		if bytes.Contains([]byte(contractDoc.Payload), bytecode) == true {
+			status = string(Verified)
+		} else {
+			ns.log.Error().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("Failed to verify contract")
+			fmt.Println([]byte(contractDoc.Payload))
+			var i interface{}
+			json.Unmarshal([]byte(contractDoc.Payload), i)
+			fmt.Println(i)
+			fmt.Println(bytecode)
+			status = string(NotVerified)
+		}
+	*/
+	var status = string(Verified)
+	contractUpDoc := doc.ConvContractUp(contractAddr, status, contractDoc.Payload, tokenAddr, codeUrl, code)
 	ns.updateContract(contractUpDoc)
 }

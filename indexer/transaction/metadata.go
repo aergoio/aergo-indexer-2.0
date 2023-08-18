@@ -9,7 +9,7 @@ func UnmarshalMetadataVerifyToken(metadata string) (contractAddr, owner, comment
 	var args map[string]interface{}
 	err = json.Unmarshal([]byte(metadata), &args)
 	if err != nil {
-		return "", "", "", "", "", "", "", fmt.Errorf("%v | %s", err, metadata)
+		return "", "", "", "", "", "", "", fmt.Errorf("err : [%v], metadata : [%s]", err, metadata)
 	}
 
 	if field := args["contract"]; field != nil {

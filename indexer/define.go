@@ -39,6 +39,7 @@ type ChanInfoType struct {
 type VerifiedStatus string
 
 const (
-	Empty    VerifiedStatus = ""
-	Verified VerifiedStatus = "verified"
+	Empty       VerifiedStatus = ""
+	NotVerified VerifiedStatus = "not_verified"
+	Verified    VerifiedStatus = "verified"
 )
