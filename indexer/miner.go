@@ -48,7 +48,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		ns.addBlock(info.Type, blockDoc)
 
 		// update variables per 10 minutes
-		if info.Type == BlockType_Sync && blockHeight%10 == 0 {
+		if info.Type == BlockType_Sync && blockHeight%600 == 0 {
 			ns.cache.refreshVariables(info, blockDoc, MinerGRPC)
 		}
 	}
