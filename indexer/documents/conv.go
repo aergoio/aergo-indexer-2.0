@@ -45,15 +45,10 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		gasUsed = receipt.GasUsed
 		feeDelegation = receipt.FeeDelegation
 		result = receipt.Ret
-
-		feeUsedBig := big.NewInt(0).SetBytes(receipt.FeeUsed)
-		feeUsed = feeUsedBig.String()
-
-		// TODO: currently, gas price always zero in tx. so, use feeUsed / gasUsed
-		gasPriceBig := big.NewInt(0).Div(feeUsedBig, big.NewInt(int64(gasUsed)))
-		gasPrice = gasPriceBig.String()
+		feeUsed = big.NewInt(0).SetBytes(receipt.FeeUsed).String()
 	}
-	// not used, always zero
+	// TODO: currently, gas price always zero in tx. so, use default price
+	gasPrice = "50000000000"
 	// gasPrice := big.NewInt(0).SetBytes(tx.GetBody().GasPrice)
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
 	category, method := transaction.DetectTxCategory(tx)
