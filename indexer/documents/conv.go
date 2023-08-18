@@ -39,23 +39,34 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	var result string
 	var gasUsed uint64
 	var feeDelegation bool
+	var feeUsed string
+	var gasPrice string
 	if receipt != nil {
 		status = receipt.Status
 		gasUsed = receipt.GasUsed
 		feeDelegation = receipt.FeeDelegation
 		result = receipt.Ret
-	}
 
+		feeUsedBig := big.NewInt(0).SetBytes(receipt.FeeUsed)
+		feeUsed = feeUsedBig.String()
+
+		// TODO: currently, gas price always zero in tx. so, use feeUsed / gasUsed
+		gasPriceBig := big.NewInt(0).Div(feeUsedBig, big.NewInt(int64(gasUsed)))
+		gasPrice = gasPriceBig.String()
+	}
+	// not used, always zero
+	// gasPrice := big.NewInt(0).SetBytes(tx.GetBody().GasPrice)
 	amount := big.NewInt(0).SetBytes(tx.GetBody().Amount)
-	gasPrice := big.NewInt(0).SetBytes(tx.GetBody().GasPrice)
 	category, method := transaction.DetectTxCategory(tx)
 	if len(method) > 50 {
 		method = method[:50]
 	}
+	nonce := tx.Body.Nonce
 
 	return &EsTx{
 		BaseEsType:    &BaseEsType{Id: base58.Encode(tx.Hash)},
 		BlockNo:       blockDoc.BlockNo,
+		BlockId:       blockDoc.Id,
 		Timestamp:     blockDoc.Timestamp,
 		TxIdx:         txIdx,
 		Payload:       string(tx.GetBody().GetPayload()),
@@ -68,10 +79,12 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		Method:        method,
 		Status:        status,
 		Result:        result,
+		Nonce:         nonce,
 		FeeDelegation: feeDelegation,
-		GasPrice:      gasPrice.String(),
-		GasLimit:      tx.Body.GasLimit,
+		GasPrice:      gasPrice,
 		GasUsed:       gasUsed,
+		GasLimit:      tx.Body.GasLimit,
+		FeeUsed:       feeUsed,
 	}
 }
 

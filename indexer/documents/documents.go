@@ -56,6 +56,7 @@ type EsBlock struct {
 type EsTx struct {
 	*BaseEsType
 	BlockNo       uint64        `json:"blockno" db:"blockno"`
+	BlockId       string        `json:"block_id" db:"block_id"`
 	Timestamp     time.Time     `json:"ts" db:"ts"`
 	TxIdx         uint64        `json:"tx_idx" db:"tx_idx"`
 	Payload       string        `json:"payload" db:"payload"`
@@ -68,10 +69,12 @@ type EsTx struct {
 	Method        string        `json:"method" db:"method"`
 	Status        string        `json:"status" db:"status"`
 	Result        string        `json:"result" db:"result"`
+	Nonce         uint64        `json:"nonce" db:"nonce"`
 	FeeDelegation bool          `json:"fee_delegation" db:"fee_delegation"`
 	GasPrice      string        `json:"gas_price" db:"gas_price"`
 	GasLimit      uint64        `json:"gas_limit" db:"gas_limit"`
 	GasUsed       uint64        `json:"gas_used" db:"gas_used"`
+	FeeUsed       string        `json:"fee_used" db:"fee_used"`
 }
 
 type EsContract struct {
@@ -308,6 +311,9 @@ func InitEsMappings(clusterMode bool) {
 						"blockno": {
 							"type": "long"
 						},
+						"block_id": {
+							"type": "keyword"
+						},
 						"ts": {
 							"type": "date"
 						},
@@ -347,6 +353,9 @@ func InitEsMappings(clusterMode bool) {
 						"result": {
 							"type": "keyword"
 						},
+						"nonce": {
+							"type": "long"
+						},
 						"fee_delegation": {
 							"type": "boolean"
 						},
@@ -358,6 +367,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"gas_limit": {
 							"type": "long"
+						},
+						"fee_used": {
+							"type": "keyword"
 						}
 					}
 				}
@@ -788,6 +800,9 @@ func InitEsMappings(clusterMode bool) {
 						"blockno": {
 							"type": "long"
 						},
+						"block_id": {
+							"type": "keyword"
+						},
 						"ts": {
 							"type": "date"
 						},
@@ -818,11 +833,17 @@ func InitEsMappings(clusterMode bool) {
 						"method": {
 							"type": "keyword"
 						},
+						"token_transfers": {
+							"type": "long"
+						},
 						"status": {
 							"type": "keyword"
 						},
 						"result": {
 							"type": "keyword"
+						},
+						"nonce": {
+							"type": "long"
 						},
 						"fee_delegation": {
 							"type": "boolean"
@@ -835,6 +856,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"gas_limit": {
 							"type": "long"
+						},
+						"fee_used": {
+							"type": "keyword"
 						}
 					}
 				}

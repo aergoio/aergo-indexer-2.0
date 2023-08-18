@@ -53,6 +53,7 @@ tx (transactions)
 Field           Type        Comment
 id              string      tx hash
 blockno         uint64      block number
+block_id        string      block hash
 ts              timestamp   block creation timestamp (unixnano)
 tx_idx          uint64      tx index within block
 payload         string      tx payload
@@ -69,6 +70,7 @@ fee_delegation  bool        fee delegation transaction
 gas_price       string      tx gas price
 gas_limit       uint64      tx gas limit
 gas_used        uint64      receipt gas used
+nonce           uint64      receipt nonce
 ```
 
 contract
