@@ -40,9 +40,11 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	var feeDelegation bool
 	var feeUsed string
 	var gasPrice string
+	var contract string
 	if receipt != nil {
 		status = receipt.Status
 		gasUsed = receipt.GasUsed
+		contract = transaction.EncodeAndResolveAccount(receipt.ContractAddress, blockDoc.BlockNo)
 		feeDelegation = receipt.FeeDelegation
 		result = receipt.Ret
 		feeUsed = big.NewInt(0).SetBytes(receipt.FeeUsed).String()
@@ -73,6 +75,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		Method:        method,
 		Status:        status,
 		Result:        result,
+		Contract:      contract,
 		Nonce:         nonce,
 		FeeDelegation: feeDelegation,
 		GasPrice:      gasPrice,

@@ -69,6 +69,7 @@ type EsTx struct {
 	Method        string        `json:"method" db:"method"`
 	Status        string        `json:"status" db:"status"`
 	Result        string        `json:"result" db:"result"`
+	Contract      string        `json:"contract" db:"contract"`
 	Nonce         uint64        `json:"nonce" db:"nonce"`
 	FeeDelegation bool          `json:"fee_delegation" db:"fee_delegation"`
 	GasPrice      string        `json:"gas_price" db:"gas_price"`
@@ -355,6 +356,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"nonce": {
 							"type": "long"
+						},
+						"contract": {
+							"type": "keyword"
 						},
 						"fee_delegation": {
 							"type": "boolean"
@@ -844,6 +848,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"nonce": {
 							"type": "long"
+						},
+						"contract": {
+							"type": "keyword"
 						},
 						"fee_delegation": {
 							"type": "boolean"
