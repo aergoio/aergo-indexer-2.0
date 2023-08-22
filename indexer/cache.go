@@ -115,6 +115,7 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	// update verify token
 	ns.addrsVerifiedToken.Range(func(k, v interface{}) bool {
 		if tokenAddress, ok := k.(string); ok {
+			ns.idxer.log.Info().Str("tokenAddress", tokenAddress).Msg("update verified token")
 			metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, tokenAddress)
 			ns.idxer.MinerTokenVerified(tokenAddress, metadata, minerGRPC)
 		}
@@ -124,6 +125,7 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	// update verify code
 	ns.addrsVerifiedContract.Range(func(k, v interface{}) bool {
 		if contractAddress, ok := k.(string); ok {
+			ns.idxer.log.Info().Str("contractAddress", contractAddress).Msg("update verified contract")
 			metadata := minerGRPC.QueryMetadataOf(ns.idxer.contractVerifyAddr, contractAddress)
 			ns.idxer.MinerContractVerified(contractAddress, metadata, minerGRPC)
 		}
