@@ -97,7 +97,13 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 
 // Count returns the number of indexed documents
 func (esdb *ElasticsearchDbController) Count(params QueryParams) (int64, error) {
-	return esdb.client.Count(params.IndexName).Do(context.Background())
+	var query elastic.Query
+	if params.IntegerRange != nil {
+		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
+	} else if params.StringMatch != nil {
+		query = elastic.NewMatchQuery(params.StringMatch.Field, params.StringMatch.Value)
+	}
+	return esdb.client.Count(params.IndexName).Query(query).Do(context.Background())
 }
 
 // SelectOne selects a single document

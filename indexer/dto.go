@@ -198,7 +198,7 @@ func (ns *Indexer) getNFT(id string) (nftDoc *doc.EsNFT, err error) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "nft",
 		StringMatch: &db.StringMatchQuery{
-			Field: "id",
+			Field: "_id",
 			Value: id,
 		},
 	}, func() doc.DocType {
