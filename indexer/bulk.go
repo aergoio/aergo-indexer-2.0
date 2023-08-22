@@ -2,128 +2,126 @@ package indexer
 
 import (
 	"context"
-	"time"
 	"fmt"
-	"github.com/olivere/elastic/v7"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
+	"time"
+
+	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 )
 
-// FOR BULK INSERT
-func (ns *Indexer) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64) {
+type Bulk struct {
+	idxer *Indexer
 
-	ns.log.Info().Msg(fmt.Sprintf("Indexing %d [%d..%d]", (1 + toBlockHeight - fromBlockHeight), fromBlockHeight, toBlockHeight))
+	BChannel ChanInfoType
+	RChannel []chan BlockInfo
+	SynDone  chan bool
+
+	bulkSize  int32
+	batchTime time.Duration
+	minerNum  int
+	grpcNum   int
+}
+
+func NewBulk(idxer *Indexer) *Bulk {
+	return &Bulk{
+		idxer:     idxer,
+		bulkSize:  idxer.bulkSize,
+		batchTime: idxer.batchTime,
+		minerNum:  idxer.minerNum,
+		grpcNum:   idxer.grpcNum,
+	}
+}
+
+func (b *Bulk) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64) {
+	b.idxer.log.Info().Msg(fmt.Sprintf("Indexing %d [%d..%d]", (1 + toBlockHeight - fromBlockHeight), fromBlockHeight, toBlockHeight))
 
 	for blockHeight := toBlockHeight; blockHeight > fromBlockHeight; blockHeight-- {
-		if (blockHeight % 100000 == 0) {
-			fmt.Println(">>>>> Current Reindex Height :", blockHeight)
+		if blockHeight%100000 == 0 {
+			b.idxer.log.Info().Uint64("Height", blockHeight).Msg("Current Reindex")
 		}
-		ns.RChannel[blockHeight%uint64(ns.MinerNum)]  <- BlockInfo{1,blockHeight}
+		b.RChannel[blockHeight%uint64(b.minerNum)] <- BlockInfo{BlockType_Bulk, blockHeight}
 	}
 	// last one
-	ns.RChannel[0]  <- BlockInfo{1,fromBlockHeight}
+	b.RChannel[0] <- BlockInfo{BlockType_Bulk, fromBlockHeight}
 }
 
-
-// Run Bulk Indexing 
-func (ns *Indexer) StartBulkChannel () {
-
+func (b *Bulk) StartBulkChannel() {
 	// Open channels for each indices
-	ns.BChannel.Block = make(chan ChanInfo)
-	ns.BChannel.Tx = make(chan ChanInfo)
-	ns.BChannel.TokenTx = make(chan ChanInfo)
-	ns.BChannel.AccTokens = make(chan ChanInfo)
-	ns.BChannel.NFT = make(chan ChanInfo)
-	ns.SynDone = make(chan bool)
+	b.BChannel.Block = make(chan ChanInfo)
+	b.BChannel.Tx = make(chan ChanInfo)
+	b.BChannel.TokenTransfer = make(chan ChanInfo)
+	b.BChannel.AccTokens = make(chan ChanInfo)
+	b.SynDone = make(chan bool)
 
 	// Start bulk indexers for each indices
-	go ns.BulkIndexer(ns.BChannel.Block, ns.indexNamePrefix+"block", ns.BulkSize, ns.BatchTime, true)
-	go ns.BulkIndexer(ns.BChannel.Tx, ns.indexNamePrefix+"tx", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.TokenTx, ns.indexNamePrefix+"token_transfer", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.AccTokens, ns.indexNamePrefix+"account_tokens", ns.BulkSize, ns.BatchTime, false)
-	go ns.BulkIndexer(ns.BChannel.NFT, ns.indexNamePrefix+"nft", ns.BulkSize, ns.BatchTime, false)
+	go b.BulkIndexer(b.BChannel.Block, b.idxer.indexNamePrefix+"block", b.bulkSize, b.batchTime, true)
+	go b.BulkIndexer(b.BChannel.Tx, b.idxer.indexNamePrefix+"tx", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.TokenTransfer, b.idxer.indexNamePrefix+"token_transfer", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.AccTokens, b.idxer.indexNamePrefix+"account_tokens", b.bulkSize, b.batchTime, false)
 
-	// Start multiple miners 
-	GrpcClients := make([]types.AergoRPCServiceClient, ns.GrpcNum)
-	for i := 0 ; i < ns.GrpcNum ; i ++ {
-		GrpcClients[i] = ns.WaitForClient(ns.ServerAddr)
+	// Start multiple miners
+	GrpcClients := make([]*client.AergoClientController, b.grpcNum)
+	for i := 0; i < b.grpcNum; i++ {
+		GrpcClients[i] = b.idxer.WaitForServer(context.Background())
 	}
 
-	ns.RChannel = make([]chan BlockInfo, ns.MinerNum)
-	for i := 0 ; i < ns.MinerNum ; i ++ {
-
-		fmt.Println(":::::::::::::::::::::: Start Channels")
-
-		ns.RChannel[i] = make(chan BlockInfo)
-
-		if ns.GrpcNum > 0 {
-			go ns.Miner(ns.RChannel[i], GrpcClients[i%ns.GrpcNum])
+	b.RChannel = make([]chan BlockInfo, b.minerNum)
+	for i := 0; i < b.minerNum; i++ {
+		b.idxer.log.Debug().Msg("grpc channel start")
+		b.RChannel[i] = make(chan BlockInfo)
+		if b.grpcNum > 0 {
+			go b.idxer.Miner(b.RChannel[i], GrpcClients[i%b.grpcNum])
 		} else {
-			go ns.Miner(ns.RChannel[i], ns.grpcClient)
+			go b.idxer.Miner(b.RChannel[i], b.idxer.grpcClient)
 		}
 	}
 }
 
+func (b *Bulk) StopBulkChannel() {
+	b.idxer.log.Debug().Msg("grpc channel stop")
 
-// Stop Bulk indexing
-func (ns *Indexer) StopBulkChannel () {
-
-	fmt.Println(":::::::::::::::::::::: STOP Channels")
-
-	for i := 0 ; i < ns.MinerNum ; i ++ {
-		ns.RChannel[i] <- BlockInfo{0,0}
-		close(ns.RChannel[i])
+	for i := 0; i < b.minerNum; i++ {
+		b.RChannel[i] <- BlockInfo{BlockType_StopMiner, 0}
+		close(b.RChannel[i])
 	}
 
-	// Force commit 
-	time.Sleep(5*time.Second)
-	ns.BChannel.Block <- ChanInfo{2,nil}
-	time.Sleep(5*time.Second)
+	// Force commit
+	time.Sleep(5 * time.Second)
+	b.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
+	time.Sleep(5 * time.Second)
 
 	// Send stop messages to each bulk channels
-	ns.BChannel.Block <- ChanInfo{0,nil}
-	ns.BChannel.Tx <- ChanInfo{0,nil}
-//	ns.BChannel.Name <- ChanInfo{0,nil}
-//	ns.BChannel.Token <- ChanInfo{0,nil}
-	ns.BChannel.TokenTx <- ChanInfo{0,nil}
-	ns.BChannel.AccTokens <- ChanInfo{0,nil}
-	ns.BChannel.NFT <- ChanInfo{0,nil}
+	b.BChannel.Block <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.Tx <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.TokenTransfer <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.AccTokens <- ChanInfo{ChanType_StopBulk, nil}
 
 	// Close bulk channels
-	close(ns.BChannel.Block)
-	close(ns.BChannel.Tx)
-//	close(ns.BChannel.Name)
-//	close(ns.BChannel.Token)
-	close(ns.BChannel.TokenTx)
-	close(ns.BChannel.AccTokens)
-	close(ns.BChannel.NFT)
-	close(ns.SynDone)
+	close(b.BChannel.Block)
+	close(b.BChannel.Tx)
+	close(b.BChannel.TokenTransfer)
+	close(b.BChannel.AccTokens)
+	close(b.SynDone)
 
-	ns.log.Info().Msg("Stop Bulk Indexer")
+	b.idxer.log.Info().Msg("Stop Bulk Indexer")
 }
 
-
-// Do Bulk Indexing 
-func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize int32, batchTime time.Duration, isBlock bool)  {
-
-	ctx := context.Background()
-	bulk := ns.db.Client.Bulk().Index(indexName)
+func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize int32, batchTime time.Duration, isBlock bool) {
+	bulk := b.idxer.db.InsertBulk(indexName)
 	total := int32(0)
 	begin := time.Now()
 
 	return_flag := false
 
-	// Block Channel : Time-out Sync  
+	// Block Channel : Time-out Sync
 	if isBlock {
 		go func() {
 			for {
-				if  return_flag {
+				if return_flag {
 					return
 				} else {
-
 					time.Sleep(batchTime)
-
 					if total > 0 && time.Now().Sub(begin) > batchTime {
-						ns.BChannel.Block <- ChanInfo{2,nil}
+						b.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
 					}
 				}
 			}
@@ -132,73 +130,65 @@ func (ns *Indexer) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkS
 
 	// Do commit
 	commitBulk := func(sync bool) {
-
 		if total == 0 {
-			if (sync && !isBlock) {
-				ns.SynDone <- true
+			if sync && !isBlock {
+				b.SynDone <- true
 			}
-
 			return_flag = true
-
 			return
 		}
 
 		// Block Channel : wait other channels
 		if isBlock {
+			b.BChannel.Tx <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.TokenTransfer <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.AccTokens <- ChanInfo{ChanType_Commit, nil}
 
-			ns.BChannel.Tx		<- ChanInfo{2,nil}
-//			ns.BChannel.Name	<- ChanInfo{2,nil}
-//			ns.BChannel.Token	<- ChanInfo{2,nil}
-			ns.BChannel.TokenTx	<- ChanInfo{2,nil}
-			ns.BChannel.AccTokens	<- ChanInfo{2,nil}
-			ns.BChannel.NFT		<- ChanInfo{2,nil}
-
-			for i := 0 ; i < 4 ; i ++ {
-				<-ns.SynDone
+			for i := 0; i < 3; i++ {
+				<-b.SynDone
 			}
 		}
 
-		_, err := bulk.Do(ctx)
+		err := bulk.Commit()
 
-		if sync && !isBlock  { ns.SynDone <- true }
+		if sync && !isBlock {
+			b.SynDone <- true
+		}
 
 		if err != nil {
-			ns.log.Error().Err(err).Str("indexName", indexName)
-			ns.StopBulkChannel()
+			b.idxer.log.Error().Err(err).Str("indexName", indexName)
+			b.StopBulkChannel()
 		}
 
 		dur := time.Since(begin).Seconds()
 		pps := int64(float64(total) / dur)
 
-		ns.log.Info().Str("Commit",indexName).Int32("total", total).Int64("perSecond", pps).Msg("")
+		b.idxer.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps)
 
 		begin = time.Now()
 		total = 0
-
 		return_flag = true
 	}
 
-
 	for I := range docChannel {
-
 		// stop
-		if I.Type == 0 {
+		if I.Type == ChanType_StopBulk {
 			break
 		}
 
 		// commit
-		if I.Type == 2 {
+		if I.Type == ChanType_Commit {
 			commitBulk(true)
 			continue
 		}
 
 		// commit
-		if total >= bulkSize { commitBulk(false) }
+		if total >= bulkSize {
+			commitBulk(false)
+		}
+		total++
 
-		total ++
-
-		// Only Create Indexing 
-		bulk.Add(elastic.NewBulkIndexRequest().OpType("create").Id(I.Doc.GetID()).Doc(I.Doc))
-//		bulk.Add(elastic.NewBulkUpdateRequest().Id(I.Doc.GetID()).Doc(I.Doc).DocAsUpsert(true))
+		// Only Create Indexing
+		bulk.Add(I.Doc)
 	}
 }

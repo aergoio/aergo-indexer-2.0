@@ -1,56 +1,49 @@
 package indexer
 
 import (
-	"github.com/kjunblk/aergo-indexer-2.0/indexer/category"
-	"github.com/kjunblk/aergo-indexer-2.0/types"
-	doc "github.com/kjunblk/aergo-indexer-2.0/indexer/documents"
+	"bytes"
+
+	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	tx "github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
-var cccv_nft_address []byte
-
-func (ns *Indexer) cccv_nft_mainnet() {
-
-	cccv_nft_string := "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
-
-	var err error
-	cccv_nft_address, err = types.DecodeAddress(cccv_nft_string)
-
-	if err != nil {return}
-
-	document :=  doc.EsToken{
-		BaseEsType:  &doc.BaseEsType{cccv_nft_string},
-		TxId:		"9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL",
-		BlockNo:	68592368,
-		Name:		"cccv_nft",
-		Symbol:		"CNFT",
-		Type :		category.ARC2,
-		Supply:		"0",
-		SupplyFloat:	float32(0),
-	}
-
-	ns.db.Insert(document,ns.indexNamePrefix+"token")
+func (ns *Indexer) isCccvNft(contractAddress []byte) bool {
+	return ns.cccvNftAddress != nil && bytes.Equal(contractAddress, ns.cccvNftAddress)
 }
 
-
-func (ns *Indexer) cccv_nft_testnet() {
-
-	cccv_nft_string := "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF"
-
-	var err error
-	cccv_nft_address, err = types.DecodeAddress(cccv_nft_string)
-
-	if err != nil {return}
-
-	document :=  doc.EsToken{
-		BaseEsType:  &doc.BaseEsType{cccv_nft_string},
-		TxId:		"21J8YmRt3onQYwZnCkwUEk1zV7GsvRMhfFzwdtaeWkyi",
-		BlockNo:	66638759,
-		Name:		"cccv_nft",
-		Symbol:		"CNFT",
-		Type :		category.ARC2,
-		Supply:		"0",
-		SupplyFloat:	float32(0),
+func (ns *Indexer) initCccvNft() {
+	var cccv_nft_string, txid string
+	var blockno uint64
+	switch ns.networkTypeForCccv {
+	case "mainnet":
+		cccv_nft_string = "Amg5yZU9j5rCYBmCs1TiZ65GpffFBhEBpYyRAyjwXMweouVTeckE"
+		txid = "9nCGvpKEY7Yu9zbwCzGwurTzjHKV9qEgH54MtVXY7DpL"
+		blockno = 68592368
+	case "testnet":
+		cccv_nft_string = "Amg5KQVkBcX1rR1nmKFPyZPnU8CeGWnZkqAiqp3v4fgSL6KmcCuF"
+		txid = "21J8YmRt3onQYwZnCkwUEk1zV7GsvRMhfFzwdtaeWkyi"
+		blockno = 66638759
+	default:
+		return
 	}
 
-	ns.db.Insert(document,ns.indexNamePrefix+"token")
+	// init cccv address
+	ns.cccvNftAddress, _ = types.DecodeAddress(cccv_nft_string)
+
+	// insert cccv record
+	document := &doc.EsToken{
+		BaseEsType:   &doc.BaseEsType{Id: cccv_nft_string},
+		TxId:         txid,
+		BlockNo:      blockno,
+		Name:         "cccv_nft",
+		Name_lower:   "cccv_nft",
+		Symbol:       "CNFT",
+		Symbol_lower: "cnft",
+		Type:         tx.TokenARC2,
+		Supply:       "0",
+		SupplyFloat:  float32(0),
+		Decimals:     0,
+	}
+	ns.addToken(document)
 }
