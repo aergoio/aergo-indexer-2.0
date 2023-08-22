@@ -302,7 +302,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *cli
 
 	tokenDoc, err := ns.getToken(contractAddr)
 	if err != nil || tokenDoc == nil {
-		ns.log.Error().Err(err).Msg("tokenDoc is not exist. wait until tokenDoc added")
+		ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
 		return
 	}
 
