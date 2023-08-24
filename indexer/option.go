@@ -51,7 +51,7 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.whitelistAddresses = whiteListAddresses
+		indexer.balanceAddresses = whiteListAddresses
 		return nil
 	}
 }

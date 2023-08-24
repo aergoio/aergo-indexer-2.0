@@ -75,10 +75,8 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	}
 
 	// Balance from, to
-	ns.MinerBalance(blockDoc, tx.Body.Account, MinerGRPC)
-	if bytes.Equal(tx.Body.Account, tx.Body.Recipient) != true {
-		ns.MinerBalance(blockDoc, tx.Body.Recipient, MinerGRPC)
-	}
+	ns.cache.storeBalance(transaction.EncodeAndResolveAccount(tx.Body.Account, txDoc.BlockNo))
+	ns.cache.storeBalance(transaction.EncodeAndResolveAccount(tx.Body.Recipient, txDoc.BlockNo))
 
 	// Process Token and TokenTransfer
 	switch txDoc.Category {
@@ -93,7 +91,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	// Process Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
 		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
-		ns.addContract(contractDoc)
+		ns.addContract(info.Type, contractDoc)
 	}
 
 	// Process Events
@@ -116,9 +114,9 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		tokenDoc := doc.ConvToken(txDoc, receipt.ContractAddress, tType, name, symbol, decimals, supply, supplyFloat)
 		ns.addToken(tokenDoc)
 
-		// Add Contract doc
+		// Add Contract Doc
 		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
-		ns.addContract(contractDoc)
+		ns.addContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(receipt.ContractAddress)).Msg("Token created ( Policy 2 )")
 	}
@@ -129,7 +127,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
 	// mine all events per contract
 	eventDoc := doc.ConvEvent(event, blockDoc, txDoc, txIdx)
-	ns.addEvent(eventDoc)
+	ns.addEvent(info.Type, eventDoc)
 
 	// parse event by contract address
 	ns.MinerEventByAddr(blockDoc, txDoc, event, MinerGRPC)
@@ -140,22 +138,21 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.
 
 func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
 	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.tokenVerifyAddr) == true {
-		tokenAddr, err := transaction.UnmarshalEventVerifyToken(event)
+		tokenAddr, contractAddr, err := transaction.UnmarshalEventVerifyToken(event)
 		if err != nil {
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.storeVerifiedToken(tokenAddr)
+		ns.cache.storeVerifiedToken(tokenAddr, contractAddr)
 	}
 	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.contractVerifyAddr) == true {
-		contractAddr, err := transaction.UnmarshalEventVerifyContract(event)
+		tokenAddr, contractAddr, err := transaction.UnmarshalEventVerifyContract(event)
 		if err != nil {
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.storeVerifiedContract(contractAddr)
+		ns.cache.storeVerifiedContract(tokenAddr, contractAddr)
 	}
-
 }
 
 func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
@@ -183,7 +180,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 
 		// Add Contract Doc
 		contractDoc := doc.ConvContract(txDoc, contractAddress)
-		ns.addContract(contractDoc)
+		ns.addContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Policy 1 )")
 	case transaction.EventMint:
@@ -284,83 +281,122 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 	}
 }
 
-func (ns *Indexer) MinerBalance(block *doc.EsBlock, address []byte, MinerGRPC *client.AergoClientController) {
-	if transaction.IsBalanceNotResolved(string(address)) {
-		return
+func (ns *Indexer) MinerBalance(block *doc.EsBlock, address string, MinerGRPC *client.AergoClientController) bool {
+	addressRaw, err := types.DecodeAddress(address)
+	if err != nil || transaction.IsBalanceNotResolved(string(addressRaw)) {
+		return false
 	}
-	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(address)
+
+	balance, balanceFloat, staking, stakingFloat := MinerGRPC.BalanceOf(addressRaw)
 	balanceFromDoc := doc.ConvAccountBalance(block.BlockNo, address, block.Timestamp, balance, balanceFloat, staking, stakingFloat)
 	ns.addAccountBalance(balanceFromDoc)
+
+	// if staking balance >= 10000, keep track balance
+	if stakingFloat >= 10000 {
+		return true
+	}
+	return false
 }
 
-func (ns *Indexer) MinerTokenVerified(tokenAddr, metadata string, MinerGRPC *client.AergoClientController) {
-	contractAddr, owner, comment, email, regDate, homepageUrl, imageUrl, err := transaction.UnmarshalMetadataVerifyToken(metadata)
-	if err != nil {
-		ns.log.Error().Err(err).Str("method", "verifyToken").Msg("Failed to unmarshal metadata")
-		return
-	}
+func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
+	updateContractAddr, owner, comment, email, regDate, homepageUrl, imageUrl := transaction.UnmarshalMetadataVerifyToken(metadata)
 
-	tokenDoc, err := ns.getToken(contractAddr)
-	if err != nil || tokenDoc == nil {
-		ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
-		return
-	}
+	// remove exist token info
+	if updateContractAddr != contractAddr {
+		tokenDoc, err := ns.getToken(contractAddr)
+		if err != nil || tokenDoc == nil {
+			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
+			return contractAddr
+		}
 
-	var totalTransfer uint64
-	totalTransfer, err = ns.cntTokenTransfer(contractAddr)
-	if err != nil {
-		totalTransfer = 0
-	}
-
-	tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(Verified), tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
-	ns.updateTokenVerified(tokenVerifiedDoc)
-}
-
-func (ns *Indexer) MinerContractVerified(tokenAddr, metadata string, MinerGRPC *client.AergoClientController) {
-	contractAddr, codeUrl, _, err := transaction.UnmarshalMetadataVerifyContract(metadata)
-	if err != nil {
-		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to unmarshal metadata")
-		return
-	}
-
-	contractDoc, err := ns.getContract(contractAddr)
-	if err != nil || contractDoc == nil {
-		ns.log.Error().Err(err).Msg("contractDoc is not exist. wait until contractDoc added")
-		return
-	}
-	// skip if codeUrl not changed
-	if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
-		ns.log.Debug().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("codeUrl is not changed, skip")
-		return
-	}
-
-	code, err := lua_compiler.GetCode(codeUrl)
-	if err != nil {
-		ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
-	}
-
-	// TODO : valid bytecode
-	/*
-		bytecode, err := lua_compiler.CompileCode(code)
+		totalTransfer, err := ns.cntTokenTransfer(contractAddr)
 		if err != nil {
-			ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to compile code")
+			totalTransfer = 0
+		}
+		tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(NotVerified), "", "", "", "", "", "", "", totalTransfer)
+		ns.updateTokenVerified(tokenVerifiedDoc)
+		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified token updated or removed")
+	}
+
+	// update token info
+	if updateContractAddr != "" {
+		tokenDoc, err := ns.getToken(updateContractAddr)
+		if err != nil || tokenDoc == nil {
+			ns.log.Error().Err(err).Str("addr", updateContractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
+			return contractAddr // 기존 contract address 반환
 		}
 
-		// compare bytecode and payload
-		var status string
-		if bytes.Contains([]byte(contractDoc.Payload), bytecode) == true {
-			status = string(Verified)
-		} else {
-			ns.log.Error().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("Failed to verify contract")
-			fmt.Println([]byte(contractDoc.Payload))
-			var i interface{}
-			json.Unmarshal([]byte(contractDoc.Payload), i)
-			fmt.Println(i)
-			fmt.Println(bytecode)
-			status = string(NotVerified)
+		totalTransfer, err := ns.cntTokenTransfer(updateContractAddr)
+		if err != nil {
+			totalTransfer = 0
 		}
-	*/
-	var status = string(Verified)
-	contractUpDoc := doc.ConvContractUp(contractAddr, status, contractDoc.Payload, tokenAddr, codeUrl, code)
-	ns.updateContract(contractUpDoc)
+		tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(Verified), tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
+		ns.updateTokenVerified(tokenVerifiedDoc)
+	}
+	return updateContractAddr
+}
+
+func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
+	updateContractAddr, _, codeUrl := transaction.UnmarshalMetadataVerifyContract(metadata)
+
+	// remove exist contract info
+	if updateContractAddr != contractAddr {
+		contractDoc, err := ns.getContract(contractAddr)
+		if err != nil || contractDoc == nil {
+			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc is not exist. wait until contractDoc added")
+			return contractAddr
+		}
+		contractUpDoc := doc.ConvContractUp(contractAddr, string(NotVerified), contractDoc.Payload, "", "", "")
+		ns.updateContract(contractUpDoc)
+		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract updated or removed")
+	}
+
+	// update contract info
+	if updateContractAddr != "" {
+		contractDoc, err := ns.getContract(updateContractAddr)
+		if err != nil || contractDoc == nil {
+			ns.log.Error().Err(err).Msg("contractDoc is not exist. wait until contractDoc added")
+			return contractAddr // 기존 contract address 반환
+		}
+
+		// skip if codeUrl not changed
+		var code string
+		var status string = string(NotVerified)
+		if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
+			ns.log.Debug().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("codeUrl is not changed, skip")
+			return updateContractAddr
+		}
+		code, err = lua_compiler.GetCode(codeUrl)
+		if err != nil {
+			ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
+		} else if len(code) > 0 {
+			status = string(Verified)
+		}
+
+		// TODO : valid bytecode
+		/*
+			bytecode, err := lua_compiler.CompileCode(code)
+			if err != nil {
+				ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to compile code")
+			}
+
+			// compare bytecode and payload
+			var status string
+			if bytes.Contains([]byte(contractDoc.Payload), bytecode) == true {
+				status = string(Verified)
+			} else {
+				ns.log.Error().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("Failed to verify contract")
+				fmt.Println([]byte(contractDoc.Payload))
+				var i interface{}
+				json.Unmarshal([]byte(contractDoc.Payload), i)
+				fmt.Println(i)
+				fmt.Println(bytecode)
+				status = string(NotVerified)
+			}
+		*/
+
+		contractUpDoc := doc.ConvContractUp(contractAddr, status, contractDoc.Payload, tokenAddr, codeUrl, code)
+		ns.updateContract(contractUpDoc)
+	}
+	return updateContractAddr
 }

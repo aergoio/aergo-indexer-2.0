@@ -30,7 +30,7 @@ type Indexer struct {
 	batchTime          time.Duration
 	minerNum           int
 	grpcNum            int
-	whitelistAddresses []string
+	balanceAddresses   []string
 	tokenVerifyAddr    []byte
 	contractVerifyAddr []byte
 

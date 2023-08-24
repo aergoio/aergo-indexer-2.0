@@ -48,6 +48,8 @@ func (b *Bulk) StartBulkChannel() {
 	// Open channels for each indices
 	b.BChannel.Block = make(chan ChanInfo)
 	b.BChannel.Tx = make(chan ChanInfo)
+	b.BChannel.Event = make(chan ChanInfo)
+	b.BChannel.Contract = make(chan ChanInfo)
 	b.BChannel.TokenTransfer = make(chan ChanInfo)
 	b.BChannel.AccTokens = make(chan ChanInfo)
 	b.SynDone = make(chan bool)
@@ -55,6 +57,8 @@ func (b *Bulk) StartBulkChannel() {
 	// Start bulk indexers for each indices
 	go b.BulkIndexer(b.BChannel.Block, b.idxer.indexNamePrefix+"block", b.bulkSize, b.batchTime, true)
 	go b.BulkIndexer(b.BChannel.Tx, b.idxer.indexNamePrefix+"tx", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.Event, b.idxer.indexNamePrefix+"event", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.Contract, b.idxer.indexNamePrefix+"contract", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.TokenTransfer, b.idxer.indexNamePrefix+"token_transfer", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.AccTokens, b.idxer.indexNamePrefix+"account_tokens", b.bulkSize, b.batchTime, false)
 
@@ -92,12 +96,16 @@ func (b *Bulk) StopBulkChannel() {
 	// Send stop messages to each bulk channels
 	b.BChannel.Block <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.Tx <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.Event <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.Contract <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.TokenTransfer <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.AccTokens <- ChanInfo{ChanType_StopBulk, nil}
 
 	// Close bulk channels
 	close(b.BChannel.Block)
 	close(b.BChannel.Tx)
+	close(b.BChannel.Event)
+	close(b.BChannel.Contract)
 	close(b.BChannel.TokenTransfer)
 	close(b.BChannel.AccTokens)
 	close(b.SynDone)
@@ -141,10 +149,12 @@ func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize 
 		// Block Channel : wait other channels
 		if isBlock {
 			b.BChannel.Tx <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.Event <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.Contract <- ChanInfo{ChanType_Commit, nil}
 			b.BChannel.TokenTransfer <- ChanInfo{ChanType_Commit, nil}
 			b.BChannel.AccTokens <- ChanInfo{ChanType_Commit, nil}
 
-			for i := 0; i < 3; i++ {
+			for i := 0; i < 5; i++ {
 				<-b.SynDone
 			}
 		}

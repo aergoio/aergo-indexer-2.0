@@ -230,9 +230,9 @@ func ConvAccountTokens(tokenType transaction.TokenType, tokenAddress string, tim
 	}
 }
 
-func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance string, balanceFloat float32, staking string, stakingFloat float32) *EsAccountBalance {
+func ConvAccountBalance(blockNo uint64, address string, ts time.Time, balance string, balanceFloat float32, staking string, stakingFloat float32) *EsAccountBalance {
 	return &EsAccountBalance{
-		BaseEsType:   &BaseEsType{Id: transaction.EncodeAndResolveAccount(address, blockNo)},
+		BaseEsType:   &BaseEsType{Id: address},
 		Timestamp:    ts,
 		BlockNo:      blockNo,
 		Balance:      balance,

@@ -218,36 +218,69 @@ func UnmarshalEventBurn(event *types.Event) (contractAddress []byte, accountFrom
 	return contractAddress, accountFrom, accountTo, amountOrId, nil
 }
 
-func UnmarshalEventVerifyToken(event *types.Event) (tokenAddress string, err error) {
+func UnmarshalEventVerifyToken(event *types.Event) (tokenAddress, contractAddress string, err error) {
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return "", fmt.Errorf("%v | %s", err, event.JsonArgs)
+		return "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
 	}
-	if len(args) < 2 {
-		return "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
+	if len(args) < 3 {
+		return "", "", fmt.Errorf("len(args) < 3 | %s", event.JsonArgs)
 	}
-	tokenAddress, ok := args[1].(string)
-	if !ok {
-		return "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
+
+	var ok bool
+	// get token address
+	if tokenAddress, ok = args[1].(string); ok != true {
+		return tokenAddress, contractAddress, fmt.Errorf("args[1] != string | %s", event.JsonArgs)
 	}
-	return tokenAddress, nil
+
+	// get contract address
+	metadata, ok := args[2].(map[string]interface{})
+	if ok != true {
+		return "", "", fmt.Errorf("args[2] != metadata | %s", event.JsonArgs)
+	}
+	contract, exist := metadata["contract"]
+	if exist != true {
+		return "", "", fmt.Errorf("args[2].contract not exist | %s", event.JsonArgs)
+	}
+	contractAddress, ok = contract.(string)
+	if exist != true {
+		return "", "", fmt.Errorf("args[2].contract != string | %s", event.JsonArgs)
+	}
+
+	return tokenAddress, contractAddress, nil
 }
 
-func UnmarshalEventVerifyContract(event *types.Event) (tokenAddress string, err error) {
+func UnmarshalEventVerifyContract(event *types.Event) (tokenAddress, contractAddress string, err error) {
 	var args []interface{}
 	err = json.Unmarshal([]byte(event.JsonArgs), &args)
 	if err != nil {
-		return "", fmt.Errorf("%v | %s", err, event.JsonArgs)
+		return "", "", fmt.Errorf("%v | %s", err, event.JsonArgs)
 	}
-	if len(args) < 2 {
-		return "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
+	if len(args) < 3 {
+		return "", "", fmt.Errorf("len(args) < 3 | %s", event.JsonArgs)
 	}
-	tokenAddress, ok := args[1].(string)
-	if !ok {
-		return "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
+	var ok bool
+	// get token address
+	if tokenAddress, ok = args[1].(string); ok != true {
+		return "", "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
 	}
-	return tokenAddress, nil
+
+	// get contract address
+	metadata, ok := args[2].(map[string]interface{})
+	if ok != true {
+		return "", "", fmt.Errorf("args[2] != metadata | %s", event.JsonArgs)
+	}
+	contract, exist := metadata["contract"]
+	if exist != true {
+		return "", "", fmt.Errorf("args[2].contract not exist | %s", event.JsonArgs)
+	}
+	contractAddress, ok = contract.(string)
+	if exist != true {
+		return "", "", fmt.Errorf("args[2].contract != string | %s", event.JsonArgs)
+	}
+
+	return tokenAddress, contractAddress, nil
 }
 
 // parse string, byte, int, map[string]interface{} to string

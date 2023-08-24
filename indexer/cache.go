@@ -8,7 +8,6 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
-	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
 type Cache struct {
@@ -16,7 +15,7 @@ type Cache struct {
 
 	accToken              sync.Map
 	peerId                sync.Map
-	addrsWhiteListAddr    sync.Map
+	addrsBalance          sync.Map
 	addrsVerifiedToken    sync.Map
 	addrsVerifiedContract sync.Map
 }
@@ -26,8 +25,8 @@ func NewCache(idxer *Indexer) *Cache {
 		idxer: idxer,
 	}
 
-	for _, whitelistAddr := range idxer.whitelistAddresses {
-		cache.addrsWhiteListAddr.Store(whitelistAddr, true)
+	for _, balanceAddr := range idxer.balanceAddresses {
+		cache.storeBalance(balanceAddr)
 	}
 	return cache
 }
@@ -57,7 +56,7 @@ func (c *Cache) registerVariables() {
 		}
 		if tokenVerified, ok := document.(*doc.EsToken); ok {
 			if tokenVerified.TokenAddress != "" {
-				c.storeVerifiedToken(tokenVerified.TokenAddress)
+				c.storeVerifiedToken(tokenVerified.TokenAddress, tokenVerified.Id)
 			}
 		}
 	}
@@ -84,11 +83,13 @@ func (c *Cache) registerVariables() {
 			break
 		}
 		if contract, ok := document.(*doc.EsContract); ok {
-			c.storeVerifiedContract(contract.VerifiedToken)
+			if contract.VerifiedToken != "" {
+				c.storeVerifiedContract(contract.VerifiedToken, contract.Id)
+			}
 		}
 	}
 
-	// register whitelist
+	// register balances
 	scroll = c.idxer.db.Scroll(db.QueryParams{
 		IndexName: c.idxer.indexNamePrefix + "account_balance",
 		SortField: "staking_float",
@@ -105,42 +106,63 @@ func (c *Cache) registerVariables() {
 		if err == io.EOF {
 			break
 		}
-		if balance, ok := document.(*doc.EsAccountBalance); ok && balance.StakingFloat >= 10000 {
-			c.storeWhiteList(balance.Id)
+		if balance, ok := document.(*doc.EsAccountBalance); ok {
+			c.storeBalance(balance.Id)
 		}
 	}
 }
 
 func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGRPC *client.AergoClientController) {
 	// update verify token
+	mapTmp := make(map[string]string)
 	ns.addrsVerifiedToken.Range(func(k, v interface{}) bool {
-		if tokenAddress, ok := k.(string); ok {
+		tokenAddress, ok1 := k.(string)
+		contractAddress, ok2 := v.(string)
+		if ok1 && ok2 {
 			ns.idxer.log.Info().Str("tokenAddress", tokenAddress).Msg("update verified token")
 			metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, tokenAddress)
-			ns.idxer.MinerTokenVerified(tokenAddress, metadata, minerGRPC)
+			updateContractAddress := ns.idxer.MinerTokenVerified(tokenAddress, contractAddress, metadata, minerGRPC)
+			mapTmp[tokenAddress] = updateContractAddress
 		}
 		return true
 	})
+	// refresh verify token
+	for tokenAddr, contractAddr := range mapTmp {
+		ns.storeVerifiedToken(tokenAddr, contractAddr)
+	}
 
 	// update verify code
+	mapTmp = make(map[string]string)
 	ns.addrsVerifiedContract.Range(func(k, v interface{}) bool {
-		if contractAddress, ok := k.(string); ok {
-			ns.idxer.log.Info().Str("contractAddress", contractAddress).Msg("update verified contract")
-			metadata := minerGRPC.QueryMetadataOf(ns.idxer.contractVerifyAddr, contractAddress)
-			ns.idxer.MinerContractVerified(contractAddress, metadata, minerGRPC)
+		tokenAddress, ok1 := k.(string)
+		contractAddress, ok2 := v.(string)
+		if ok1 && ok2 {
+			ns.idxer.log.Info().Str("contractAddress", tokenAddress).Msg("update verified contract")
+			metadata := minerGRPC.QueryMetadataOf(ns.idxer.contractVerifyAddr, tokenAddress)
+			updateContractAddress := ns.idxer.MinerContractVerified(tokenAddress, contractAddress, metadata, minerGRPC)
+			mapTmp[tokenAddress] = updateContractAddress
 		}
 		return true
 	})
+	// refresh verify contract
+	for tokenAddr, contractAddr := range mapTmp {
+		ns.storeVerifiedContract(tokenAddr, contractAddr)
+	}
 
 	// update whitelist balance
-	ns.addrsWhiteListAddr.Range(func(k, v interface{}) bool {
+	mapTmp = make(map[string]string)
+	ns.addrsBalance.Range(func(k, v interface{}) bool {
 		if addr, ok := k.(string); ok {
-			if addr, err := types.DecodeAddress(addr); err == nil {
-				ns.idxer.MinerBalance(blockDoc, addr, minerGRPC)
+			if isExiststake := ns.idxer.MinerBalance(blockDoc, addr, minerGRPC); isExiststake == false {
+				mapTmp[addr] = ""
 			}
 		}
 		return true
 	})
+	// if stake amount not exist, remove balance from whitelist ( prevent repeat update )
+	for addr := range mapTmp {
+		ns.addrsBalance.Delete(addr)
+	}
 }
 
 func (c *Cache) getPeerId(pubKey []byte) string {
@@ -162,14 +184,18 @@ func (c *Cache) getAccTokens(id string) (exist bool) {
 	return exist
 }
 
-func (c *Cache) storeVerifiedToken(id string) {
-	c.addrsVerifiedToken.Store(id, true)
+func (c *Cache) storeVerifiedToken(tokenAddr, contractAddr string) {
+	if tokenAddr != "" {
+		c.addrsVerifiedToken.Store(tokenAddr, contractAddr)
+	}
 }
 
-func (c *Cache) storeVerifiedContract(id string) {
-	c.addrsVerifiedContract.Store(id, true)
+func (c *Cache) storeVerifiedContract(tokenAddr, contractAddr string) {
+	if tokenAddr != "" {
+		c.addrsVerifiedContract.Store(tokenAddr, contractAddr)
+	}
 }
 
-func (c *Cache) storeWhiteList(id string) {
-	c.addrsWhiteListAddr.Store(id, true)
+func (c *Cache) storeBalance(id string) {
+	c.addrsBalance.Store(id, true)
 }

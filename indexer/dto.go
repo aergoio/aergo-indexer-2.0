@@ -26,17 +26,26 @@ func (ns *Indexer) addTx(blockType BlockType, txDoc *doc.EsTx) {
 		}
 	}
 }
-func (ns *Indexer) addEvent(eventDoc *doc.EsEvent) {
-	err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", eventDoc.Id).Str("method", "insertEvent").Msg("error while insert")
+
+func (ns *Indexer) addEvent(blockType BlockType, eventDoc *doc.EsEvent) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.Event <- ChanInfo{ChanType_Add, eventDoc}
+	} else {
+		err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", eventDoc.Id).Str("method", "insertEvent").Msg("error while insert")
+		}
 	}
 }
 
-func (ns *Indexer) addContract(contractDoc *doc.EsContract) {
-	err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
+func (ns *Indexer) addContract(blockType BlockType, contractDoc *doc.EsContract) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.Contract <- ChanInfo{ChanType_Add, contractDoc}
+	} else {
+		err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
+		}
 	}
 }
 
@@ -68,26 +77,15 @@ func (ns *Indexer) addAccountTokens(blockType BlockType, accountTokensDoc *doc.E
 }
 
 func (ns *Indexer) addAccountBalance(balanceDoc *doc.EsAccountBalance) {
-	document, err := ns.db.SelectOne(db.QueryParams{
-		IndexName: ns.indexNamePrefix + "account_balance",
-		StringMatch: &db.StringMatchQuery{
-			Field: "id",
-			Value: balanceDoc.Id,
-		},
-	}, func() doc.DocType {
-		balance := new(doc.EsAccountBalance)
-		balance.BaseEsType = new(doc.BaseEsType)
-		return balance
-	})
+	document, err := ns.getAccountBalance(balanceDoc.Id)
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", balanceDoc.Id).Str("method", "insertAccountBalance").Msg("error while select")
 	}
 
 	if document != nil { // 기존에 존재하는 주소라면 잔고에 상관없이 update
-		accountBalance := document.(*doc.EsAccountBalance)
-		if balanceDoc.BlockNo < accountBalance.BlockNo { // blockNo, timeStamp 는 최신으로 저장
-			balanceDoc.BlockNo = accountBalance.BlockNo
-			balanceDoc.Timestamp = accountBalance.Timestamp
+		if balanceDoc.BlockNo < document.BlockNo { // blockNo, timeStamp 는 최신으로 저장
+			balanceDoc.BlockNo = document.BlockNo
+			balanceDoc.Timestamp = document.Timestamp
 		}
 		err = ns.db.Update(balanceDoc, ns.indexNamePrefix+"account_balance", balanceDoc.Id)
 	} else if balanceDoc.BalanceFloat > 0 { // 처음 발견된 주소라면 잔고 > 0 일 때만 insert
@@ -95,11 +93,6 @@ func (ns *Indexer) addAccountBalance(balanceDoc *doc.EsAccountBalance) {
 	}
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", balanceDoc.Id).Str("method", "insertAccountBalance").Msg("error while insert or update")
-	}
-
-	// stake 주소는 whitelist 에 추가
-	if balanceDoc.StakingFloat > 0 {
-		ns.cache.storeWhiteList(balanceDoc.Id)
 	}
 }
 
@@ -173,12 +166,12 @@ func (ns *Indexer) getContract(id string) (contractDoc *doc.EsContract, err erro
 	return document.(*doc.EsContract), nil
 }
 
-func (ns *Indexer) getToken(id string) (tokenDoc *doc.EsToken, err error) {
+func (ns *Indexer) getToken(contractAddr string) (tokenDoc *doc.EsToken, err error) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "token",
 		StringMatch: &db.StringMatchQuery{
 			Field: "_id",
-			Value: id,
+			Value: contractAddr,
 		},
 	}, func() doc.DocType {
 		token := new(doc.EsToken)
@@ -186,7 +179,7 @@ func (ns *Indexer) getToken(id string) (tokenDoc *doc.EsToken, err error) {
 		return token
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Str("Id", id).Str("method", "getToken").Msg("error while select")
+		ns.log.Error().Err(err).Str("contract", contractAddr).Str("method", "getToken").Msg("error while select")
 		return nil, err
 	} else if document == nil {
 		return nil, nil
@@ -214,6 +207,28 @@ func (ns *Indexer) getNFT(id string) (nftDoc *doc.EsNFT, err error) {
 		return nil, nil
 	}
 	return document.(*doc.EsNFT), nil
+}
+
+func (ns *Indexer) getAccountBalance(id string) (contractDoc *doc.EsAccountBalance, err error) {
+	document, err := ns.db.SelectOne(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_balance",
+		StringMatch: &db.StringMatchQuery{
+			Field: "_id",
+			Value: id,
+		},
+	}, func() doc.DocType {
+		balance := new(doc.EsAccountBalance)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", id).Str("method", "getAccountBalance").Msg("error while select")
+	}
+	if document == nil {
+		return nil, nil
+	}
+
+	return document.(*doc.EsAccountBalance), nil
 }
 
 func (ns *Indexer) cntTokenTransfer(id string) (ttCnt uint64, err error) {

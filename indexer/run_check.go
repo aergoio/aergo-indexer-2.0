@@ -55,7 +55,7 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 			break
 		}
 		if err != nil {
-			ns.log.Warn().Err(err).Msg("Failed to query block numbers")
+			ns.log.Warn().Err(err).Uint64("no", blockNo).Msg("Failed to query block numbers")
 			time.Sleep(time.Second)
 			continue
 		}
