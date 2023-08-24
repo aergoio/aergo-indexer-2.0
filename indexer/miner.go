@@ -47,7 +47,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		// Add block doc
 		ns.addBlock(info.Type, blockDoc)
 
-		// update variables per 5 minutes
+		// update variables per 300 blocks
 		if info.Type == BlockType_Sync && blockHeight%300 == 0 {
 			ns.cache.refreshVariables(info, blockDoc, MinerGRPC)
 		}
@@ -138,20 +138,20 @@ func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.
 
 func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, MinerGRPC *client.AergoClientController) {
 	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.tokenVerifyAddr) == true {
-		tokenAddr, contractAddr, err := transaction.UnmarshalEventVerifyToken(event)
+		tokenAddr, err := transaction.UnmarshalEventVerifyToken(event)
 		if err != nil {
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.storeVerifiedToken(tokenAddr, contractAddr)
+		ns.cache.storeVerifiedToken(tokenAddr, "")
 	}
 	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.contractVerifyAddr) == true {
-		tokenAddr, contractAddr, err := transaction.UnmarshalEventVerifyContract(event)
+		tokenAddr, err := transaction.UnmarshalEventVerifyContract(event)
 		if err != nil {
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.storeVerifiedContract(tokenAddr, contractAddr)
+		ns.cache.storeVerifiedContract(tokenAddr, "")
 	}
 }
 
@@ -302,7 +302,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	updateContractAddr, owner, comment, email, regDate, homepageUrl, imageUrl := transaction.UnmarshalMetadataVerifyToken(metadata)
 
 	// remove exist token info
-	if updateContractAddr != contractAddr {
+	if contractAddr != "" && updateContractAddr != contractAddr {
 		tokenDoc, err := ns.getToken(contractAddr)
 		if err != nil || tokenDoc == nil {
 			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
@@ -340,7 +340,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 	updateContractAddr, _, codeUrl := transaction.UnmarshalMetadataVerifyContract(metadata)
 
 	// remove exist contract info
-	if updateContractAddr != contractAddr {
+	if contractAddr != "" && contractAddr != updateContractAddr {
 		contractDoc, err := ns.getContract(contractAddr)
 		if err != nil || contractDoc == nil {
 			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc is not exist. wait until contractDoc added")
