@@ -315,7 +315,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 		}
 		tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(NotVerified), "", "", "", "", "", "", "", totalTransfer)
 		ns.updateTokenVerified(tokenVerifiedDoc)
-		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified token updated or removed")
+		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified token removed")
 	}
 
 	// update token info
@@ -332,6 +332,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 		}
 		tokenVerifiedDoc := doc.ConvTokenUpVerified(tokenDoc, string(Verified), tokenAddr, owner, comment, email, regDate, homepageUrl, imageUrl, totalTransfer)
 		ns.updateTokenVerified(tokenVerifiedDoc)
+		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified token updated")
 	}
 	return updateContractAddr
 }
@@ -346,9 +347,9 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc is not exist. wait until contractDoc added")
 			return contractAddr
 		}
-		contractUpDoc := doc.ConvContractUp(contractAddr, string(NotVerified), contractDoc.Payload, "", "", "")
+		contractUpDoc := doc.ConvContractUp(contractDoc.Id, string(NotVerified), contractDoc.Payload, "", "", "")
 		ns.updateContract(contractUpDoc)
-		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract updated or removed")
+		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract removed")
 	}
 
 	// update contract info
@@ -395,8 +396,9 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			}
 		*/
 
-		contractUpDoc := doc.ConvContractUp(contractAddr, status, contractDoc.Payload, tokenAddr, codeUrl, code)
+		contractUpDoc := doc.ConvContractUp(contractDoc.Id, status, contractDoc.Payload, tokenAddr, codeUrl, code)
 		ns.updateContract(contractUpDoc)
+		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified contract updated")
 	}
 	return updateContractAddr
 }
