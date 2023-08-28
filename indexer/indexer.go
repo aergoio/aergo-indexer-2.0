@@ -16,23 +16,25 @@ import (
 // Indexer hold all state information
 type Indexer struct {
 	// config
-	log                *log.Logger
-	dbAddr             string
-	serverAddr         string
-	prefix             string
-	runMode            string
-	networkTypeForCccv string
-	indexNamePrefix    string
-	aliasNamePrefix    string
-	lastHeight         uint64
-	cccvNftAddress     []byte
-	bulkSize           int32
-	batchTime          time.Duration
-	minerNum           int
-	grpcNum            int
-	balanceAddresses   []string
-	tokenVerifyAddr    []byte
-	contractVerifyAddr []byte
+	log                     *log.Logger
+	dbAddr                  string
+	serverAddr              string
+	prefix                  string
+	runMode                 string
+	networkTypeForCccv      string
+	indexNamePrefix         string
+	aliasNamePrefix         string
+	lastHeight              uint64
+	cccvNftAddress          []byte
+	bulkSize                int32
+	batchTime               time.Duration
+	minerNum                int
+	grpcNum                 int
+	tokenVerifyAddr         []byte
+	contractVerifyAddr      []byte
+	balanceWhitelist        []string
+	tokenVerifyWhitelist    []string
+	contractVerifyWhitelist []string
 
 	db         db.DbController
 	grpcClient *client.AergoClientController

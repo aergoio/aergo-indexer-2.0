@@ -124,6 +124,13 @@ func (ns *Indexer) addNFT(nftDoc *doc.EsNFT) {
 	}
 }
 
+func (ns *Indexer) addWhitelist(whitelistDoc *doc.EsWhitelist) {
+	err := ns.db.Insert(whitelistDoc, ns.indexNamePrefix+"whitelist")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", whitelistDoc.Id).Str("method", "insertWhitelist").Msg("error while insert")
+	}
+}
+
 func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUpSupply) {
 	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {

@@ -232,6 +232,12 @@ type EsNFTUp struct {
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
+type EsWhitelist struct {
+	*BaseEsType
+	Contract string `json:"contract" db:"contract"`
+	Type     string `json:"type" db:"type"`
+}
+
 var EsMappings map[string]string
 
 func InitEsMappings(clusterMode bool) {
@@ -541,59 +547,6 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
-			"token_verified": `{
-				"settings": {
-					"number_of_shards": 5,
-					"number_of_replicas": 1,
-					"index.max_result_window": 100000
-				},
-				"mappings": {
-					"properties": {
-						"token_address": {
-							"type": "keyword"
-						},
-						"owner": {
-							"type": "keyword"
-						},
-						"comment": {
-							"type": "keyword"
-						},
-						"email": {
-							"type": "keyword"
-						},
-						"regdate": {
-							"type": "keyword"
-						},
-						"homepage_url": {
-							"type": "keyword"
-						},
-						"image_url": {
-							"type": "keyword"
-						},
-						"name": {
-							"type": "keyword"
-						},
-						"name_lower": {
-							"type": "keyword"
-						},
-						"symbol": {
-							"type": "keyword"
-						},
-						"symbol_lower": {
-							"type": "keyword"
-						},
-						"type": {
-							"type": "keyword"
-						},
-						"total_supply": {
-							"type": "keyword"
-						},
-						"total_transfer": {
-							"type": "long"
-						}
-					}
-				}
-			}`,
 			"token_transfer": `{
 				"settings": {
 					"number_of_shards": 30,
@@ -722,6 +675,25 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"staking_float": {
 							"type": "float"
+						}
+					}
+				}
+			}`,
+			"whitelist": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"id": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"type": {
+							"type": "keyword"
 						}
 					}
 				}
@@ -1162,6 +1134,25 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"image_url": {
+							"type": "keyword"
+						}
+					}
+				}
+			}`,
+			"whitelist": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"id": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"type": {
 							"type": "keyword"
 						}
 					}

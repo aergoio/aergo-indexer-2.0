@@ -252,6 +252,14 @@ func ConvChainInfo(chainInfo *types.ChainInfo) *EsChainInfo {
 	}
 }
 
+func ConvWhitelist(token string, contract string, whitelistType string) *EsWhitelist {
+	return &EsWhitelist{
+		BaseEsType: &BaseEsType{Id: token},
+		Contract:   contract,
+		Type:       whitelistType,
+	}
+}
+
 // bigIntToFloat takes a big.Int, divides it by 10^exp and returns the resulting float
 // Note that this float is not precise. It can be used for sorting purposes
 func bigIntToFloat(a *big.Int, exp int64) float32 {

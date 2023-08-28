@@ -51,7 +51,7 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.balanceAddresses = whiteListAddresses
+		indexer.balanceWhitelist = whiteListAddresses
 		return nil
 	}
 }
@@ -82,6 +82,20 @@ func SetContractVerifyAddress(verifyContractAddress string) IndexerOptionFunc {
 		}
 
 		indexer.contractVerifyAddr = raw
+		return nil
+	}
+}
+
+func SetTokenVerifyWhitelist(verifyTokenWhitelist []string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.tokenVerifyWhitelist = verifyTokenWhitelist
+		return nil
+	}
+}
+
+func SetContractVerifyWhitelist(verifyContractWhitelist []string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.contractVerifyWhitelist = verifyContractWhitelist
 		return nil
 	}
 }

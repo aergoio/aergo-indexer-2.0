@@ -143,7 +143,7 @@ func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, even
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.storeVerifiedToken(tokenAddr, "")
+		ns.addWhitelist(doc.ConvWhitelist(tokenAddr, "", "token"))
 	}
 	if len(event.ContractAddress) != 0 && bytes.Equal(event.ContractAddress, ns.contractVerifyAddr) == true {
 		tokenAddr, err := transaction.UnmarshalEventVerifyContract(event)
@@ -151,7 +151,7 @@ func (ns *Indexer) MinerEventByAddr(blockDoc *doc.EsBlock, txDoc *doc.EsTx, even
 			ns.log.Error().Err(err).Uint64("Block", blockDoc.BlockNo).Str("Tx", txDoc.Id).Str("eventName", event.EventName).Msg("Failed to unmarshal event args")
 			return
 		}
-		ns.cache.storeVerifiedContract(tokenAddr, "")
+		ns.addWhitelist(doc.ConvWhitelist(tokenAddr, "", "contract"))
 	}
 }
 
