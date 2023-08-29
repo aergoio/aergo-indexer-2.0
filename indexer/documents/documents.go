@@ -94,7 +94,6 @@ type EsContract struct {
 
 type EsContractUp struct {
 	*BaseEsType
-	Payload        string `json:"payload" db:"payload"`
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	CodeUrl        string `json:"code_url" db:"code_url"`

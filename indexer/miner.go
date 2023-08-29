@@ -347,7 +347,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc is not exist. wait until contractDoc added")
 			return contractAddr
 		}
-		contractUpDoc := doc.ConvContractUp(contractDoc.Id, string(NotVerified), contractDoc.Payload, "", "", "")
+		contractUpDoc := doc.ConvContractUp(contractDoc.Id, string(NotVerified), "", "", "")
 		ns.updateContract(contractUpDoc)
 		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract removed")
 	}
@@ -396,7 +396,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			}
 		*/
 
-		contractUpDoc := doc.ConvContractUp(contractDoc.Id, status, contractDoc.Payload, tokenAddr, codeUrl, code)
+		contractUpDoc := doc.ConvContractUp(updateContractAddr, status, tokenAddr, codeUrl, code)
 		ns.updateContract(contractUpDoc)
 		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified contract updated")
 	}
