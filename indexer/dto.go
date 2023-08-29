@@ -1,6 +1,8 @@
 package indexer
 
 import (
+	"io"
+
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 )
@@ -251,4 +253,148 @@ func (ns *Indexer) cntTokenTransfer(id string) (ttCnt uint64, err error) {
 		return 0, err
 	}
 	return uint64(cnt), nil
+}
+
+func (ns *Indexer) ScrollToken(fn func(*doc.EsToken)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "token",
+		SortField: "blockno",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		token := new(doc.EsToken)
+		token.BaseEsType = new(doc.BaseEsType)
+		return token
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if token, ok := document.(*doc.EsToken); ok {
+			fn(token)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollContract(fn func(*doc.EsContract)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "contract",
+		SortField: "blockno",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		contract := new(doc.EsContract)
+		contract.BaseEsType = new(doc.BaseEsType)
+		return contract
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if contract, ok := document.(*doc.EsContract); ok {
+			fn(contract)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollTokenTransfer(fn func(*doc.EsTokenTransfer)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "token_transfer",
+		SortField: "blockno",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		tokenTransfer := new(doc.EsTokenTransfer)
+		tokenTransfer.BaseEsType = new(doc.BaseEsType)
+		return tokenTransfer
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if tokenTransfer, ok := document.(*doc.EsTokenTransfer); ok {
+			fn(tokenTransfer)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollAccountTokens(fn func(*doc.EsAccountTokens)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_tokens",
+		SortField: "ts",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		accountTokens := new(doc.EsAccountTokens)
+		accountTokens.BaseEsType = new(doc.BaseEsType)
+		return accountTokens
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if accountTokens, ok := document.(*doc.EsAccountTokens); ok {
+			fn(accountTokens)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollBalance(fn func(*doc.EsAccountBalance)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_balance",
+		SortField: "staking_float",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		balance := new(doc.EsAccountBalance)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if balance, ok := document.(*doc.EsAccountBalance); ok {
+			fn(balance)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollWhitelist(fn func(*doc.EsWhitelist)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "whitelist",
+		SortField: "type",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		whitelist := new(doc.EsWhitelist)
+		whitelist.BaseEsType = new(doc.BaseEsType)
+		return whitelist
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if whitelist, ok := document.(*doc.EsWhitelist); ok {
+			fn(whitelist)
+		}
+	}
+	return nil
 }

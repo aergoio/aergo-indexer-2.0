@@ -1,11 +1,9 @@
 package indexer
 
 import (
-	"io"
 	"sync"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
-	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 )
@@ -28,8 +26,8 @@ func NewCache(idxer *Indexer) *Cache {
 	for _, tokenAddr := range idxer.tokenVerifyWhitelist {
 		idxer.addWhitelist(doc.ConvWhitelist(tokenAddr, "", "token"))
 	}
-	for _, contractAddr := range idxer.contractVerifyWhitelist {
-		idxer.addWhitelist(doc.ConvWhitelist(contractAddr, "", "contract"))
+	for _, tokenAddr := range idxer.contractVerifyWhitelist {
+		idxer.addWhitelist(doc.ConvWhitelist(tokenAddr, "", "contract"))
 	}
 	for _, balanceAddr := range idxer.balanceWhitelist {
 		cache.storeBalance(balanceAddr)
@@ -37,121 +35,54 @@ func NewCache(idxer *Indexer) *Cache {
 	return cache
 }
 
-// register staking account to white list. ( staking addresses receive rewards by block creation )
+// register to white list.
 func (c *Cache) registerVariables() {
 	// register verify token
-	scroll := c.idxer.db.Scroll(db.QueryParams{
-		IndexName: c.idxer.indexNamePrefix + "token",
-		SortField: "blockno",
-		Size:      100,
-		From:      0,
-		SortAsc:   true,
-		StringMatch: &db.StringMatchQuery{
-			Field: "verified_status",
-			Value: string(Verified),
-		},
-	}, func() doc.DocType {
-		token := new(doc.EsToken)
-		token.BaseEsType = new(doc.BaseEsType)
-		return token
-	})
-	for {
-		document, err := scroll.Next()
-		if err == io.EOF {
-			break
+	if err := c.idxer.ScrollToken(func(tokenDoc *doc.EsToken) {
+		if tokenDoc.TokenAddress != "" {
+			c.idxer.addWhitelist(doc.ConvWhitelist(tokenDoc.TokenAddress, tokenDoc.Id, "token"))
 		}
-		if tokenVerified, ok := document.(*doc.EsToken); ok {
-			if tokenVerified.TokenAddress != "" {
-				c.idxer.addWhitelist(doc.ConvWhitelist(tokenVerified.TokenAddress, tokenVerified.Id, "token"))
-			}
-		}
+	}); err != nil {
+		c.idxer.log.Error().Err(err).Str("func", "registerVariables").Msg("error while scroll token")
 	}
 
 	// register verify contract
-	scroll = c.idxer.db.Scroll(db.QueryParams{
-		IndexName: c.idxer.indexNamePrefix + "contract",
-		SortField: "blockno",
-		Size:      100,
-		From:      0,
-		SortAsc:   true,
-		StringMatch: &db.StringMatchQuery{
-			Field: "verified_status",
-			Value: string(Verified),
-		},
-	}, func() doc.DocType {
-		contract := new(doc.EsContract)
-		contract.BaseEsType = new(doc.BaseEsType)
-		return contract
-	})
-	for {
-		document, err := scroll.Next()
-		if err == io.EOF {
-			break
+	if err := c.idxer.ScrollContract(func(contractDoc *doc.EsContract) {
+		if contractDoc.VerifiedToken != "" {
+			c.idxer.addWhitelist(doc.ConvWhitelist(contractDoc.VerifiedToken, contractDoc.Id, "contract"))
 		}
-		if contract, ok := document.(*doc.EsContract); ok {
-			if contract.VerifiedToken != "" {
-				c.idxer.addWhitelist(doc.ConvWhitelist(contract.VerifiedToken, contract.Id, "contract"))
-			}
-		}
+	}); err != nil {
+		c.idxer.log.Error().Err(err).Str("func", "registerVariables").Msg("error while scroll contract")
 	}
 
 	// register balances
-	scroll = c.idxer.db.Scroll(db.QueryParams{
-		IndexName: c.idxer.indexNamePrefix + "account_balance",
-		SortField: "staking_float",
-		Size:      10000,
-		From:      0,
-		SortAsc:   true,
-	}, func() doc.DocType {
-		balance := new(doc.EsAccountBalance)
-		balance.BaseEsType = new(doc.BaseEsType)
-		return balance
-	})
-	for {
-		document, err := scroll.Next()
-		if err == io.EOF {
-			break
-		}
-		if balance, ok := document.(*doc.EsAccountBalance); ok {
-			c.storeBalance(balance.Id)
-		}
+	if err := c.idxer.ScrollBalance(func(balanceDoc *doc.EsAccountBalance) {
+		c.storeBalance(balanceDoc.Id)
+	}); err != nil {
+		c.idxer.log.Error().Err(err).Str("func", "registerVariables").Msg("error while scroll balance")
 	}
 }
 
 func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGRPC *client.AergoClientController) {
-	// update verify token, contract
-	scroll := ns.idxer.db.Scroll(db.QueryParams{
-		IndexName: ns.idxer.indexNamePrefix + "whitelist",
-		SortField: "type",
-		Size:      10000,
-		From:      0,
-		SortAsc:   true,
-	}, func() doc.DocType {
-		whitelist := new(doc.EsWhitelist)
-		whitelist.BaseEsType = new(doc.BaseEsType)
-		return whitelist
-	})
 	mapWhitelist := make(map[string][2]string)
-	for {
-		document, err := scroll.Next()
-		if err == io.EOF {
-			break
-		}
-		if whitelist, ok := document.(*doc.EsWhitelist); ok {
-			metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, whitelist.Id)
 
-			var updateContractAddress string
-			if whitelist.Type == "token" {
-				ns.idxer.log.Info().Str("tokenAddress", whitelist.Id).Msg("update verified token")
-				updateContractAddress = ns.idxer.MinerTokenVerified(whitelist.Id, whitelist.Contract, metadata, minerGRPC)
-			}
-			if whitelist.Type == "contract" {
-				ns.idxer.log.Info().Str("tokenAddress", whitelist.Id).Msg("update verified contract")
-				updateContractAddress = ns.idxer.MinerContractVerified(whitelist.Id, whitelist.Contract, metadata, minerGRPC)
-			}
-			mapWhitelist[whitelist.Id] = [2]string{updateContractAddress, whitelist.Type}
+	// update verify token, contract
+	ns.idxer.ScrollWhitelist(func(whitelistDoc *doc.EsWhitelist) {
+		var updateContractAddress string
+		metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, whitelistDoc.Id)
+		if whitelistDoc.Type == "token" {
+			ns.idxer.log.Info().Str("tokenAddress", whitelistDoc.Id).Msg("update verified token")
+			updateContractAddress = ns.idxer.MinerTokenVerified(whitelistDoc.Id, whitelistDoc.Contract, metadata, minerGRPC)
 		}
-	}
+		if whitelistDoc.Type == "contract" {
+			ns.idxer.log.Info().Str("tokenAddress", whitelistDoc.Id).Msg("update verified contract")
+			updateContractAddress = ns.idxer.MinerContractVerified(whitelistDoc.Id, whitelistDoc.Contract, metadata, minerGRPC)
+		}
+		// contract 변경 시 갱신
+		if whitelistDoc.Contract != updateContractAddress {
+			mapWhitelist[whitelistDoc.Id] = [2]string{updateContractAddress, whitelistDoc.Type}
+		}
+	})
 	// refresh verify token, contract
 	for tokenAddr, contractAddr := range mapWhitelist {
 		ns.idxer.addWhitelist(doc.ConvWhitelist(tokenAddr, contractAddr[0], contractAddr[1]))

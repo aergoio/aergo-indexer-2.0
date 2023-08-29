@@ -686,9 +686,6 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"id": {
-							"type": "keyword"
-						},
 						"contract": {
 							"type": "keyword"
 						},
@@ -1146,9 +1143,6 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"id": {
-							"type": "keyword"
-						},
 						"contract": {
 							"type": "keyword"
 						},
