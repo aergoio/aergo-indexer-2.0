@@ -69,12 +69,13 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	// update verify token, contract
 	ns.idxer.ScrollWhitelist(func(whitelistDoc *doc.EsWhitelist) {
 		var updateContractAddress string
-		metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, whitelistDoc.Id)
 		if whitelistDoc.Type == "token" {
+			metadata := minerGRPC.QueryMetadataOf(ns.idxer.tokenVerifyAddr, whitelistDoc.Id)
 			ns.idxer.log.Info().Str("tokenAddress", whitelistDoc.Id).Msg("update verified token")
 			updateContractAddress = ns.idxer.MinerTokenVerified(whitelistDoc.Id, whitelistDoc.Contract, metadata, minerGRPC)
 		}
 		if whitelistDoc.Type == "contract" {
+			metadata := minerGRPC.QueryMetadataOf(ns.idxer.contractVerifyAddr, whitelistDoc.Id)
 			ns.idxer.log.Info().Str("tokenAddress", whitelistDoc.Id).Msg("update verified contract")
 			updateContractAddress = ns.idxer.MinerContractVerified(whitelistDoc.Id, whitelistDoc.Contract, metadata, minerGRPC)
 		}
