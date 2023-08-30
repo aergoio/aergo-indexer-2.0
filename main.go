@@ -23,6 +23,7 @@ var (
 	runMode    string
 	checkMode  bool
 	onsyncMode bool
+	fix        bool
 
 	host                    string
 	port                    int32
@@ -50,6 +51,7 @@ func init() {
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
 	fs.StringVarP(&prefix, "prefix", "P", "testnet", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
+	fs.BoolVar(&fix, "fix", false, "fix mode to overwrite data")
 	fs.BoolVar(&checkMode, "check", true, "check indices of range of heights")
 	fs.BoolVar(&onsyncMode, "onsync", true, "onsync data in indices")
 	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode(all,check,onsync) Alternative to setting check, onsync separately")
@@ -83,6 +85,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetPrefix(prefix),
 		indexer.SetNetworkTypeForCccv(cccvNftServerType),
 		indexer.SetRunMode(getRunMode()),
+		indexer.SetFix(fix),
 		indexer.SetLogger(logger),
 		indexer.SetWhiteListAddresses(balanceWhitelist),
 		indexer.SetTokenVerifyAddress(tokenVerifyAddress),
