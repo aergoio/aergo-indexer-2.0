@@ -17,10 +17,12 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 		stopAt = ns.GetBestBlock() - 1
 	}
 	ns.fixIndex(startFrom, stopAt)
-	err := ns.cleanIndex()
-	if err != nil {
-		ns.log.Warn().Err(err).Msg("Failed to clean unexpected data")
-	}
+
+	// remove clean index logic
+	// err := ns.cleanIndex()
+	// if err != nil {
+	// ns.log.Warn().Err(err).Msg("Failed to clean unexpected data")
+	// }
 }
 
 func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
@@ -93,7 +95,7 @@ func (ns *Indexer) cleanIndex() error {
 	// 1. get token list
 	tokens := make(map[string]bool)
 	ns.ScrollToken(func(tokenDoc *doc.EsToken) {
-		tokens[tokenDoc.Name] = true
+		tokens[tokenDoc.TokenAddress] = true
 	})
 
 	// 2. get token transfer
