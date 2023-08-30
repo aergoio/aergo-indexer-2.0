@@ -21,6 +21,7 @@ type Indexer struct {
 	serverAddr              string
 	prefix                  string
 	runMode                 string
+	fix                     bool
 	networkTypeForCccv      string
 	indexNamePrefix         string
 	aliasNamePrefix         string

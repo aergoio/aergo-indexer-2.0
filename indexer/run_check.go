@@ -16,7 +16,11 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 	if stopAt == 0 {
 		stopAt = ns.GetBestBlock() - 1
 	}
-	ns.fixIndex(startFrom, stopAt)
+	if ns.fix == true {
+		ns.fixIndex(startFrom, stopAt)
+	} else {
+		ns.checkIndex(startFrom, stopAt)
+	}
 
 	// remove clean index logic
 	// err := ns.cleanIndex()
@@ -25,7 +29,7 @@ func (ns *Indexer) Check(startFrom uint64, stopAt uint64) {
 	// }
 }
 
-func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
+func (ns *Indexer) checkIndex(startFrom uint64, stopAt uint64) {
 	ns.log.Info().Uint64("startFrom", startFrom).Uint64("stopAt", stopAt).Msg("Check Block range")
 	ns.bulk.StartBulkChannel()
 
@@ -86,6 +90,16 @@ func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
 
 	ns.bulk.StopBulkChannel()
 	ns.log.Info().Uint64("missing", missingBlocks).Msg("Done with consistency check")
+}
+
+func (ns *Indexer) fixIndex(startFrom uint64, stopAt uint64) {
+	ns.log.Info().Uint64("startFrom", startFrom).Uint64("stopAt", stopAt).Msg("Fix Block range")
+	ns.bulk.StartBulkChannel()
+
+	ns.bulk.InsertBlocksInRange(startFrom, stopAt)
+
+	ns.bulk.StopBulkChannel()
+	ns.log.Info().Msg("Done with fix")
 }
 
 // Start clean the indexer

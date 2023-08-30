@@ -49,6 +49,13 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 	}
 }
 
+func SetFix(fix bool) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.fix = fix
+		return nil
+	}
+}
+
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.balanceWhitelist = whiteListAddresses
