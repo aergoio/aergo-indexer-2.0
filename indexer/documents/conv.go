@@ -90,7 +90,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 // ConvContractCreateTx creates document for token creation
 func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 
-	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.RawPayload)
+	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
 
 	return &EsContract{
 		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
@@ -140,14 +140,14 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	return nil, sourceCode, "", deployArgs
 }
 
-func extractByteCode(payload []byte) ([]byte, []byte, []byte) {
+func extractByteCode(payload []byte) ([]byte, string, string) {
 	// read the length of the first section
 	codeAbiLength := binary.BigEndian.Uint32(payload[:4])
 	// read the bytecode length
 	bytecodeLength := binary.BigEndian.Uint32(payload[4:8])
 	// check if the lengths are valid
 	if codeAbiLength > uint32(len(payload)) || bytecodeLength > codeAbiLength {
-		return nil
+		return nil, "", ""
 	}
 	// extract the code+abi and deploy args
 	codeAbi := payload[4:codeAbiLength]
@@ -155,7 +155,7 @@ func extractByteCode(payload []byte) ([]byte, []byte, []byte) {
 	// extract the bytecode and abi
 	bytecode := codeAbi[4:bytecodeLength]
 	abi := codeAbi[4+bytecodeLength:]
-	return bytecode, abi, deployArgs
+	return bytecode, string(abi), string(deployArgs)
 }
 
 func extractSourceCode(payload []byte) (string, string) {
