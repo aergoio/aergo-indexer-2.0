@@ -121,7 +121,7 @@ func ConvContractUp(contractAddress string, status, token, codeUrl, code string)
 		VerifiedToken:  token,
 		VerifiedStatus: status,
 		CodeUrl:        codeUrl,
-		Code:           code,
+		SourceCode:     code,
 	}
 }
 

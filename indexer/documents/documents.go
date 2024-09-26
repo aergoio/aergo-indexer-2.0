@@ -93,7 +93,6 @@ type EsContract struct {
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	CodeUrl        string `json:"code_url" db:"code_url"`
-	Code           string `json:"code" db:"code"`
 }
 
 type EsContractUp struct {
@@ -101,7 +100,7 @@ type EsContractUp struct {
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	CodeUrl        string `json:"code_url" db:"code_url"`
-	Code           string `json:"code" db:"code"`
+	SourceCode     string `json:"source_code" db:"source_code"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -427,9 +426,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"code_url": {
 							"type": "keyword"
-						},
-						"code": {
-							"type": "text"
 						}
 					}
 				}
@@ -891,9 +887,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"code_url": {
 							"type": "keyword"
-						},
-						"code": {
-							"type": "text"
 						}
 					}
 				}
