@@ -65,7 +65,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		BlockId:       blockDoc.Id,
 		Timestamp:     blockDoc.Timestamp,
 		TxIdx:         txIdx,
-		Payload:       string(tx.GetBody().GetPayload()),
+		Payload:       tx.GetBody().GetPayload(),
 		Account:       transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
 		Recipient:     transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:        amount.String(),

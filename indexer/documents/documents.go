@@ -59,7 +59,7 @@ type EsTx struct {
 	BlockId       string        `json:"block_id" db:"block_id"`
 	Timestamp     time.Time     `json:"ts" db:"ts"`
 	TxIdx         uint64        `json:"tx_idx" db:"tx_idx"`
-	Payload       string        `json:"payload" db:"payload"`
+	Payload       []byte        `json:"payload" db:"payload"`
 	Account       string        `json:"from" db:"from"`
 	Recipient     string        `json:"to" db:"to"`
 	Amount        string        `json:"amount" db:"amount"`             // string of BigInt
@@ -84,7 +84,7 @@ type EsContract struct {
 	Creator   string    `json:"creator" db:"creator"`
 	BlockNo   uint64    `json:"blockno" db:"blockno"`
 	Timestamp time.Time `json:"ts" db:"ts"`
-	Payload   string    `json:"payload" db:"payload"`
+	Payload   []byte    `json:"payload" db:"payload"`
 
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
@@ -327,7 +327,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"from": {
 							"type": "keyword"
@@ -404,7 +404,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"verified_status": {
 							"type": "keyword"
@@ -782,7 +782,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"from": {
 							"type": "keyword"
@@ -859,7 +859,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "date"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"verified_status": {
 							"type": "keyword"
