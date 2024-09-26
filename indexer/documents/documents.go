@@ -84,7 +84,11 @@ type EsContract struct {
 	Creator   string    `json:"creator" db:"creator"`
 	BlockNo   uint64    `json:"blockno" db:"blockno"`
 	Timestamp time.Time `json:"ts" db:"ts"`
-	Payload   []byte    `json:"payload" db:"payload"`
+
+	ABI        string    `json:"abi" db:"abi"`
+	ByteCode   []byte    `json:"byte_code" db:"byte_code"`
+	SourceCode string    `json:"source_code" db:"source_code"`
+	DeployArgs string    `json:"deploy_args" db:"deploy_args"`
 
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
@@ -403,8 +407,17 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"payload": {
+						"abi": {
+							"type": "text"
+						},
+						"byte_code": {
 							"type": "binary"
+						},
+						"source_code": {
+							"type": "text"
+						},
+						"deploy_args": {
+							"type": "text"
 						},
 						"verified_status": {
 							"type": "keyword"
@@ -858,8 +871,17 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"payload": {
+						"abi": {
+							"type": "text"
+						},
+						"byte_code": {
 							"type": "binary"
+						},
+						"source_code": {
+							"type": "text"
+						},
+						"deploy_args": {
+							"type": "text"
 						},
 						"verified_status": {
 							"type": "keyword"

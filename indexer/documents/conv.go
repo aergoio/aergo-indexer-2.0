@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"bytes"
+	"encoding/binary"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -87,13 +89,29 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 
 // ConvContractCreateTx creates document for token creation
 func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
+
+	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.RawPayload)
+
 	return &EsContract{
 		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Creator:    txDoc.Account,
 		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
 		Timestamp:  txDoc.Timestamp,
-		Payload:    txDoc.Payload,
+		ABI:        abi,
+		ByteCode:   byteCode,
+		SourceCode: sourceCode,
+		DeployArgs: deployArgs,
+	}
+}
+
+func ConvInternalContract(txDoc *EsTx, contractAddress []byte) *EsContract {
+	return &EsContract{
+		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
+		Creator:    txDoc.Account,
+		TxId:       txDoc.GetID(),
+		BlockNo:    txDoc.BlockNo,
+		Timestamp:  txDoc.Timestamp,
 	}
 }
 
@@ -105,6 +123,48 @@ func ConvContractUp(contractAddress string, status, token, codeUrl, code string)
 		CodeUrl:        codeUrl,
 		Code:           code,
 	}
+}
+
+func extractContractCode(payload []byte) ([]byte, string, string, string) {
+	if len(payload) <= 12 {
+		return nil, "", "", ""
+	}
+	// check for LuaJIT bytecode signature at position 8
+	if bytes.HasPrefix(payload[8:], []byte{0x1b, 0x4c, 0x4a}) {
+		// before hardfork 4, the deploy contains the contract bytecode, abi and deploy args
+		bytecode, abi, deployArgs := extractByteCode(payload)
+		return bytecode, "", abi, deployArgs
+	}
+	// on hardfork 4, the deploy contains the contract source code and deploy args
+	sourceCode, deployArgs := extractSourceCode(payload)
+	return nil, sourceCode, "", deployArgs
+}
+
+func extractByteCode(payload []byte) ([]byte, []byte, []byte) {
+	// read the length of the first section
+	codeAbiLength := binary.BigEndian.Uint32(payload[:4])
+	// read the bytecode length
+	bytecodeLength := binary.BigEndian.Uint32(payload[4:8])
+	// check if the lengths are valid
+	if codeAbiLength > uint32(len(payload)) || bytecodeLength > codeAbiLength {
+		return nil
+	}
+	// extract the code+abi and deploy args
+	codeAbi := payload[4:codeAbiLength]
+	deployArgs := payload[4+codeAbiLength:]
+	// extract the bytecode and abi
+	bytecode := codeAbi[4:bytecodeLength]
+	abi := codeAbi[4+bytecodeLength:]
+	return bytecode, abi, deployArgs
+}
+
+func extractSourceCode(payload []byte) (string, string) {
+	// read the code length
+	codeLength := binary.BigEndian.Uint32(payload[:4])
+	// extract the source code and deploy args
+	sourceCode := payload[4:codeLength]
+	deployArgs := payload[4+codeLength:]
+	return string(sourceCode), string(deployArgs)
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
