@@ -301,7 +301,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	if contractAddr != "" && updateContractAddr != contractAddr {
 		tokenDoc, err := ns.getToken(contractAddr)
 		if err != nil || tokenDoc == nil {
-			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
+			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc does not exist. wait until tokenDoc added")
 			return contractAddr
 		}
 
@@ -318,7 +318,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	if updateContractAddr != "" {
 		tokenDoc, err := ns.getToken(updateContractAddr)
 		if err != nil || tokenDoc == nil {
-			ns.log.Error().Err(err).Str("addr", updateContractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
+			ns.log.Error().Err(err).Str("addr", updateContractAddr).Msg("tokenDoc does not exist. wait until tokenDoc added")
 			return contractAddr // 기존 contract address 반환
 		}
 
@@ -340,7 +340,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 	if contractAddr != "" && contractAddr != updateContractAddr {
 		contractDoc, err := ns.getContract(contractAddr)
 		if err != nil || contractDoc == nil {
-			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc is not exist. wait until contractDoc added")
+			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc does not exist. wait until contractDoc is added")
 			return contractAddr
 		}
 		contractUpDoc := doc.ConvContractUp(contractDoc.Id, string(NotVerified), "", "", "")
@@ -352,7 +352,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 	if updateContractAddr != "" {
 		contractDoc, err := ns.getContract(updateContractAddr)
 		if err != nil || contractDoc == nil {
-			ns.log.Error().Err(err).Msg("contractDoc is not exist. wait until contractDoc added")
+			ns.log.Error().Err(err).Msg("contractDoc does not exist. wait until contractDoc is added")
 			return contractAddr // 기존 contract address 반환
 		}
 
