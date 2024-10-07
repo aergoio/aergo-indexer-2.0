@@ -114,10 +114,6 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		tokenDoc := doc.ConvToken(txDoc, receipt.ContractAddress, tType, name, symbol, decimals, supply, supplyFloat)
 		ns.addToken(tokenDoc)
 
-		// Add Contract Doc
-		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
-		ns.addContract(info.Type, contractDoc)
-
 		ns.log.Info().Str("contract", transaction.EncodeAccount(receipt.ContractAddress)).Msg("Token created ( Policy 2 )")
 	}
 
@@ -179,7 +175,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 		ns.addAccountTokens(info.Type, accountTokensDoc)
 
 		// Add Contract Doc
-		contractDoc := doc.ConvContract(txDoc, contractAddress)
+		contractDoc := doc.ConvInternalContract(txDoc, contractAddress)
 		ns.addContract(info.Type, contractDoc)
 
 		ns.log.Info().Str("contract", transaction.EncodeAccount(contractAddress)).Msg("Token created ( Policy 1 )")
