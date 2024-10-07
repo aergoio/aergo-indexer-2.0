@@ -10,6 +10,7 @@ import (
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-indexer-2.0/lua_compiler"
 	"github.com/mr-tron/base58"
 	"google.golang.org/protobuf/proto"
 )
@@ -125,6 +126,7 @@ func ConvContractUp(contractAddress string, status, token, codeUrl, code string)
 	}
 }
 
+// returns: bytecode, sourceCode, abi, deployArgs
 func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	if len(payload) <= 12 {
 		return nil, "", "", ""
@@ -137,7 +139,8 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	}
 	// on hardfork 4, the deploy contains the contract source code and deploy args
 	sourceCode, deployArgs := extractSourceCode(payload)
-	return nil, sourceCode, "", deployArgs
+	bytecode, abi := compileSourceCode(sourceCode)
+	return bytecode, sourceCode, abi, deployArgs
 }
 
 func extractByteCode(payload []byte) ([]byte, string, string) {
@@ -165,6 +168,19 @@ func extractSourceCode(payload []byte) (string, string) {
 	sourceCode := payload[4:codeLength]
 	deployArgs := payload[4+codeLength:]
 	return string(sourceCode), string(deployArgs)
+}
+
+func compileSourceCode(sourceCode string) ([]byte, string) {
+	bytecodeABI, err := lua_compiler.CompileCode(sourceCode)
+	if err != nil {
+		 panic(err)
+	}
+	// read the bytecode length
+	bytecodeLength := binary.BigEndian.Uint32(bytecodeABI[:4])
+	// extract the bytecode and abi
+	bytecode := bytecodeABI[4:bytecodeLength]
+	abi := bytecodeABI[4+bytecodeLength:]
+	return bytecode, string(abi)
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
