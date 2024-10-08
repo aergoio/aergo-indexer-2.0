@@ -155,7 +155,7 @@ type InternalOperations struct {
 }
 
 func (ns *Indexer) MinerBlockInternalOps(blockHeight uint64, jsonInternalOps []byte) {
-	// decode jsonInternalOps (JSON array) into []InternalOperations
+	// decode the JSON array into objects
 	var txsInternalOps []InternalOperations
 	err := json.Unmarshal(jsonInternalOps, &txsInternalOps)
 	if err != nil {
@@ -163,7 +163,7 @@ func (ns *Indexer) MinerBlockInternalOps(blockHeight uint64, jsonInternalOps []b
 		return
 	}
 
-	// Process each InternalOperations object
+	// process the internal operations for each transaction
 	for _, txOps := range txsInternalOps {
 		ns.MinerTxInternalOps(txOps.TxHash, txOps.Contract, txOps.Operations)
 	}
@@ -191,15 +191,34 @@ func (ns *Indexer) MinerTxInternalOps(txHash string, contract string, operations
 func (ns *Indexer) MinerContractInternalOp(txHash string, contract string, operation InternalOperation) {
 	ns.log.Debug().Str("txHash", txHash).Str("contract", contract).Str("operation", operation.Operation).Msg("Processing internal operation")
 
-	// register internal operation
+	// register individual internal operation - not needed
 	//internalOpDoc := doc.ConvInternalOperation(txHash, contract, operation.Operation, operation.Amount, operation.Args, operation.Result)
 	//ns.addInternalOperation(internalOpDoc)
 
+	// if it's a send operation
+	if operation.Operation == "send" {
+		// TODO: register new account, or register internal transfer of aergo tokens
+	}
+
+	// if it's a stake operation
+	if operation.Operation == "stake" {
+		// TODO: register staking of aergo tokens
+	} else if operation.Operation == "unstake" {
+		// TODO: register unstaking of aergo tokens
+	}
+
 	// if it's an internal contract deployment
 	if operation.Operation == "deploy" {
-		// register new contract
-		//contractDoc := doc.ConvContract(txHash, contract, operation.Operation, operation.Amount, operation.Args, operation.Result)
-		//ns.addContract(contractDoc)
+		/*
+		// extract source code and deploy args
+		sourceCode := operation.Args[0]
+		deployArgs := operation.Args[1:]
+		// get the address of the new contract from the result
+		contractAddr := operation.Result
+		// TODO: register new contract
+		contractDoc := doc.ConvContract(txHash, contractAddr, sourceCode, deployArgs)
+		ns.addContract(contractDoc)
+		*/
 	}
 
 	// if it has a call to another contract
