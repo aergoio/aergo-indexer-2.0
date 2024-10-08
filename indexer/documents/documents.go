@@ -105,6 +105,23 @@ type EsContractToken struct {
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 }
 
+type EsInternalOperations struct {
+	*BaseEsType
+	TxId       string `json:"tx_id" db:"tx_id"`
+	Contract   string `json:"contract" db:"contract"`
+	Operations string `json:"operations" db:"operations"`
+}
+
+type EsInternalCall struct {
+	*BaseEsType
+	TxId      string `json:"tx_id" db:"tx_id"`
+	Caller    string `json:"caller" db:"caller"`
+	Contract  string `json:"contract" db:"contract"`
+	Function  string `json:"function" db:"function"`
+	Args      string `json:"args" db:"args"`
+	Amount    string `json:"amount" db:"amount"`
+}
+
 // EsEvent is a contract-event mapping stored in the database
 type EsEvent struct {
 	*BaseEsType
@@ -705,6 +722,55 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
+			"internal_operations": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"operations": {
+							"type": "text"
+						}
+					}
+				}
+			}`,
+			"internal_call": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"caller": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"function": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "text"
+						},
+						"amount": {
+							"type": "keyword"
+						}
+					}
+				}
+			}`,
 		}
 	} else {
 		EsMappings = map[string]string{
@@ -1163,6 +1229,55 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"type": {
+							"type": "keyword"
+						}
+					}
+				}
+			}`,
+			"internal_operations": `{
+				"settings": {
+					"number_of_shards": 3,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"operations": {
+							"type": "text"
+						}
+					}
+				}
+			}`,
+			"internal_call": `{
+				"settings": {
+					"number_of_shards": 3,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"caller": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"function": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "text"
+						},
+						"amount": {
 							"type": "keyword"
 						}
 					}

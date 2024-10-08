@@ -202,6 +202,25 @@ func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 	return bytecode, string(abi), nil
 }
 
+func ConvInternalOperations(txHash string, contract string, jsonOperations string) *EsInternalOperations {
+	return &EsInternalOperations{
+		BaseEsType: &BaseEsType{Id: txHash},
+		Contract:   contract,
+		Operations: jsonOperations,
+	}
+}
+
+func ConvInternalCall(txHash string, caller string, contract string, function string, args string, amount string) *EsInternalCall {
+	return &EsInternalCall{
+		BaseEsType: &BaseEsType{Id: txHash},
+		Caller:     caller,
+		Contract:   contract,
+		Function:   function,
+		Args:       args,
+		Amount:     amount,
+	}
+}
+
 // ConvEvent converts Event from RPC into Elasticsearch type
 func ConvEvent(event *types.Event, blockDoc *EsBlock, txDoc *EsTx, txIdx uint64) *EsEvent {
 	id := fmt.Sprintf("%d-%d-%d", blockDoc.BlockNo, txDoc.TxIdx, event.EventIdx)
