@@ -334,7 +334,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 }
 
 func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
-	updateContractAddr, _, codeUrl := transaction.UnmarshalMetadataVerifyContract(metadata)
+	updateContractAddr, _, _ := transaction.UnmarshalMetadataVerifyContract(metadata)
 
 	// remove exist contract info
 	if contractAddr != "" && contractAddr != updateContractAddr {
@@ -356,6 +356,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			return contractAddr // 기존 contract address 반환
 		}
 
+		/*
 		// skip if codeUrl not changed
 		var code string
 		var status string = string(NotVerified)
@@ -369,6 +370,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 		} else if len(code) > 0 {
 			status = string(Verified)
 		}
+		*/
 
 		// TODO : valid bytecode
 		/*
@@ -392,7 +394,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			}
 		*/
 
-		contractUpDoc := doc.ConvContractUp(updateContractAddr, status, tokenAddr, codeUrl, code)
+		contractUpDoc := doc.ConvContractUp(updateContractAddr, status, tokenAddr, code)
 		ns.updateContract(contractUpDoc)
 		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified contract updated")
 	}

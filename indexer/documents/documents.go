@@ -92,14 +92,12 @@ type EsContract struct {
 
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
-	CodeUrl        string `json:"code_url" db:"code_url"`
 }
 
 type EsContractUp struct {
 	*BaseEsType
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
-	CodeUrl        string `json:"code_url" db:"code_url"`
 	SourceCode     string `json:"source_code" db:"source_code"`
 }
 
