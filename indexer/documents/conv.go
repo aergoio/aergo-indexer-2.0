@@ -144,7 +144,10 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	}
 	// on hardfork 4, the deploy contains the contract source code and deploy args
 	sourceCode, deployArgs := extractSourceCode(payload)
-	bytecode, abi := compileSourceCode(sourceCode)
+	bytecode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		panic(err)
+	}
 	return bytecode, sourceCode, abi, deployArgs
 }
 
@@ -175,17 +178,18 @@ func extractSourceCode(payload []byte) (string, string) {
 	return string(sourceCode), string(deployArgs)
 }
 
-func compileSourceCode(sourceCode string) ([]byte, string) {
+// CompileSourceCode compiles the source code and returns the bytecode and abi
+func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 	bytecodeABI, err := lua_compiler.CompileCode(sourceCode)
 	if err != nil {
-		 panic(err)
+		return nil, "", err
 	}
 	// read the bytecode length
 	bytecodeLength := binary.BigEndian.Uint32(bytecodeABI[:4])
 	// extract the bytecode and abi
 	bytecode := bytecodeABI[4:bytecodeLength]
 	abi := bytecodeABI[4+bytecodeLength:]
-	return bytecode, string(abi)
+	return bytecode, string(abi), nil
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
