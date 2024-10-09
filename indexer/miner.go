@@ -333,7 +333,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	return updateContractAddr
 }
 
-func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
+func (ns *Indexer) MinerContractVerified(tokenSymbol, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
 	updateContractAddr, _, _ := transaction.UnmarshalMetadataVerifyContract(metadata)
 
 	// remove existing contract info (verified token)
@@ -345,7 +345,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 		}
 		contractUpDoc := doc.ConvContractToken(contractDoc.Id, string(NotVerified), "")
 		ns.updateContractToken(contractUpDoc)
-		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract removed")
+		ns.log.Info().Str("contract", contractAddr).Str("token", tokenSymbol).Msg("verified contract removed")
 	}
 
 	// update contract info
@@ -361,7 +361,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 		var code string
 		var status string = string(NotVerified)
 		if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
-			ns.log.Debug().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("codeUrl is not changed, skip")
+			ns.log.Debug().Str("method", "verifyContract").Str("token", tokenSymbol).Msg("codeUrl is not changed, skip")
 			return updateContractAddr
 		}
 		code, err = lua_compiler.GetCode(codeUrl)
@@ -384,7 +384,7 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			if bytes.Contains([]byte(contractDoc.Payload), bytecode) == true {
 				status = string(Verified)
 			} else {
-				ns.log.Error().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("Failed to verify contract")
+				ns.log.Error().Str("method", "verifyContract").Str("token", tokenSymbol).Msg("Failed to verify contract")
 				fmt.Println([]byte(contractDoc.Payload))
 				var i interface{}
 				json.Unmarshal([]byte(contractDoc.Payload), i)
@@ -394,9 +394,9 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			}
 		*/
 
-		contractUpDoc := doc.ConvContractToken(updateContractAddr, status, tokenAddr)
+		contractUpDoc := doc.ConvContractToken(updateContractAddr, status, tokenSymbol)
 		ns.updateContractToken(contractUpDoc)
-		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified contract updated")
+		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenSymbol).Msg("verified contract updated")
 	}
 	return updateContractAddr
 }
