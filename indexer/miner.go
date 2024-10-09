@@ -89,7 +89,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 
 	// Process Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
-		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+		contractDoc := doc.ConvContractFromTx(txDoc, receipt.ContractAddress)
 		ns.addContract(info.Type, contractDoc)
 	}
 

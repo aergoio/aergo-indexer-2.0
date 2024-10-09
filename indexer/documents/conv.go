@@ -88,17 +88,27 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	}
 }
 
-// ConvContractCreateTx creates document for token creation
-func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
-
+// ConvContractFromTx creates document for contract creation
+func ConvContractFromTx(txDoc *EsTx, contractAddress []byte) *EsContract {
 	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
+	return ConvContract(txDoc, contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
+}
 
+func ConvContractFromCall(txDoc *EsTx, contractAddress []byte, creator, sourceCode, deployArgs string) *EsContract {
+	byteCode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		panic(err)
+	}
+	return ConvContract(txDoc, contractAddress, creator, byteCode, abi, sourceCode, deployArgs)
+}
+
+func ConvContract(txDoc *EsTx, contractAddress []byte, creator string, byteCode []byte, abi, sourceCode, deployArgs string) *EsContract {
 	return &EsContract{
 		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
-		Creator:    txDoc.Account,
-		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
 		Timestamp:  txDoc.Timestamp,
+		TxId:       txDoc.GetID(),
+		Creator:    creator,
 		ABI:        abi,
 		ByteCode:   byteCode,
 		SourceCode: sourceCode,
