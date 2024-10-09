@@ -116,12 +116,18 @@ func ConvInternalContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	}
 }
 
-func ConvContractUp(contractAddress string, status, token, code string) *EsContractUp {
-	return &EsContractUp{
+func ConvContractSource(contractAddress string, sourceCode string) *EsContractSource {
+	return &EsContractSource{
+		BaseEsType:     &BaseEsType{Id: contractAddress},
+		SourceCode:     sourceCode,
+	}
+}
+
+func ConvContractToken(contractAddress string, status, token string) *EsContractToken {
+	return &EsContractToken{
 		BaseEsType:     &BaseEsType{Id: contractAddress},
 		VerifiedToken:  token,
 		VerifiedStatus: status,
-		SourceCode:     code,
 	}
 }
 

@@ -94,11 +94,15 @@ type EsContract struct {
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 }
 
-type EsContractUp struct {
+type EsContractSource struct {
+	*BaseEsType
+	SourceCode string `json:"source_code" db:"source_code"`
+}
+
+type EsContractToken struct {
 	*BaseEsType
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
-	SourceCode     string `json:"source_code" db:"source_code"`
 }
 
 // EsEvent is a contract-event mapping stored in the database

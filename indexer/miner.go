@@ -336,15 +336,15 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
 	updateContractAddr, _, _ := transaction.UnmarshalMetadataVerifyContract(metadata)
 
-	// remove exist contract info
+	// remove existing contract info (verified token)
 	if contractAddr != "" && contractAddr != updateContractAddr {
 		contractDoc, err := ns.getContract(contractAddr)
 		if err != nil || contractDoc == nil {
 			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc does not exist. wait until contractDoc is added")
 			return contractAddr
 		}
-		contractUpDoc := doc.ConvContractUp(contractDoc.Id, string(NotVerified), "", "", "")
-		ns.updateContract(contractUpDoc)
+		contractUpDoc := doc.ConvContractToken(contractDoc.Id, string(NotVerified), "")
+		ns.updateContractToken(contractUpDoc)
 		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract removed")
 	}
 
@@ -394,8 +394,8 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			}
 		*/
 
-		contractUpDoc := doc.ConvContractUp(updateContractAddr, status, tokenAddr, code)
-		ns.updateContract(contractUpDoc)
+		contractUpDoc := doc.ConvContractToken(updateContractAddr, status, tokenAddr)
+		ns.updateContractToken(contractUpDoc)
 		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified contract updated")
 	}
 	return updateContractAddr
