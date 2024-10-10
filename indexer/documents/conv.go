@@ -89,25 +89,30 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 }
 
 // ConvContractFromTx creates document for contract creation
-func ConvContractFromTx(txDoc *EsTx, contractAddress []byte) *EsContract {
+func ConvContractFromTx(txDoc *EsTx, contractAddressByte []byte) *EsContract {
 	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
-	return ConvContract(txDoc, contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
+	contractAddress := transaction.EncodeAndResolveAccount(contractAddressByte, txDoc.BlockNo)
+	return ConvContract(txDoc.BlockNo, txDoc.Timestamp, txDoc.GetID(), contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
 }
 
-func ConvContractFromCall(txDoc *EsTx, contractAddress []byte, creator, sourceCode, deployArgs string) *EsContract {
+func ConvContractFromCall(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator, sourceCode string, deployArgs []string) *EsContract {
 	byteCode, abi, err := CompileSourceCode(sourceCode)
 	if err != nil {
 		panic(err)
 	}
-	return ConvContract(txDoc, contractAddress, creator, byteCode, abi, sourceCode, deployArgs)
+	var deployArgsStr string
+	if len(deployArgs) > 0 {
+		deployArgsStr = "[" + strings.Join(deployArgs, ",") + "]"
+	}
+	return ConvContract(blockHeight, timestamp, txHash, contractAddress, creator, byteCode, abi, sourceCode, deployArgsStr)
 }
 
-func ConvContract(txDoc *EsTx, contractAddress []byte, creator string, byteCode []byte, abi, sourceCode, deployArgs string) *EsContract {
+func ConvContract(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator string, byteCode []byte, abi, sourceCode, deployArgs string) *EsContract {
 	return &EsContract{
-		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
-		BlockNo:    txDoc.BlockNo,
-		Timestamp:  txDoc.Timestamp,
-		TxId:       txDoc.GetID(),
+		BaseEsType: &BaseEsType{Id: contractAddress},
+		BlockNo:    blockHeight,
+		Timestamp:  timestamp,
+		TxId:       txHash,
 		Creator:    creator,
 		ABI:        abi,
 		ByteCode:   byteCode,
