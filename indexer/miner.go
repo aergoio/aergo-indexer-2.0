@@ -8,7 +8,6 @@ import (
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
-	"github.com/aergoio/aergo-indexer-2.0/lua_compiler"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 )
 
@@ -90,7 +89,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 
 	// Process Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
-		contractDoc := doc.ConvContract(txDoc, receipt.ContractAddress)
+		contractDoc := doc.ConvContractFromTx(txDoc, receipt.ContractAddress)
 		ns.addContract(info.Type, contractDoc)
 	}
 
@@ -301,7 +300,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	if contractAddr != "" && updateContractAddr != contractAddr {
 		tokenDoc, err := ns.getToken(contractAddr)
 		if err != nil || tokenDoc == nil {
-			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
+			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("tokenDoc does not exist. wait until tokenDoc added")
 			return contractAddr
 		}
 
@@ -318,7 +317,7 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	if updateContractAddr != "" {
 		tokenDoc, err := ns.getToken(updateContractAddr)
 		if err != nil || tokenDoc == nil {
-			ns.log.Error().Err(err).Str("addr", updateContractAddr).Msg("tokenDoc is not exist. wait until tokenDoc added")
+			ns.log.Error().Err(err).Str("addr", updateContractAddr).Msg("tokenDoc does not exist. wait until tokenDoc added")
 			return contractAddr // 기존 contract address 반환
 		}
 
@@ -333,42 +332,47 @@ func (ns *Indexer) MinerTokenVerified(tokenAddr, contractAddr, metadata string, 
 	return updateContractAddr
 }
 
-func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
-	updateContractAddr, _, codeUrl := transaction.UnmarshalMetadataVerifyContract(metadata)
+// it appears that this function is used for 2 different cases:
+// 1. verifying and updating the contract source code
+// 2. updating the verified token status
+// TODO: separate the logic into two different functions
+func (ns *Indexer) MinerContractVerified(tokenSymbol, contractAddr, metadata string, MinerGRPC *client.AergoClientController) (updateContractAddr string) {
+	updateContractAddr, _, _ = transaction.UnmarshalMetadataVerifyContract(metadata)
 
-	// remove exist contract info
+	// remove existing contract info (verified token)
 	if contractAddr != "" && contractAddr != updateContractAddr {
 		contractDoc, err := ns.getContract(contractAddr)
 		if err != nil || contractDoc == nil {
-			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc is not exist. wait until contractDoc added")
+			ns.log.Error().Err(err).Str("addr", contractAddr).Msg("contractDoc does not exist. wait until contractDoc is added")
 			return contractAddr
 		}
-		contractUpDoc := doc.ConvContractUp(contractDoc.Id, string(NotVerified), "", "", "")
-		ns.updateContract(contractUpDoc)
-		ns.log.Info().Str("contract", contractAddr).Str("token", tokenAddr).Msg("verified contract removed")
+		contractUpDoc := doc.ConvContractToken(contractDoc.Id, string(NotVerified), "")
+		ns.updateContractToken(contractUpDoc)
+		ns.log.Info().Str("contract", contractAddr).Str("token", tokenSymbol).Msg("verified contract removed")
 	}
 
 	// update contract info
 	if updateContractAddr != "" {
 		contractDoc, err := ns.getContract(updateContractAddr)
 		if err != nil || contractDoc == nil {
-			ns.log.Error().Err(err).Msg("contractDoc is not exist. wait until contractDoc added")
+			ns.log.Error().Err(err).Msg("contractDoc does not exist. wait until contractDoc is added")
 			return contractAddr // 기존 contract address 반환
 		}
 
+		/*
 		// skip if codeUrl not changed
 		var code string
-		var status string = string(NotVerified)
 		if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
-			ns.log.Debug().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("codeUrl is not changed, skip")
+			ns.log.Debug().Str("method", "verifyContract").Str("token", tokenSymbol).Msg("codeUrl is not changed, skip")
 			return updateContractAddr
 		}
 		code, err = lua_compiler.GetCode(codeUrl)
 		if err != nil {
 			ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
 		} else if len(code) > 0 {
-			status = string(Verified)
+			...
 		}
+		*/
 
 		// TODO : valid bytecode
 		/*
@@ -378,23 +382,51 @@ func (ns *Indexer) MinerContractVerified(tokenAddr, contractAddr, metadata strin
 			}
 
 			// compare bytecode and payload
-			var status string
-			if bytes.Contains([]byte(contractDoc.Payload), bytecode) == true {
-				status = string(Verified)
+			if bytes.Equal([]byte(contractDoc.ByteCode), bytecode) == true {
+				...
 			} else {
-				ns.log.Error().Str("method", "verifyContract").Str("tokenAddr", tokenAddr).Msg("Failed to verify contract")
+				ns.log.Error().Str("method", "verifyContract").Str("token", tokenSymbol).Msg("Failed to verify contract")
 				fmt.Println([]byte(contractDoc.Payload))
 				var i interface{}
 				json.Unmarshal([]byte(contractDoc.Payload), i)
 				fmt.Println(i)
 				fmt.Println(bytecode)
-				status = string(NotVerified)
 			}
 		*/
 
-		contractUpDoc := doc.ConvContractUp(updateContractAddr, status, tokenAddr, codeUrl, code)
-		ns.updateContract(contractUpDoc)
-		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenAddr).Msg("verified contract updated")
+		contractUpDoc := doc.ConvContractToken(updateContractAddr, string(Verified), tokenSymbol)
+		ns.updateContractToken(contractUpDoc)
+		ns.log.Info().Str("contract", updateContractAddr).Str("token", tokenSymbol).Msg("verified contract updated")
 	}
 	return updateContractAddr
+}
+
+// TODO: use this function in the backend
+func (ns *Indexer) checkContractSourceCode(contractAddress, sourceCode string) (status string) {
+	contractDoc, err := ns.getContract(contractAddress)
+	if err != nil || contractDoc == nil {
+		ns.log.Error().Err(err).Str("addr", contractAddress).Msg("not found")
+		return "this contract is not yet added to the index. wait until it is indexed or check the contract address"
+	}
+
+	// compile the source code
+	bytecode, _, err := doc.CompileSourceCode(sourceCode)
+	if err != nil {
+		ns.log.Error().Err(err).Str("addr", contractAddress).Msg("failed to compile source code")
+		return "compile error"
+	}
+
+	// compare the generated bytecode with the contract bytecode
+	isCorrect := bytes.Equal(bytecode, []byte(contractDoc.ByteCode))
+
+	if isCorrect {
+		// store the source code in the contract doc
+		contractUpDoc := doc.ConvContractSource(contractDoc.Id, sourceCode)
+		ns.updateContractSource(contractUpDoc)
+		ns.log.Info().Str("contract", contractAddress).Msg("contract source code updated")
+		return "OK"
+	} else {
+		ns.log.Error().Str("contract", contractAddress).Msg("invalid source code")
+		return "invalid source code"
+	}
 }

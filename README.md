@@ -83,10 +83,12 @@ tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
-payload         string      compiled bytecode
+abi             string      contract abi
+byte_code       string      compiled bytecode
+source_code     string      contract source code
+deploy_args     string      constructor function arguments
 verified_status string      verified status
-verified_token  string      verified token address
-code            string      verified contract code
+verified_token  string      verified token symbol
 ```
 
 event

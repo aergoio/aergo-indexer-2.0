@@ -88,17 +88,27 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	}
 }
 
-// ConvContractCreateTx creates document for token creation
-func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
-
+// ConvContractFromTx creates document for contract creation
+func ConvContractFromTx(txDoc *EsTx, contractAddress []byte) *EsContract {
 	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
+	return ConvContract(txDoc, contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
+}
 
+func ConvContractFromCall(txDoc *EsTx, contractAddress []byte, creator, sourceCode, deployArgs string) *EsContract {
+	byteCode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		panic(err)
+	}
+	return ConvContract(txDoc, contractAddress, creator, byteCode, abi, sourceCode, deployArgs)
+}
+
+func ConvContract(txDoc *EsTx, contractAddress []byte, creator string, byteCode []byte, abi, sourceCode, deployArgs string) *EsContract {
 	return &EsContract{
 		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
-		Creator:    txDoc.Account,
-		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
 		Timestamp:  txDoc.Timestamp,
+		TxId:       txDoc.GetID(),
+		Creator:    creator,
 		ABI:        abi,
 		ByteCode:   byteCode,
 		SourceCode: sourceCode,
@@ -116,13 +126,18 @@ func ConvInternalContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	}
 }
 
-func ConvContractUp(contractAddress string, status, token, codeUrl, code string) *EsContractUp {
-	return &EsContractUp{
+func ConvContractSource(contractAddress string, sourceCode string) *EsContractSource {
+	return &EsContractSource{
+		BaseEsType:     &BaseEsType{Id: contractAddress},
+		SourceCode:     sourceCode,
+	}
+}
+
+func ConvContractToken(contractAddress string, status, token string) *EsContractToken {
+	return &EsContractToken{
 		BaseEsType:     &BaseEsType{Id: contractAddress},
 		VerifiedToken:  token,
 		VerifiedStatus: status,
-		CodeUrl:        codeUrl,
-		SourceCode:     code,
 	}
 }
 
@@ -139,7 +154,10 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	}
 	// on hardfork 4, the deploy contains the contract source code and deploy args
 	sourceCode, deployArgs := extractSourceCode(payload)
-	bytecode, abi := compileSourceCode(sourceCode)
+	bytecode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		panic(err)
+	}
 	return bytecode, sourceCode, abi, deployArgs
 }
 
@@ -170,17 +188,18 @@ func extractSourceCode(payload []byte) (string, string) {
 	return string(sourceCode), string(deployArgs)
 }
 
-func compileSourceCode(sourceCode string) ([]byte, string) {
+// CompileSourceCode compiles the source code and returns the bytecode and abi
+func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 	bytecodeABI, err := lua_compiler.CompileCode(sourceCode)
 	if err != nil {
-		 panic(err)
+		return nil, "", err
 	}
 	// read the bytecode length
 	bytecodeLength := binary.BigEndian.Uint32(bytecodeABI[:4])
 	// extract the bytecode and abi
 	bytecode := bytecodeABI[4:bytecodeLength]
 	abi := bytecodeABI[4+bytecodeLength:]
-	return bytecode, string(abi)
+	return bytecode, string(abi), nil
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
