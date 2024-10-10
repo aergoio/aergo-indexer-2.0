@@ -289,3 +289,14 @@ func (t *AergoClientController) queryContract(address []byte, name string, args 
 	}
 	return string(result.Value), nil
 }
+
+func (t *AergoClientController) GetInternalOperations(blockNumber uint64) ([]byte, error) {
+	req := &types.BlockNumberParam{
+		BlockNo: blockNumber,
+	}
+	res, err := t.client.GetInternalOperations(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return res.Value, nil
+}

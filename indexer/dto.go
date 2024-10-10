@@ -51,6 +51,20 @@ func (ns *Indexer) addContract(blockType BlockType, contractDoc *doc.EsContract)
 	}
 }
 
+func (ns *Indexer) addInternalOperations(internalOpsDoc *doc.EsInternalOperations) {
+	err := ns.db.Insert(internalOpsDoc, ns.indexNamePrefix+"internal_operations")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", internalOpsDoc.Id).Str("method", "insertInternalOperations").Msg("error while insert")
+	}
+}
+
+func (ns *Indexer) addInternalCall(internalCallDoc *doc.EsInternalCall) {
+	err := ns.db.Insert(internalCallDoc, ns.indexNamePrefix+"internal_call")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", internalCallDoc.Id).Str("method", "insertInternalCall").Msg("error while insert")
+	}
+}
+
 func (ns *Indexer) addName(nameDoc *doc.EsName) {
 	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
