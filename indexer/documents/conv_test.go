@@ -48,6 +48,7 @@ func TestConvBlock(t *testing.T) {
 		Size:          207,
 		TxCount:       11,
 		PreviousBlock: "9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga",
+		Coinbase:      "5t64bLzisGj793C28zDfkhs8uWitZLoPqj98fMBj27GeRnhbAUEW94d6mhW",
 		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",
 		RewardAmount:  "160000000000000000",
@@ -72,8 +73,9 @@ func TestConvTx(t *testing.T) {
 		FeeDelegation: true,
 		GasUsed:       100000,
 	}, &EsBlock{
-		BlockNo:   1,
-		Timestamp: time.Unix(0, 1668652376002288214),
+		BaseEsType: &BaseEsType{Id: ""},
+		BlockNo:    1,
+		Timestamp:  time.Unix(0, 1668652376002288214),
 	}, &EsTx{
 		TxIdx:         0,
 		BaseEsType:    &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
@@ -87,7 +89,8 @@ func TestConvTx(t *testing.T) {
 		Category:      tx.TxTransfer,
 		Status:        "",
 		FeeDelegation: true,
-		GasPrice:      "0",
+		FeeUsed:       "0",
+		GasPrice:      "50000000000",
 		GasLimit:      0,
 		GasUsed:       100000,
 	})
