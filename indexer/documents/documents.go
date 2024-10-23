@@ -112,7 +112,7 @@ type EsInternalOperations struct {
 	Operations string `json:"operations" db:"operations"`
 }
 
-type EsInternalCall struct {
+type EsContractCall struct {
 	*BaseEsType
 	TxId      string `json:"tx_id" db:"tx_id"`
 	Caller    string `json:"caller" db:"caller"`
@@ -742,7 +742,7 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
-			"internal_call": `{
+			"contract_call": `{
 				"settings": {
 					"number_of_shards": 30,
 					"number_of_replicas": 1,
@@ -1254,7 +1254,7 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
-			"internal_call": `{
+			"contract_call": `{
 				"settings": {
 					"number_of_shards": 3,
 					"number_of_replicas": 1,

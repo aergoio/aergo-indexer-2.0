@@ -207,6 +207,7 @@ func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 	return bytecode, string(abi), nil
 }
 
+// stores all the internal operations (as a json string) from a transaction
 func ConvInternalOperations(txHash string, contract string, jsonOperations string) *EsInternalOperations {
 	return &EsInternalOperations{
 		BaseEsType: &BaseEsType{Id: txHash},
@@ -215,8 +216,9 @@ func ConvInternalOperations(txHash string, contract string, jsonOperations strin
 	}
 }
 
-func ConvInternalCall(txHash string, caller string, contract string, function string, args string, amount string) *EsInternalCall {
-	return &EsInternalCall{
+// stores each call (internal or external) to a contract
+func ConvContractCall(txHash string, caller string, contract string, function string, args string, amount string) *EsContractCall {
+	return &EsContractCall{
 		BaseEsType: &BaseEsType{Id: txHash},
 		Caller:     caller,
 		Contract:   contract,

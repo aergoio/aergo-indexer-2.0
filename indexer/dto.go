@@ -58,10 +58,10 @@ func (ns *Indexer) addInternalOperations(internalOpsDoc *doc.EsInternalOperation
 	}
 }
 
-func (ns *Indexer) addInternalCall(internalCallDoc *doc.EsInternalCall) {
-	err := ns.db.Insert(internalCallDoc, ns.indexNamePrefix+"internal_call")
+func (ns *Indexer) addContractCall(contractCallDoc *doc.EsContractCall) {
+	err := ns.db.Insert(contractCallDoc, ns.indexNamePrefix+"contract_call")
 	if err != nil {
-		ns.log.Error().Err(err).Str("Id", internalCallDoc.Id).Str("method", "insertInternalCall").Msg("error while insert")
+		ns.log.Error().Err(err).Str("Id", contractCallDoc.Id).Str("method", "insertContractCall").Msg("error while insert")
 	}
 }
 

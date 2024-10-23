@@ -228,8 +228,8 @@ func (ns *Indexer) MinerContractInternalOp(blockHeight uint64, timestamp time.Ti
 		internalCall := operation.Call
 
 		// register internal call
-		internalCallDoc := doc.ConvInternalCall(txHash, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount)
-		ns.addInternalCall(internalCallDoc)
+		internalCallDoc := doc.ConvContractCall(txHash, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount)
+		ns.addContractCall(internalCallDoc)
 
 		// process each operation from this internal call
 		for _, nestedOperation := range internalCall.Operations {
