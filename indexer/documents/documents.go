@@ -114,12 +114,15 @@ type EsInternalOperations struct {
 
 type EsContractCall struct {
 	*BaseEsType
-	TxId      string `json:"tx_id" db:"tx_id"`
-	Caller    string `json:"caller" db:"caller"`
-	Contract  string `json:"contract" db:"contract"`
-	Function  string `json:"function" db:"function"`
-	Args      string `json:"args" db:"args"`
-	Amount    string `json:"amount" db:"amount"`
+	BlockNo    uint64    `json:"blockno" db:"blockno"`
+	Timestamp  time.Time `json:"ts" db:"ts"`
+	TxHash     string    `json:"tx_hash" db:"tx_hash"`
+	IsInternal bool      `json:"is_internal" db:"is_internal"`
+	Caller     string    `json:"caller" db:"caller"`
+	Contract   string    `json:"contract" db:"contract"`
+	Function   string    `json:"function" db:"function"`
+	Args       string    `json:"args" db:"args"`
+	Amount     string    `json:"amount" db:"amount"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -750,8 +753,17 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"tx_id": {
+						"blockno": {
+							"type": "long"
+						},
+						"ts": {
+							"type": "date"
+						},
+						"tx_hash": {
 							"type": "keyword"
+						},
+						"is_internal": {
+							"type": "boolean"
 						},
 						"caller": {
 							"type": "keyword"
@@ -1262,8 +1274,17 @@ func InitEsMappings(clusterMode bool) {
 				},
 				"mappings": {
 					"properties": {
-						"tx_id": {
+						"blockno": {
+							"type": "long"
+						},
+						"ts": {
+							"type": "date"
+						},
+						"tx_hash": {
 							"type": "keyword"
+						},
+						"is_internal": {
+							"type": "boolean"
 						},
 						"caller": {
 							"type": "keyword"

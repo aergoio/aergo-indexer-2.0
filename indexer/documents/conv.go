@@ -217,9 +217,16 @@ func ConvInternalOperations(txHash string, contract string, jsonOperations strin
 }
 
 // stores each call (internal or external) to a contract
-func ConvContractCall(txHash string, caller string, contract string, function string, args string, amount string) *EsContractCall {
+func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args string, amount string) *EsContractCall {
+	// Create a unique ID using block number, tx index and call index
+	id := fmt.Sprintf("%d-%d-%d", blockNo, txIdx, callIdx)
+
 	return &EsContractCall{
-		BaseEsType: &BaseEsType{Id: txHash},
+		BaseEsType: &BaseEsType{Id: id},
+		BlockNo:    blockNo,
+		Timestamp:  timestamp,
+		TxHash:     txHash,
+		IsInternal: callIdx > 0,
 		Caller:     caller,
 		Contract:   contract,
 		Function:   function,
@@ -392,3 +399,4 @@ func bigIntToFloat(a *big.Int, exp int64) float32 {
 	f, _ := z.Float32()
 	return f
 }
+
