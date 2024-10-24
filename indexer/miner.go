@@ -10,6 +10,7 @@ import (
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/mr-tron/base58"
 )
 
 // IndexTxs indexes a list of transactions in bulk
@@ -62,7 +63,15 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 		// Process each transaction in the block
 		for i, tx := range block.Body.Txs {
 			txIdx := uint64(i)
-			internalOps := txsInternalOps[tx.GetHash()]
+			// find the internal operations for this transaction
+			var internalOps *InternalOperations
+			for _, ops := range txsInternalOps {
+				if ops.TxHash == base58.Encode(tx.GetHash()) {
+					internalOps = &ops
+					break
+				}
+			}
+			// process the transaction
 			ns.MinerTx(txIdx, info, blockDoc, tx, internalOps, MinerGRPC)
 		}
 
@@ -81,7 +90,7 @@ type CallInfo struct {
 	CallIdx uint64
 }
 
-func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, internalOps InternalOperations, MinerGRPC *client.AergoClientController) {
+func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, internalOps *InternalOperations, MinerGRPC *client.AergoClientController) {
 	// get receipt
 	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
 	if err != nil {
