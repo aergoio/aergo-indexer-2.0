@@ -110,19 +110,12 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		return
 	}
 
-	// Balance from, to
-	ns.cache.storeBalance(transaction.EncodeAndResolveAccount(tx.Body.Account, txDoc.BlockNo))
-	ns.cache.storeBalance(transaction.EncodeAndResolveAccount(tx.Body.Recipient, txDoc.BlockNo))
+	sender := transaction.EncodeAndResolveAccount(tx.Body.Account, txDoc.BlockNo)
+	recipient := transaction.EncodeAndResolveAccount(tx.Body.Recipient, txDoc.BlockNo)
 
-	// Process Token and TokenTransfer
-	switch txDoc.Category {
-	case transaction.TxCall:
-	case transaction.TxDeploy:
-	case transaction.TxPayload:
-	case transaction.TxMultiCall:
-	default:
-		return
-	}
+	// Balance from, to
+	ns.cache.storeBalance(sender)
+	ns.cache.storeBalance(recipient)
 
 	// Process Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
@@ -139,7 +132,14 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 			TxIdx: txIdx,
 			CallIdx: 1,
 		}
-		ns.MinerTxInternalOps(&callInfo, internalOps.Contract, internalOps.Operations)
+		// register external call
+		txCall := internalOps.Call
+		txCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, sender, txCall.Contract, txCall.Function, txCall.Args, txCall.Amount)
+		ns.addContractCall(txCallDoc)
+		// Process internal operations
+		if len(txCall.Operations) > 0 {
+			ns.MinerTxInternalOps(&callInfo, txCall.Contract, txCall.Operations)
+		}
 	}
 
 	// Process Events
@@ -186,8 +186,7 @@ type InternalCall struct {
 
 type InternalOperations struct {
 	TxHash    string   `json:"txhash"`
-	Contract  string   `json:"contract"`
-	Operations []InternalOperation `json:"operations"`
+	Call      InternalCall `json:"call"`
 }
 
 func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, contract string, operations []InternalOperation) {
