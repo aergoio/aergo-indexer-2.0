@@ -179,7 +179,7 @@ type InternalOperation struct {
 type InternalCall struct {
 	Contract  string   `json:"contract"`
 	Function  string   `json:"function"`
-	Args      string   `json:"args"`
+	Args      []interface{} `json:"args"`
 	Amount    string   `json:"amount"`
 	Operations []InternalOperation `json:"operations"`
 }

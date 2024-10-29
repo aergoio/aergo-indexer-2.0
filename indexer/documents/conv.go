@@ -7,6 +7,7 @@ import (
 	"time"
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
@@ -217,7 +218,7 @@ func ConvInternalOperations(txHash string, contract string, jsonOperations strin
 }
 
 // stores each call (internal or external) to a contract
-func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args string, amount string) *EsContractCall {
+func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args []interface{}, amount string) *EsContractCall {
 	// Create a unique ID using block number, tx index and call index
 	id := fmt.Sprintf("%020d-%05d-%04d", blockNo, txIdx, callIdx)
 
@@ -230,9 +231,20 @@ func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx 
 		Caller:     caller,
 		Contract:   contract,
 		Function:   function,
-		Args:       args,
+		Args:       argsToJson(args),
 		Amount:     amount,
 	}
+}
+
+func argsToJson(argsList []interface{}) (string) {
+	if argsList == nil {
+		return ""
+	}
+	args, err := json.Marshal(argsList)
+	if err != nil {
+		return ""
+	}
+	return string(args)
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
