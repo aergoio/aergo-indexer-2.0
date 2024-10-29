@@ -169,9 +169,9 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 
 func extractByteCode(payload []byte) ([]byte, string, string) {
 	// read the length of the first section
-	codeAbiLength := binary.BigEndian.Uint32(payload[:4])
+	codeAbiLength := binary.LittleEndian.Uint32(payload[:4])
 	// read the bytecode length
-	bytecodeLength := binary.BigEndian.Uint32(payload[4:8])
+	bytecodeLength := binary.LittleEndian.Uint32(payload[4:8])
 	// check if the lengths are valid
 	if codeAbiLength > uint32(len(payload)) || bytecodeLength > codeAbiLength {
 		return nil, "", ""
@@ -187,7 +187,7 @@ func extractByteCode(payload []byte) ([]byte, string, string) {
 
 func extractSourceCode(payload []byte) (string, string) {
 	// read the code length
-	codeLength := binary.BigEndian.Uint32(payload[:4])
+	codeLength := binary.LittleEndian.Uint32(payload[:4])
 	// extract the source code and deploy args
 	sourceCode := payload[4:codeLength]
 	deployArgs := payload[4+codeLength:]
@@ -201,7 +201,7 @@ func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 		return nil, "", err
 	}
 	// read the bytecode length
-	bytecodeLength := binary.BigEndian.Uint32(bytecodeABI[:4])
+	bytecodeLength := binary.LittleEndian.Uint32(bytecodeABI[:4])
 	// extract the bytecode and abi
 	bytecode := bytecodeABI[4:bytecodeLength]
 	abi := bytecodeABI[4+bytecodeLength:]
