@@ -169,28 +169,28 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 
 func extractByteCode(payload []byte) ([]byte, string, string) {
 	// read the length of the first section
-	codeAbiLength := binary.LittleEndian.Uint32(payload[:4])
+	codeAbiEnd := binary.LittleEndian.Uint32(payload[:4])
 	// read the bytecode length
 	bytecodeLength := binary.LittleEndian.Uint32(payload[4:8])
 	// check if the lengths are valid
-	if codeAbiLength > uint32(len(payload)) || bytecodeLength > codeAbiLength {
+	if codeAbiEnd > uint32(len(payload)) || bytecodeLength > codeAbiEnd {
 		return nil, "", ""
 	}
 	// extract the code+abi and deploy args
-	codeAbi := payload[4:codeAbiLength]
-	deployArgs := payload[4+codeAbiLength:]
+	codeAbi := payload[4:codeAbiEnd]
+	deployArgs := payload[codeAbiEnd:]
 	// extract the bytecode and abi
-	bytecode := codeAbi[4:bytecodeLength]
+	bytecode := codeAbi[4:4+bytecodeLength]
 	abi := codeAbi[4+bytecodeLength:]
 	return bytecode, string(abi), string(deployArgs)
 }
 
 func extractSourceCode(payload []byte) (string, string) {
-	// read the code length
-	codeLength := binary.LittleEndian.Uint32(payload[:4])
+	// read the code end position
+	codeEnd := binary.LittleEndian.Uint32(payload[:4])
 	// extract the source code and deploy args
-	sourceCode := payload[4:codeLength]
-	deployArgs := payload[4+codeLength:]
+	sourceCode := payload[4:codeEnd]
+	deployArgs := payload[codeEnd:]
 	return string(sourceCode), string(deployArgs)
 }
 
