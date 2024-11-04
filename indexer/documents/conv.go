@@ -1,17 +1,17 @@
 package documents
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
-	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-indexer-2.0/lua_compiler"
+	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/mr-tron/base58"
 	"google.golang.org/protobuf/proto"
 )

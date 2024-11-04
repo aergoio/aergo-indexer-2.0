@@ -188,6 +188,8 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
 	ns.CreateIndexIfNotExists("whitelist")
+	ns.CreateIndexIfNotExists("contract_call")
+	ns.CreateIndexIfNotExists("internal_operations")
 
 	return nil
 }
