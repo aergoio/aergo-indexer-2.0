@@ -214,6 +214,7 @@ func ConvInternalOperations(txHash string, contract string, jsonOperations strin
 		BaseEsType: &BaseEsType{Id: txHash},
 		Contract:   contract,
 		Operations: jsonOperations,
+		TxId: txHash,
 	}
 }
 
