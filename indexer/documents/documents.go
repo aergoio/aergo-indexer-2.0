@@ -32,10 +32,11 @@ func (m *BaseEsType) SetID(id string) {
 // EsChainInfo is meta data of a chain information
 type EsChainInfo struct {
 	*BaseEsType
-	Public    bool   `json:"public" db:"public"`
-	Mainnet   bool   `json:"mainnet" db:"mainnet"`
-	Consensus string `json:"consensus" db:"consensus"`
-	Version   uint64 `json:"version" db:"version"`
+	Public    bool   			`json:"public" db:"public"`
+	Mainnet   bool   			`json:"mainnet" db:"mainnet"`
+	Consensus string 			`json:"consensus" db:"consensus"`
+	Version   uint64 			`json:"version" db:"version"`
+	Hardfork  map[string]uint64 `json:"hardfork" db:"hardfork"`
 }
 
 // EsBlock is a block stored in the database

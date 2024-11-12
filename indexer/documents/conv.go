@@ -389,6 +389,7 @@ func ConvChainInfo(chainInfo *types.ChainInfo) *EsChainInfo {
 		Mainnet:    chainInfo.Id.Mainnet,
 		Consensus:  chainInfo.Id.Consensus,
 		Version:    uint64(chainInfo.Id.Version),
+		Hardfork: 	chainInfo.Hardfork,
 	}
 }
 

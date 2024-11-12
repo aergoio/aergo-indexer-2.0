@@ -210,7 +210,7 @@ func (ns *Indexer) ValidChainInfo() error {
 	if err != nil {
 		return err
 	}
-
+	
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
 		SortField: "version",
@@ -221,9 +221,11 @@ func (ns *Indexer) ValidChainInfo() error {
 		chainInfo.BaseEsType = new(doc.BaseEsType)
 		return chainInfo
 	})
+
 	if err != nil {
 		ns.log.Info().Err(err).Msg("Could not query chain info, add new one.")
 	}
+
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
 			BaseEsType: &doc.BaseEsType{
@@ -233,6 +235,7 @@ func (ns *Indexer) ValidChainInfo() error {
 			Public:    chainInfoFromNode.Id.Public,
 			Consensus: chainInfoFromNode.Id.Consensus,
 			Version:   uint64(chainInfoFromNode.Id.Version),
+			Hardfork:  chainInfoFromNode.Hardfork,
 		}
 		err = ns.db.Insert(&chainInfo, ns.indexNamePrefix+"chain_info")
 		if err != nil {
@@ -249,6 +252,10 @@ func (ns *Indexer) ValidChainInfo() error {
 		}
 	}
 	return nil
+}
+
+func String(u uint64) {
+	panic("unimplemented")
 }
 
 // UpdateAliasForType updates aliases

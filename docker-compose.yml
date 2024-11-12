@@ -1,4 +1,4 @@
-version: '3.2'
+version: "3.2"
 services:
   elasticsearch:
     container_name: es
@@ -9,9 +9,9 @@ services:
       bootstrap.memory_lock: true
       ES_JAVA_OPTS: -Xms1024m -Xmx1024m
     ulimits:
-     memlock:
-      soft: -1
-      hard: -1
+      memlock:
+        soft: -1
+        hard: -1
     ports:
       - 9200:9200
       - 9300:9300
@@ -22,9 +22,9 @@ services:
         max-size: "10m"
   indexer:
     container_name: indexer
-    image: aergo/indexer2:2.2.0
+    image: aergo/indexer2:2.6.1
     ports:
-     - 8000:8000
+      - 8000:8000
     privileged: true
     command: indexer
       - --aergo=localhost:7845
