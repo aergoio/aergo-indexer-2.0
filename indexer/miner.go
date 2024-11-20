@@ -138,7 +138,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		ns.addContractCall(txCallDoc)
 		// Process internal operations
 		if len(txCall.Operations) > 0 {
-			ns.MinerTxInternalOps(&callInfo, txCall.Contract, txCall.Operations)
+			ns.MinerTxInternalOps(&callInfo, txCall.Contract, internalOps)
 		}
 	}
 
@@ -199,7 +199,7 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, contract string, opera
 	}
 	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).Str("operations", string(jsonOperations)).Msg("Processing internal operations")
 	// save to db
-	internalOpsDoc := doc.ConvInternalOperations(callInfo.TxHash, contract, string(jsonOperations))
+	internalOpsDoc := doc.ConvInternalOperations(callInfo.TxHash, string(jsonOperations))
 	ns.addInternalOperations(internalOpsDoc)
 
 	// process each operation from this contract

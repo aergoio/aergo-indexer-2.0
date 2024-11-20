@@ -109,7 +109,6 @@ type EsContractToken struct {
 type EsInternalOperations struct {
 	*BaseEsType
 	TxId       string `json:"tx_id" db:"tx_id"`
-	Contract   string `json:"contract" db:"contract"`
 	Operations string `json:"operations" db:"operations"`
 }
 
@@ -737,9 +736,6 @@ func InitEsMappings(clusterMode bool) {
 						"tx_id": {
 							"type": "keyword"
 						},
-						"contract": {
-							"type": "keyword"
-						},
 						"operations": {
 							"type": "text"
 						}
@@ -1256,9 +1252,6 @@ func InitEsMappings(clusterMode bool) {
 				"mappings": {
 					"properties": {
 						"tx_id": {
-							"type": "keyword"
-						},
-						"contract": {
 							"type": "keyword"
 						},
 						"operations": {

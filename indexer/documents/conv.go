@@ -209,10 +209,9 @@ func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 }
 
 // stores all the internal operations (as a json string) from a transaction
-func ConvInternalOperations(txHash string, contract string, jsonOperations string) *EsInternalOperations {
+func ConvInternalOperations(txHash string, jsonOperations string) *EsInternalOperations {
 	return &EsInternalOperations{
 		BaseEsType: &BaseEsType{Id: txHash},
-		Contract:   contract,
 		Operations: jsonOperations,
 		TxId: txHash,
 	}
