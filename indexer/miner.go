@@ -138,7 +138,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		ns.addContractCall(txCallDoc)
 		// Process internal operations
 		if len(txCall.Operations) > 0 {
-			ns.MinerTxInternalOps(&callInfo, txCall.Contract, internalOps)
+			ns.MinerTxInternalOps(&callInfo, txCall.Contract, &txCall)
 		}
 	}
 
@@ -189,10 +189,10 @@ type InternalOperations struct {
 	Call      InternalCall `json:"call"`
 }
 
-func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, contract string, operations []InternalOperation) {
+func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, contract string, outerCall *InternalCall) {
 	// save the entire tree of internal operations for the transaction
 	// re-encode operations to json
-	jsonOperations, err := json.Marshal(operations)
+	jsonOperations, err := json.Marshal(outerCall)
 	if err != nil {
 		ns.log.Error().Err(err).Str("txHash", callInfo.TxHash).Str("contract", contract).Msg("Failed to marshal internal operations")
 		return
@@ -203,7 +203,7 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, contract string, opera
 	ns.addInternalOperations(internalOpsDoc)
 
 	// process each operation from this contract
-	for _, operation := range operations {
+	for _, operation := range outerCall.Operations {
 		ns.MinerContractInternalOp(callInfo, contract, operation)
 	}
 }
