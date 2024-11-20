@@ -170,18 +170,18 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 
 type InternalOperation struct {
 	Operation string   `json:"op"`
-	Amount    string   `json:"amount"`
+	Amount    string   `json:"amount,omitempty"`
 	Args      []string `json:"args"`
-	Result    string   `json:"result"`
-	Call      *InternalCall `json:"call"`
+	Result    string   `json:"result,omitempty"`
+	Call      *InternalCall `json:"call,omitempty"`
 }
 
 type InternalCall struct {
-	Contract  string   `json:"contract"`
-	Function  string   `json:"function"`
-	Args      []interface{} `json:"args"`
-	Amount    string   `json:"amount"`
-	Operations []InternalOperation `json:"operations"`
+	Contract  string   `json:"contract,omitempty"`
+	Function  string   `json:"function,omitempty"`
+	Args      []interface{} `json:"args,omitempty"`
+	Amount    string   `json:"amount,omitempty"`
+	Operations []InternalOperation `json:"operations,omitempty"`
 }
 
 type InternalOperations struct {
