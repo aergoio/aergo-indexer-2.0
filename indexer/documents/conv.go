@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -212,7 +213,7 @@ func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 	// read the bytecode length
 	bytecodeLength := binary.LittleEndian.Uint32(bytecodeABI[:4])
 	// extract the bytecode and abi
-	bytecode := bytecodeABI[4:bytecodeLength]
+	bytecode := bytecodeABI[4:4+bytecodeLength]
 	abi := bytecodeABI[4+bytecodeLength:]
 	return bytecode, string(abi), nil
 }
