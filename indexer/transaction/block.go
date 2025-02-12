@@ -14,6 +14,6 @@ func MakePeerId(pubKey []byte) string {
 	if err != nil {
 		return ""
 	}
-	peerId := peer.IDB58Encode(Id)
+	peerId := peer.Encode(Id)
 	return peerId
 }
