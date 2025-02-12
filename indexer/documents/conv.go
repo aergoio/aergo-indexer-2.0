@@ -159,7 +159,10 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 		return bytecode, "", abi, deployArgs
 	}
 	// on hardfork 4, the deploy contains the contract source code and deploy args
-	sourceCode, deployArgs := extractSourceCode(payload)
+	sourceCode, deployArgs, err := extractSourceCode(payload)
+	if err != nil {
+		return nil, "", "", ""
+	}
 	bytecode, abi, err := CompileSourceCode(sourceCode)
 	if err != nil {
 		panic(err)
@@ -185,13 +188,19 @@ func extractByteCode(payload []byte) ([]byte, string, string) {
 	return bytecode, string(abi), string(deployArgs)
 }
 
-func extractSourceCode(payload []byte) (string, string) {
+func extractSourceCode(payload []byte) (string, string, error) {
+	if len(payload) <= 4 {
+		return "", "", errors.New("payload is too short")
+	}
 	// read the code end position
 	codeEnd := binary.LittleEndian.Uint32(payload[:4])
+	if codeEnd > uint32(len(payload)) {
+		return "", "", errors.New("code end position is out of bounds")
+	}
 	// extract the source code and deploy args
 	sourceCode := payload[4:codeEnd]
 	deployArgs := payload[codeEnd:]
-	return string(sourceCode), string(deployArgs)
+	return string(sourceCode), string(deployArgs), nil
 }
 
 // CompileSourceCode compiles the source code and returns the bytecode and abi
