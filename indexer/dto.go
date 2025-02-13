@@ -51,6 +51,20 @@ func (ns *Indexer) addContract(blockType BlockType, contractDoc *doc.EsContract)
 	}
 }
 
+func (ns *Indexer) addInternalOperations(internalOpsDoc *doc.EsInternalOperations) {
+	err := ns.db.Insert(internalOpsDoc, ns.indexNamePrefix+"internal_operations")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", internalOpsDoc.Id).Str("method", "insertInternalOperations").Msg("error while insert")
+	}
+}
+
+func (ns *Indexer) addContractCall(contractCallDoc *doc.EsContractCall) {
+	err := ns.db.Insert(contractCallDoc, ns.indexNamePrefix+"contract_call")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", contractCallDoc.Id).Str("method", "insertContractCall").Msg("error while insert")
+	}
+}
+
 func (ns *Indexer) addName(nameDoc *doc.EsName) {
 	err := ns.db.Insert(nameDoc, ns.indexNamePrefix+"name")
 	if err != nil {
@@ -147,10 +161,17 @@ func (ns *Indexer) updateTokenVerified(tokenDoc *doc.EsTokenUpVerified) {
 	}
 }
 
-func (ns *Indexer) updateContract(contractDoc *doc.EsContractUp) {
+func (ns *Indexer) updateContractSource(contractDoc *doc.EsContractSource) {
 	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
 	if err != nil {
-		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContract").Msg("error while update")
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContractSource").Msg("error while update")
+	}
+}
+
+func (ns *Indexer) updateContractToken(contractDoc *doc.EsContractToken) {
+	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContractToken").Msg("error while update")
 	}
 }
 

@@ -1,12 +1,17 @@
 package documents
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	"github.com/aergoio/aergo-indexer-2.0/lua_compiler"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/mr-tron/base58"
 	"google.golang.org/protobuf/proto"
@@ -65,7 +70,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		BlockId:       blockDoc.Id,
 		Timestamp:     blockDoc.Timestamp,
 		TxIdx:         txIdx,
-		Payload:       string(tx.GetBody().GetPayload()),
+		Payload:       tx.GetBody().GetPayload(),
 		Account:       transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
 		Recipient:     transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:        amount.String(),
@@ -85,26 +90,174 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	}
 }
 
-// ConvContractCreateTx creates document for token creation
-func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
+// ConvContractFromTx creates document for contract creation
+func ConvContractFromTx(txDoc *EsTx, contractAddressByte []byte) *EsContract {
+	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
+	if byteCode == nil && sourceCode == "" {
+		return nil
+	}
+	contractAddress := transaction.EncodeAndResolveAccount(contractAddressByte, txDoc.BlockNo)
+	return ConvContract(txDoc.BlockNo, txDoc.Timestamp, txDoc.GetID(), contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
+}
+
+func ConvContractFromCall(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator, sourceCode string, deployArgs []string) *EsContract {
+	byteCode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		return nil
+	}
+	var deployArgsStr string
+	if len(deployArgs) > 0 {
+		deployArgsStr = "[" + strings.Join(deployArgs, ",") + "]"
+	}
+	return ConvContract(blockHeight, timestamp, txHash, contractAddress, creator, byteCode, abi, sourceCode, deployArgsStr)
+}
+
+func ConvContract(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator string, byteCode []byte, abi, sourceCode, deployArgs string) *EsContract {
+	return &EsContract{
+		BaseEsType: &BaseEsType{Id: contractAddress},
+		BlockNo:    blockHeight,
+		Timestamp:  timestamp,
+		TxId:       txHash,
+		Creator:    creator,
+		ABI:        abi,
+		ByteCode:   byteCode,
+		SourceCode: sourceCode,
+		DeployArgs: deployArgs,
+	}
+}
+
+func ConvInternalContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	return &EsContract{
 		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Creator:    txDoc.Account,
 		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
 		Timestamp:  txDoc.Timestamp,
-		Payload:    txDoc.Payload,
 	}
 }
 
-func ConvContractUp(contractAddress string, status, token, codeUrl, code string) *EsContractUp {
-	return &EsContractUp{
+func ConvContractSource(contractAddress string, sourceCode string) *EsContractSource {
+	return &EsContractSource{
+		BaseEsType:     &BaseEsType{Id: contractAddress},
+		SourceCode:     sourceCode,
+	}
+}
+
+func ConvContractToken(contractAddress string, status, token string) *EsContractToken {
+	return &EsContractToken{
 		BaseEsType:     &BaseEsType{Id: contractAddress},
 		VerifiedToken:  token,
 		VerifiedStatus: status,
-		CodeUrl:        codeUrl,
-		Code:           code,
 	}
+}
+
+// returns: bytecode, sourceCode, abi, deployArgs
+func extractContractCode(payload []byte) ([]byte, string, string, string) {
+	if len(payload) <= 12 {
+		return nil, "", "", ""
+	}
+	// check for LuaJIT bytecode signature at position 8
+	if bytes.HasPrefix(payload[8:], []byte{0x1b, 0x4c, 0x4a}) {
+		// before hardfork 4, the deploy contains the contract bytecode, abi and deploy args
+		bytecode, abi, deployArgs := extractByteCode(payload)
+		return bytecode, "", abi, deployArgs
+	}
+	// on hardfork 4, the deploy contains the contract source code and deploy args
+	sourceCode, deployArgs, err := extractSourceCode(payload)
+	if err != nil {
+		return nil, "", "", ""
+	}
+	bytecode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		return nil, "", "", ""
+	}
+	return bytecode, sourceCode, abi, deployArgs
+}
+
+func extractByteCode(payload []byte) ([]byte, string, string) {
+	// read the length of the first section
+	codeAbiEnd := binary.LittleEndian.Uint32(payload[:4])
+	// read the bytecode length
+	bytecodeLength := binary.LittleEndian.Uint32(payload[4:8])
+	// check if the lengths are valid
+	if codeAbiEnd > uint32(len(payload)) || bytecodeLength > codeAbiEnd {
+		return nil, "", ""
+	}
+	// extract the code+abi and deploy args
+	codeAbi := payload[4:codeAbiEnd]
+	deployArgs := payload[codeAbiEnd:]
+	// extract the bytecode and abi
+	bytecode := codeAbi[4:4+bytecodeLength]
+	abi := codeAbi[4+bytecodeLength:]
+	return bytecode, string(abi), string(deployArgs)
+}
+
+func extractSourceCode(payload []byte) (string, string, error) {
+	if len(payload) <= 4 {
+		return "", "", errors.New("payload is too short")
+	}
+	// read the code end position
+	codeEnd := binary.LittleEndian.Uint32(payload[:4])
+	if codeEnd > uint32(len(payload)) {
+		return "", "", errors.New("code end position is out of bounds")
+	}
+	// extract the source code and deploy args
+	sourceCode := payload[4:codeEnd]
+	deployArgs := payload[codeEnd:]
+	return string(sourceCode), string(deployArgs), nil
+}
+
+// CompileSourceCode compiles the source code and returns the bytecode and abi
+func CompileSourceCode(sourceCode string) ([]byte, string, error) {
+	bytecodeABI, err := lua_compiler.CompileCode(sourceCode)
+	if err != nil {
+		return nil, "", err
+	}
+	// read the bytecode length
+	bytecodeLength := binary.LittleEndian.Uint32(bytecodeABI[:4])
+	// extract the bytecode and abi
+	bytecode := bytecodeABI[4:4+bytecodeLength]
+	abi := bytecodeABI[4+bytecodeLength:]
+	return bytecode, string(abi), nil
+}
+
+// stores all the internal operations (as a json string) from a transaction
+func ConvInternalOperations(txHash string, jsonOperations string) *EsInternalOperations {
+	return &EsInternalOperations{
+		BaseEsType: &BaseEsType{Id: txHash},
+		Operations: jsonOperations,
+		TxId: txHash,
+	}
+}
+
+// stores each call (internal or external) to a contract
+func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args []interface{}, amount string) *EsContractCall {
+	// Create a unique ID using block number, tx index and call index
+	id := fmt.Sprintf("%020d-%05d-%04d", blockNo, txIdx, callIdx)
+
+	return &EsContractCall{
+		BaseEsType: &BaseEsType{Id: id},
+		BlockNo:    blockNo,
+		Timestamp:  timestamp,
+		TxHash:     txHash,
+		IsInternal: callIdx > 0,
+		Caller:     caller,
+		Contract:   contract,
+		Function:   function,
+		Args:       argsToJson(args),
+		Amount:     amount,
+	}
+}
+
+func argsToJson(argsList []interface{}) (string) {
+	if argsList == nil {
+		return ""
+	}
+	args, err := json.Marshal(argsList)
+	if err != nil {
+		return ""
+	}
+	return string(args)
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
@@ -248,6 +401,7 @@ func ConvChainInfo(chainInfo *types.ChainInfo) *EsChainInfo {
 		Mainnet:    chainInfo.Id.Mainnet,
 		Consensus:  chainInfo.Id.Consensus,
 		Version:    uint64(chainInfo.Id.Version),
+		Hardfork: 	chainInfo.Hardfork,
 	}
 }
 
@@ -271,3 +425,4 @@ func bigIntToFloat(a *big.Int, exp int64) float32 {
 	f, _ := z.Float32()
 	return f
 }
+
