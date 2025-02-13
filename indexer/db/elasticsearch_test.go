@@ -1,3 +1,6 @@
+//go:build integration
+
+// These tests are integration tests since they require external docker node in same machine.
 package db
 
 import (
@@ -11,9 +14,6 @@ import (
 )
 
 func TestElastic(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration tests in short mode.")
-	}
 
 	mock, err := mockupDocker()
 	require.NoError(t, err)
