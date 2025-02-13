@@ -1,3 +1,6 @@
+//go:build integration
+
+// These tests are integration tests since they require running Aergo node in same machine.
 package client
 
 import (

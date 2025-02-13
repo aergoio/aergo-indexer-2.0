@@ -49,6 +49,7 @@ func TestConvBlock(t *testing.T) {
 		TxCount:       11,
 		PreviousBlock: "9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga",
 		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
+		Coinbase:      tx.EncodeAndResolveAccount(decodeBase58("AmPJRLHDKtzLpsaC8ubmPuRkxnMCyBSq5wBwYNDD6DJdgiRhAhYR"), 104524962),
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",
 		RewardAmount:  "160000000000000000",
 	})
@@ -72,13 +73,15 @@ func TestConvTx(t *testing.T) {
 		FeeDelegation: true,
 		GasUsed:       100000,
 	}, &EsBlock{
-		BlockNo:   1,
-		Timestamp: time.Unix(0, 1668652376002288214),
+		BaseEsType: &BaseEsType{Id: "2uaePMqoDeWh4SBhQTSYvCLRs97gqgiTgho1kLYWdyF3"},
+		BlockNo:    1,
+		Timestamp:  time.Unix(0, 1668652376002288214),
 	}, &EsTx{
 		TxIdx:         0,
 		BaseEsType:    &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
 		Timestamp:     time.Unix(0, 1668652376002288214),
 		BlockNo:       1,
+		BlockId:       "2uaePMqoDeWh4SBhQTSYvCLRs97gqgiTgho1kLYWdyF3",
 		Account:       "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
 		Recipient:     "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
 		Amount:        "100",
@@ -87,7 +90,8 @@ func TestConvTx(t *testing.T) {
 		Category:      tx.TxTransfer,
 		Status:        "",
 		FeeDelegation: true,
-		GasPrice:      "0",
+		FeeUsed:       "0",
+		GasPrice:      "50000000000",
 		GasLimit:      0,
 		GasUsed:       100000,
 	})
