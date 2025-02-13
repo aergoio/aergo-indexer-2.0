@@ -120,7 +120,9 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	// Process Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
 		contractDoc := doc.ConvContractFromTx(txDoc, receipt.ContractAddress)
-		ns.addContract(info.Type, contractDoc)
+		if contractDoc != nil {
+			ns.addContract(info.Type, contractDoc)
+		}
 	}
 
 	// Process the internal operations for this transaction
@@ -237,7 +239,9 @@ func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, 
 		contractAddr := operation.Result
 		// TODO: register new contract
 		contractDoc := doc.ConvContractFromCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, contractAddr, creator, sourceCode, deployArgs)
-		ns.addContract(BlockType_Sync, contractDoc)
+		if contractDoc != nil {
+			ns.addContract(BlockType_Sync, contractDoc)
+		}
 	}
 
 	// if it has a call to another contract

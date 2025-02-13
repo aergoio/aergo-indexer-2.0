@@ -93,6 +93,9 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 // ConvContractFromTx creates document for contract creation
 func ConvContractFromTx(txDoc *EsTx, contractAddressByte []byte) *EsContract {
 	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
+	if byteCode == nil && sourceCode == "" {
+		return nil
+	}
 	contractAddress := transaction.EncodeAndResolveAccount(contractAddressByte, txDoc.BlockNo)
 	return ConvContract(txDoc.BlockNo, txDoc.Timestamp, txDoc.GetID(), contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
 }
@@ -100,7 +103,7 @@ func ConvContractFromTx(txDoc *EsTx, contractAddressByte []byte) *EsContract {
 func ConvContractFromCall(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator, sourceCode string, deployArgs []string) *EsContract {
 	byteCode, abi, err := CompileSourceCode(sourceCode)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	var deployArgsStr string
 	if len(deployArgs) > 0 {
@@ -166,7 +169,7 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	}
 	bytecode, abi, err := CompileSourceCode(sourceCode)
 	if err != nil {
-		panic(err)
+		return nil, "", "", ""
 	}
 	return bytecode, sourceCode, abi, deployArgs
 }
