@@ -261,10 +261,9 @@ func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operatio
 			recipient = operation.Result
 		}
 		amount := operation.Amount
-		amountFloat := float32(0.0)  // FIXME: implement this
 
 		callInfo.SendIdx++
-		aergoTransferDoc := doc.ConvAergoTransfer(callInfo.TxDoc, callInfo.SendIdx, sender, recipient, amount, amountFloat)
+		aergoTransferDoc := doc.ConvAergoTransfer(callInfo.TxDoc, callInfo.SendIdx, sender, recipient, amount)
 		ns.addTokenTransfer(BlockType_Sync, aergoTransferDoc)
 	}
 
