@@ -354,9 +354,11 @@ func ConvNFT(ttDoc *EsTokenTransfer, tokenUri string, imageUrl string) *EsNFT {
 	}
 }
 
+// ConvTokenTransfer creates document for token transfer event
 func ConvTokenTransfer(contractAddress []byte, txDoc *EsTx, idx int, from string, to string, tokenId string, amount string, amountFloat float32) *EsTokenTransfer {
 	return &EsTokenTransfer{
-		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
+		// Uses "-token-" prefix on the ID to avoid collision with internal transfer of aergo tokens
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-token-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
 		BlockNo:      txDoc.BlockNo,
 		Timestamp:    txDoc.Timestamp,
@@ -365,6 +367,24 @@ func ConvTokenTransfer(contractAddress []byte, txDoc *EsTx, idx int, from string
 		From:         from,
 		To:           to,
 		TokenId:      tokenId,
+		Amount:       amount,
+		AmountFloat:  amountFloat,
+	}
+}
+
+// ConvAergoTransfer creates document for internal transfer of aergo tokens
+func ConvAergoTransfer(txDoc *EsTx, idx uint64, from string, to string, amount string, amountFloat float32) *EsTokenTransfer {
+	return &EsTokenTransfer{
+		// Uses "-aergo-" prefix on the ID to avoid collision with token transfers
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-aergo-%d", txDoc.Id, idx)},
+		TxId:         txDoc.GetID(),
+		BlockNo:      txDoc.BlockNo,
+		Timestamp:    txDoc.Timestamp,
+		TokenAddress: "",
+		TokenId:      "AERGO",
+		Sender:       txDoc.Account,
+		From:         from,
+		To:           to,
 		Amount:       amount,
 		AmountFloat:  amountFloat,
 	}
