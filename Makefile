@@ -26,6 +26,7 @@ cover-test:
 	gocover-cobertura < coverage.out > coverage.xml
 
 clean:
+	rm -rf bin
 	go clean -testcache
 
 run:

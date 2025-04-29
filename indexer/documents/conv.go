@@ -17,6 +17,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var (
+	// mulAergo represents 10^18 as a big.Int
+	mulAergo, _ = new(big.Int).SetString("1000000000000000000", 10) // 1 followed by 18 zeros
+	// mulGaer represents 10^9 as a big.Int
+	mulGaer, _ = new(big.Int).SetString("1000000000", 10) // 1 followed by 9 zeros
+	// zeroBig represents 0 as a big.Int
+	zeroBig = big.NewInt(0)
+)
+
 // ConvBlock converts Block from RPC into Elasticsearch type - 1.0
 func ConvBlock(block *types.Block, blockProducer string) *EsBlock {
 	rewardAmount := ""
@@ -354,9 +363,11 @@ func ConvNFT(ttDoc *EsTokenTransfer, tokenUri string, imageUrl string) *EsNFT {
 	}
 }
 
+// ConvTokenTransfer creates document for token transfer event
 func ConvTokenTransfer(contractAddress []byte, txDoc *EsTx, idx int, from string, to string, tokenId string, amount string, amountFloat float32) *EsTokenTransfer {
 	return &EsTokenTransfer{
-		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
+		// Uses "-token-" prefix on the ID to avoid collision with internal transfer of aergo tokens
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-token-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
 		BlockNo:      txDoc.BlockNo,
 		Timestamp:    txDoc.Timestamp,
@@ -367,6 +378,31 @@ func ConvTokenTransfer(contractAddress []byte, txDoc *EsTx, idx int, from string
 		TokenId:      tokenId,
 		Amount:       amount,
 		AmountFloat:  amountFloat,
+	}
+}
+
+// ConvAergoTransfer creates document for internal transfer of aergo tokens
+func ConvAergoTransfer(txDoc *EsTx, idx uint64, from string, to string, amount string) *EsTokenTransfer {
+
+	// Parse the amount string into a big.Int
+	amountBig, err := parseAergoAmount(amount)
+	if err != nil {
+		amountBig = big.NewInt(0)
+	}
+
+	return &EsTokenTransfer{
+		// Uses "-aergo-" prefix on the ID to avoid collision with token transfers
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-aergo-%d", txDoc.Id, idx)},
+		TxId:         txDoc.GetID(),
+		BlockNo:      txDoc.BlockNo,
+		Timestamp:    txDoc.Timestamp,
+		TokenAddress: "",
+		TokenId:      "AERGO",
+		Sender:       txDoc.Account,
+		From:         from,
+		To:           to,
+		Amount:       amountBig.String(),
+		AmountFloat:  bigIntToFloat(amountBig, 18),
 	}
 }
 
@@ -426,3 +462,133 @@ func bigIntToFloat(a *big.Int, exp int64) float32 {
 	return f
 }
 
+// parseAergoAmount parses the input string and converts it into a big.Int
+// taking into account the different units ("aergo", "gaer", "aer")
+func parseAergoAmount(amountStr string) (*big.Int, error) {
+	if len(amountStr) == 0 {
+		return zeroBig, nil
+	}
+
+	// Check for amount in decimal format
+	if strings.Contains(amountStr,".") && strings.HasSuffix(strings.ToLower(amountStr),"aergo") {
+		// Extract the part before the unit
+		decimalAmount := amountStr[:len(amountStr)-5]
+		decimalAmount = strings.TrimRight(decimalAmount, " ")
+		// Parse the decimal amount
+		decimalAmount = parseDecimalAmount(decimalAmount, 18)
+		if decimalAmount == "error" {
+			return nil, errors.New("converting error for BigNum: " + amountStr)
+		}
+		amount, valid := new(big.Int).SetString(decimalAmount, 10)
+		if !valid {
+			return nil, errors.New("converting error for BigNum: " + amountStr)
+		}
+		return amount, nil
+	}
+
+	totalAmount := new(big.Int)
+	remainingStr := amountStr
+
+	// Define the units and corresponding multipliers
+	for _, data := range []struct {
+		unit       string
+		multiplier *big.Int
+	}{
+		{"aergo", mulAergo},
+		{"gaer", mulGaer},
+		{"aer", zeroBig},
+	} {
+		idx := strings.Index(strings.ToLower(remainingStr), data.unit)
+		if idx != -1 {
+			// Extract the part before the unit
+			subStr := remainingStr[:idx]
+
+			// Parse and convert the amount
+			partialAmount, err := parseAndConvert(subStr, data.unit, data.multiplier, amountStr)
+			if err != nil {
+				return nil, err
+			}
+
+			// Add to the total amount
+			totalAmount.Add(totalAmount, partialAmount)
+
+			// Adjust the remaining string to process
+			remainingStr = remainingStr[idx+len(data.unit):]
+		}
+	}
+
+	// Process the rest of the string, if there is some
+	if len(remainingStr) > 0 {
+		partialAmount, err := parseAndConvert(remainingStr, "", zeroBig, amountStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add to the total amount
+		totalAmount.Add(totalAmount, partialAmount)
+	}
+
+	return totalAmount, nil
+}
+
+// convert decimal amount into big integer string
+func parseDecimalAmount(str string, num_decimals int) string {
+	// Get the integer and decimal parts
+	idx := strings.Index(str, ".")
+	if idx == -1 {
+		return str
+	}
+	p1 := str[0:idx]
+	p2 := str[idx+1:]
+
+	// Check for another decimal point
+	if strings.Index(p2, ".") != -1 {
+		return "error"
+	}
+
+	// Compute the amount of zero digits to add
+	to_add := num_decimals - len(p2)
+	if to_add > 0 {
+		p2 = p2 + strings.Repeat("0", to_add)
+	} else if to_add < 0 {
+		// Do not truncate decimal amounts
+		return "error"
+	}
+
+	// Join the integer and decimal parts
+	str = p1 + p2
+
+	// Remove leading zeros
+	str = strings.TrimLeft(str, "0")
+	if str == "" {
+		str = "0"
+	}
+	return str
+}
+
+// parseAndConvert is a helper function to parse the substring as a big integer
+// and apply the necessary multiplier based on the unit.
+func parseAndConvert(subStr, unit string, mulUnit *big.Int, fullStr string) (*big.Int, error) {
+	subStr = strings.TrimSpace(subStr)
+
+	// Convert the string to a big integer
+	amountBig, valid := new(big.Int).SetString(subStr, 10)
+	if !valid {
+		// Emits a backwards compatible error message
+		// the same as: dataType := len(unit) > 0 ? "BigNum" : "Integer"
+		dataType := map[bool]string{true: "BigNum", false: "Integer"}[len(unit) > 0]
+		return nil, errors.New("converting error for " + dataType + ": " + strings.TrimSpace(fullStr))
+	}
+
+	// Check for negative amounts
+	if amountBig.Cmp(zeroBig) < 0 {
+		return nil, errors.New("negative amount not allowed")
+	}
+
+	// Apply multiplier based on unit
+	if mulUnit != zeroBig {
+		amountBig.Mul(amountBig, mulUnit)
+	}
+
+	return amountBig, nil
+}

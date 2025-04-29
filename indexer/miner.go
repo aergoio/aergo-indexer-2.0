@@ -87,7 +87,9 @@ type CallInfo struct {
 	Timestamp time.Time
 	TxHash string
 	TxIdx uint64
+	TxDoc *doc.EsTx
 	CallIdx uint64
+	SendIdx uint64
 }
 
 func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, internalOps *InternalOperations, MinerGRPC *client.AergoClientController) {
@@ -132,7 +134,9 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 			Timestamp: blockDoc.Timestamp,
 			TxHash: internalOps.TxHash,
 			TxIdx: txIdx,
+			TxDoc: txDoc,
 			CallIdx: 1,
+			SendIdx: 0,
 		}
 		// register external call
 		txCall := internalOps.Call
@@ -176,6 +180,7 @@ type InternalOperation struct {
 	Args      []string `json:"args"`
 	Result    string   `json:"result,omitempty"`
 	Call      *InternalCall `json:"call,omitempty"`
+	Reverted  bool     `json:"reverted,omitempty"`
 }
 
 type InternalCall struct {
@@ -206,20 +211,60 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCal
 
 	// process each operation from this contract
 	for _, operation := range outerCall.Operations {
-		ns.MinerContractInternalOp(callInfo, outerCall.Contract, operation)
+		ns.MinerContractInternalOp(callInfo, outerCall.Contract, operation, operation.Reverted)
 	}
 }
 
-func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, operation InternalOperation) {
+func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, operation InternalOperation, reverted bool) {
 	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).Str("operation", operation.Operation).Msg("Processing internal operation")
+
+	// if the operation was not reverted, register transfers, deploy, etc.
+	if reverted == false {
+		ns.MinerInternalOp(callInfo, contract, operation)
+	}
+
+	// if it has a call to another contract
+	if operation.Call != nil {
+		internalCall := operation.Call
+		// increment call index
+		callInfo.CallIdx++
+
+		// register internal call
+		internalCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount)
+		ns.addContractCall(internalCallDoc)
+
+		// process each operation from this internal call
+		for _, nestedOperation := range internalCall.Operations {
+			is_reverted := reverted || nestedOperation.Reverted
+			ns.MinerContractInternalOp(callInfo, internalCall.Contract, nestedOperation, is_reverted)
+		}
+	}
+}
+
+func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operation InternalOperation) {
 
 	// register individual internal operation - not needed
 	//internalOpDoc := doc.ConvInternalOperation(txHash, contract, operation.Operation, operation.Amount, operation.Args, operation.Result)
 	//ns.addInternalOperation(internalOpDoc)
 
 	// if it's a send operation
-	if operation.Operation == "send" {
-		// TODO: register new account, or register internal transfer of aergo tokens
+	if operation.Operation == "send" ||
+	  (operation.Operation == "call" && operation.Amount != "") ||
+	  (operation.Operation == "deploy" && operation.Amount != "") {
+		// register the internal transfer of aergo tokens
+		sender := contract
+		var recipient string
+		if operation.Operation == "send" || operation.Operation == "call" {
+			recipient = operation.Args[0]
+		} else { // deploy
+			// get the address of the new contract from the result
+			recipient = operation.Result
+		}
+		amount := operation.Amount
+
+		callInfo.SendIdx++
+		aergoTransferDoc := doc.ConvAergoTransfer(callInfo.TxDoc, callInfo.SendIdx, sender, recipient, amount)
+		ns.addTokenTransfer(BlockType_Sync, aergoTransferDoc)
 	}
 
 	// if it's a stake operation
@@ -244,21 +289,6 @@ func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, 
 		}
 	}
 
-	// if it has a call to another contract
-	if operation.Call != nil {
-		internalCall := operation.Call
-		// increment call index
-		callInfo.CallIdx++
-
-		// register internal call
-		internalCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount)
-		ns.addContractCall(internalCallDoc)
-
-		// process each operation from this internal call
-		for _, nestedOperation := range internalCall.Operations {
-			ns.MinerContractInternalOp(callInfo, internalCall.Contract, nestedOperation)
-		}
-	}
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {
