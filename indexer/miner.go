@@ -140,7 +140,7 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		}
 		// register external call
 		txCall := internalOps.Call
-		txCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, sender, txCall.Contract, txCall.Function, txCall.Args, txCall.Amount)
+		txCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, sender, txCall.Contract, txCall.Function, txCall.Args, txCall.Amount, txDoc.Status == "ERROR")
 		ns.addContractCall(txCallDoc)
 		// Process internal operations
 		if len(txCall.Operations) > 0 {
@@ -218,8 +218,10 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCal
 func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, operation InternalOperation, reverted bool) {
 	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).Str("operation", operation.Operation).Msg("Processing internal operation")
 
+	internalOpReverted := callInfo.TxDoc.Status == "ERROR" || reverted
+
 	// if the transaction didn't fail and the operation was not reverted...
-	if callInfo.TxDoc.Status != "ERROR" && reverted == false {
+	if !internalOpReverted {
 		// register transfers, deploy, etc.
 		ns.MinerInternalOp(callInfo, contract, operation)
 	}
@@ -231,7 +233,7 @@ func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, 
 		callInfo.CallIdx++
 
 		// register internal call
-		internalCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount)
+		internalCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount, internalOpReverted)
 		ns.addContractCall(internalCallDoc)
 
 		// process each operation from this internal call

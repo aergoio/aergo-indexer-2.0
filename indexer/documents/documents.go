@@ -123,6 +123,7 @@ type EsContractCall struct {
 	Function   string    `json:"function" db:"function"`
 	Args       string    `json:"args" db:"args"`
 	Amount     string    `json:"amount" db:"amount"`
+	Reverted   bool      `json:"reverted" db:"reverted"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -776,6 +777,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"amount": {
 							"type": "keyword"
+						},
+						"reverted": {
+							"type": "boolean"
 						}
 					}
 				}
@@ -1294,6 +1298,9 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"amount": {
 							"type": "keyword"
+						},
+						"reverted": {
+							"type": "boolean"
 						}
 					}
 				}

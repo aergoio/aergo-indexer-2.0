@@ -240,7 +240,7 @@ func ConvInternalOperations(txHash string, jsonOperations string) *EsInternalOpe
 }
 
 // stores each call (internal or external) to a contract
-func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args []interface{}, amount string) *EsContractCall {
+func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args []interface{}, amount string, reverted bool) *EsContractCall {
 	// Create a unique ID using block number, tx index and call index
 	id := fmt.Sprintf("%020d-%05d-%04d", blockNo, txIdx, callIdx)
 
@@ -255,6 +255,7 @@ func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx 
 		Function:   function,
 		Args:       argsToJson(args),
 		Amount:     amount,
+		Reverted:   reverted,
 	}
 }
 
