@@ -396,7 +396,7 @@ func ConvAergoTransfer(txDoc *EsTx, idx uint64, from string, to string, amount s
 		TxId:         txDoc.GetID(),
 		BlockNo:      txDoc.BlockNo,
 		Timestamp:    txDoc.Timestamp,
-		TokenAddress: "",
+		TokenAddress: "AERGO",
 		TokenId:      "AERGO",
 		Sender:       txDoc.Account,
 		From:         from,
