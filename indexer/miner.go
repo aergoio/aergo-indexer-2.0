@@ -218,8 +218,9 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCal
 func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, operation InternalOperation, reverted bool) {
 	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).Str("operation", operation.Operation).Msg("Processing internal operation")
 
-	// if the operation was not reverted, register transfers, deploy, etc.
-	if reverted == false {
+	// if the transaction didn't fail and the operation was not reverted...
+	if callInfo.TxDoc.Status != "ERROR" && reverted == false {
+		// register transfers, deploy, etc.
 		ns.MinerInternalOp(callInfo, contract, operation)
 	}
 
