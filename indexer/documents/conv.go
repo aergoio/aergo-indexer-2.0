@@ -325,6 +325,24 @@ func ConvToken(txDoc *EsTx, contractAddress []byte, tokenType transaction.TokenT
 	}
 }
 
+// ConvNativeToken creates a document for the native AERGO token
+func ConvNativeToken(supply string, supplyFloat float32) *EsToken {
+	return &EsToken{
+		BaseEsType:   &BaseEsType{Id: "AERGO"},
+		TxId:         "",
+		BlockNo:      1,
+		Creator:      "",
+		Type:         transaction.TokenNone,
+		Name:         "AERGO",
+		Name_lower:   "aergo",
+		Symbol:       "AERGO",
+		Symbol_lower: "aergo",
+		Decimals:     18,
+		Supply:       supply,
+		SupplyFloat:  supplyFloat,
+	}
+}
+
 // ConvName parses a name transaction into Elasticsearch type
 func ConvName(tx *types.Tx, blockNo uint64) *EsName {
 	var name = "error"

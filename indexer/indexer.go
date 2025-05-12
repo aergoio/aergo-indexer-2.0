@@ -191,6 +191,12 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("contract_call")
 	ns.CreateIndexIfNotExists("internal_operations")
 
+	// Register the native AERGO token
+	err = ns.RegisterNativeToken()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to register native token, will try again later")
+	}
+
 	return nil
 }
 
@@ -210,7 +216,7 @@ func (ns *Indexer) ValidChainInfo() error {
 	if err != nil {
 		return err
 	}
-	
+
 	document, err := ns.db.SelectOne(db.QueryParams{ // get chain info from db
 		IndexName: ns.indexNamePrefix + "chain_info",
 		SortField: "version",
@@ -326,4 +332,20 @@ func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 		return 0, errors.New("best block not found")
 	}
 	return block.(*doc.EsBlock).BlockNo, nil
+}
+
+// RegisterNativeToken registers the native AERGO token in the database
+func (ns *Indexer) RegisterNativeToken() error {
+	// Create native token document with zero supply
+	// The actual supply would need to be queried from the blockchain if needed
+	supply, supplyFloat := "0", float32(0.0)
+	tokenDoc := doc.ConvNativeToken(supply, supplyFloat)
+
+	// Check if the token already exists before adding
+	exists := ns.db.Exists(ns.indexNamePrefix+"token", tokenDoc.Id)
+	if !exists {
+		ns.log.Info().Msg("Registering native AERGO token")
+		ns.addToken(tokenDoc)
+	}
+	return nil
 }
