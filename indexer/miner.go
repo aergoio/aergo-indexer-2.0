@@ -268,6 +268,10 @@ func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operatio
 		callInfo.SendIdx++
 		aergoTransferDoc := doc.ConvAergoTransfer(callInfo.TxDoc, callInfo.SendIdx, sender, recipient, amount)
 		ns.addTokenTransfer(BlockType_Sync, aergoTransferDoc)
+
+		// check the new balance of the sender and recipient
+		ns.cache.storeBalance(sender)
+		ns.cache.storeBalance(recipient)
 	}
 
 	// if it's a stake operation
