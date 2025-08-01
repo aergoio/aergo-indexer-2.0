@@ -50,6 +50,7 @@ func TestConvBlock(t *testing.T) {
 		PreviousBlock: "9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga",
 		Coinbase:      "5t64bLzisGj793C28zDfkhs8uWitZLoPqj98fMBj27GeRnhbAUEW94d6mhW",
 		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
+		Coinbase:      tx.EncodeAndResolveAccount(decodeBase58("AmPJRLHDKtzLpsaC8ubmPuRkxnMCyBSq5wBwYNDD6DJdgiRhAhYR"), 104524962),
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",
 		RewardAmount:  "160000000000000000",
 	})
@@ -73,7 +74,7 @@ func TestConvTx(t *testing.T) {
 		FeeDelegation: true,
 		GasUsed:       100000,
 	}, &EsBlock{
-		BaseEsType: &BaseEsType{Id: ""},
+		BaseEsType: &BaseEsType{Id: "2uaePMqoDeWh4SBhQTSYvCLRs97gqgiTgho1kLYWdyF3"},
 		BlockNo:    1,
 		Timestamp:  time.Unix(0, 1668652376002288214),
 	}, &EsTx{
@@ -81,6 +82,7 @@ func TestConvTx(t *testing.T) {
 		BaseEsType:    &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
 		Timestamp:     time.Unix(0, 1668652376002288214),
 		BlockNo:       1,
+		BlockId:       "2uaePMqoDeWh4SBhQTSYvCLRs97gqgiTgho1kLYWdyF3",
 		Account:       "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
 		Recipient:     "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA",
 		Amount:        "100",

@@ -1,8 +1,8 @@
 package transaction
 
 import (
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 func MakePeerId(pubKey []byte) string {
@@ -14,6 +14,6 @@ func MakePeerId(pubKey []byte) string {
 	if err != nil {
 		return ""
 	}
-	peerId := peer.IDB58Encode(Id)
+	peerId := Id.String()
 	return peerId
 }
