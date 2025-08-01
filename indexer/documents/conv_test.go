@@ -48,6 +48,7 @@ func TestConvBlock(t *testing.T) {
 		Size:          207,
 		TxCount:       11,
 		PreviousBlock: "9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga",
+		Coinbase:      "5t64bLzisGj793C28zDfkhs8uWitZLoPqj98fMBj27GeRnhbAUEW94d6mhW",
 		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
 		Coinbase:      tx.EncodeAndResolveAccount(decodeBase58("AmPJRLHDKtzLpsaC8ubmPuRkxnMCyBSq5wBwYNDD6DJdgiRhAhYR"), 104524962),
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",

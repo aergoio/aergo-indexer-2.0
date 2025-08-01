@@ -12,8 +12,11 @@ protoc:
 bin/indexer: *.go indexer/*.go indexer/**/*.go types/*.go go.sum go.mod
 	CGO_ENABLED=0 go build -o bin/indexer main.go
 
-unittest:
-	go test ./... -short
+unit-test:
+	go test -short -timeout 99s ./...
+
+integration-test:
+	go test -tags=integration ./...
 
 test:
 	go test ./...
