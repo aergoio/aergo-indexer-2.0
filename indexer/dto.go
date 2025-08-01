@@ -115,7 +115,7 @@ func (ns *Indexer) addAccountBalance(balanceDoc *doc.EsAccountBalance) {
 func (ns *Indexer) addTokenTransfer(blockType BlockType, tokenTransferDoc *doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
 		ns.bulk.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
-	} else {
+	} else if tokenTransferDoc.AmountFloat >= 0 {
 		err := ns.db.Insert(tokenTransferDoc, ns.indexNamePrefix+"token_transfer")
 		if err != nil {
 			ns.log.Error().Err(err).Str("Id", tokenTransferDoc.Id).Str("method", "insertTokenTransfer").Msg("error while insert")
