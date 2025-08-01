@@ -11,12 +11,20 @@ import (
 )
 
 func TestGetData(t *testing.T) {
+	if testing.Short() {
+		t.Skip("This test depends on remote service")
+	}
+
 	data, err := GetCode("https://github.com/aergoio/ARC2NFT/raw/master/src/ARC2-Mintable.lua")
 	require.NoError(t, err)
 	fmt.Println(data)
 }
 
 func TestCompile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("This test depends on remote service")
+	}
+
 	code := readLuaCode("type_arrayarg.lua")
 	byteCode, err := CompileCode(code)
 	require.NoError(t, err)
@@ -25,6 +33,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestGetDataAndCompile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("This test depends on remote service")
+	}
+
 	code, err := GetCode("https://github.com/aergoio/ARC2NFT/raw/master/src/ARC2-Mintable.lua")
 	require.NoError(t, err)
 	fmt.Println(code)

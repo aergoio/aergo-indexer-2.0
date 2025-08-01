@@ -16,6 +16,10 @@ const (
 )
 
 func TestQuery_VerifyMetadata_token(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration tests in short mode.")
+	}
+
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 	require.NoError(t, err)
 
@@ -32,6 +36,10 @@ func TestQuery_VerifyMetadata_token(t *testing.T) {
 }
 
 func TestQuery_VerifyMetadata_contract(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration tests in short mode.")
+	}
+
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 	require.NoError(t, err)
 
@@ -43,6 +51,10 @@ func TestQuery_VerifyMetadata_contract(t *testing.T) {
 }
 
 func TestQuery_BalanceOf(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration tests in short mode.")
+	}
+
 	ctx := context.Background()
 
 	grpcClient, err := NewAergoClient(AergoServerAddress, ctx)
@@ -64,6 +76,10 @@ func TestQuery_BalanceOf(t *testing.T) {
 }
 
 func TestQuery_TokenInfo(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration tests in short mode.")
+	}
+
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 	require.NoError(t, err)
 
@@ -90,6 +106,10 @@ func TestQuery_TokenInfo(t *testing.T) {
 }
 
 func TestQuery_NFTMetadata(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration tests in short mode.")
+	}
+
 	grpcClient, err := NewAergoClient(AergoServerAddress, context.Background())
 	require.NoError(t, err)
 
