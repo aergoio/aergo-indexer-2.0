@@ -1,6 +1,7 @@
 package documents
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"testing"
@@ -48,7 +49,6 @@ func TestConvBlock(t *testing.T) {
 		Size:          207,
 		TxCount:       11,
 		PreviousBlock: "9CEiURiJbPpxg3JdsXVZAJLsvhMQfMVCytoPdmiJ1Tga",
-		Coinbase:      "5t64bLzisGj793C28zDfkhs8uWitZLoPqj98fMBj27GeRnhbAUEW94d6mhW",
 		BlockProducer: "16Uiu2HAmGiJ2QgVAWHMUtzLKKNM5eFUJ3Ds3FN7nYJq1mHN5ZPj9",
 		Coinbase:      tx.EncodeAndResolveAccount(decodeBase58("AmPJRLHDKtzLpsaC8ubmPuRkxnMCyBSq5wBwYNDD6DJdgiRhAhYR"), 104524962),
 		RewardAccount: "554c66wDnfgGQ2XmBq7Q9jmHuTpNZ",
@@ -99,10 +99,26 @@ func TestConvTx(t *testing.T) {
 }
 
 func TestConvContract(t *testing.T) {
-	fn_test := func(esTx *EsTx, contractAddress []byte, esContractExpect *EsContract) {
-		esContractConv := ConvContractFromTx(esTx, contractAddress)
-		require.Equal(t, esContractExpect, esContractConv)
+	fn_test := func(esTx *EsTx, contractAddress []byte, esContractExpected *EsContract) {
+		esContractConverted := ConvContractFromTx(esTx, contractAddress)
+		require.Equal(t, esContractExpected, esContractConverted)
 	}
+
+	// Create a simple payload with source code
+	sourceCode := `
+function hello()
+  return 'world'
+end
+
+abi.register(hello)`
+	deployArgs := "[]"
+
+	// Build payload: 4 bytes for code end position + source code + deploy args
+	codeEnd := uint32(4 + len(sourceCode))
+	payload := make([]byte, 4)
+	binary.LittleEndian.PutUint32(payload, codeEnd)
+	payload = append(payload, []byte(sourceCode)...)
+	payload = append(payload, []byte(deployArgs)...)
 
 	fn_test(&EsTx{
 		BaseEsType: &BaseEsType{Id: "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8"},
@@ -111,12 +127,15 @@ func TestConvContract(t *testing.T) {
 		Account:    "AmLXGJq1GfZWRYjmNVZxCsrJodc1qC1nCXnYkkG7pQLbiWy9NMZw",
 		Type:       uint64(types.TxType_DEPLOY),
 		Category:   tx.TxDeploy,
+		Payload:    payload,
 	}, decodeAddr("AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"), &EsContract{
 		TxId:       "8Zj68cFzrzUtwPe6kZF8qPgVp9LbsefjdTsi4C3hVY8",
 		BaseEsType: &BaseEsType{Id: "AmLc7W3E9kGq9aFshbgBJdss1D8nwbMdjw3ErtJAXwjpBc69VkPA"},
 		Creator:    "AmLXGJq1GfZWRYjmNVZxCsrJodc1qC1nCXnYkkG7pQLbiWy9NMZw",
 		BlockNo:    1,
 		Timestamp:  time.Unix(0, 1668652376002288214),
+		SourceCode: sourceCode,
+		DeployArgs: deployArgs,
 	})
 }
 
@@ -252,7 +271,7 @@ func TestConvTokenTransfer(t *testing.T) {
 			Category:   tx.TxCall,
 			Account:    "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA",
 		}, 27, "MINT", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", "a6d6d055488d443d29952c1ca276b34ca_28", "AmPEHmsGApC19jtNsvuKrfcruxouAAmVDHg8VK32XamWdcGUmeFA", 1, &EsTokenTransfer{
-			BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%d", "34yeCGMt2UxFqrztewP2qgJqATQVRdnsu71faJhaWdCA", 27)},
+			BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-token-%d", "34yeCGMt2UxFqrztewP2qgJqATQVRdnsu71faJhaWdCA", 27)},
 			Timestamp:    time.Unix(0, 1668652376002288214),
 			BlockNo:      105810874,
 			TxId:         "34yeCGMt2UxFqrztewP2qgJqATQVRdnsu71faJhaWdCA",
