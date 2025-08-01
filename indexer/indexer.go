@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
@@ -93,6 +94,8 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 		ns.log.Error().Err(err).Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
 		return true
 	}
+
+	ns.checkAergoLuac()
 
 	ns.initCccvNft()
 	ns.lastHeight = uint64(ns.GetBestBlock()) - 1
@@ -348,4 +351,11 @@ func (ns *Indexer) RegisterNativeToken() error {
 		ns.addToken(tokenDoc)
 	}
 	return nil
+}
+
+func (ns *Indexer) checkAergoLuac() {
+	_, err := exec.LookPath("aergoluac")
+	if err != nil {
+		ns.log.Error().Err(err).Msg("aergoluac binary not found in PATH")
+	}
 }
