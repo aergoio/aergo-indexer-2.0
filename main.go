@@ -76,6 +76,9 @@ func rootRun(cmd *cobra.Command, args []string) {
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 
+	// Set the logger for the documents package
+	doc.SetLogger(logger)
+
 	doc.InitEsMappings(cluster)
 
 	// init indexer

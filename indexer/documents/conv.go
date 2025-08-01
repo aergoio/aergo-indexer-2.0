@@ -163,6 +163,7 @@ func ConvContractToken(contractAddress string, status, token string) *EsContract
 // returns: bytecode, sourceCode, abi, deployArgs
 func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	if len(payload) <= 12 {
+		logger.Warn().Int("payloadLen", len(payload)).Msg("Payload too short for contract code extraction")
 		return nil, "", "", ""
 	}
 	// check for LuaJIT bytecode signature at position 8
@@ -174,10 +175,12 @@ func extractContractCode(payload []byte) ([]byte, string, string, string) {
 	// on hardfork 4, the deploy contains the contract source code and deploy args
 	sourceCode, deployArgs, err := extractSourceCode(payload)
 	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to extract source code from payload")
 		return nil, "", "", ""
 	}
 	bytecode, abi, err := CompileSourceCode(sourceCode)
 	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to compile source code")
 		return nil, "", "", ""
 	}
 	return bytecode, sourceCode, abi, deployArgs
@@ -190,6 +193,7 @@ func extractByteCode(payload []byte) ([]byte, string, string) {
 	bytecodeLength := binary.LittleEndian.Uint32(payload[4:8])
 	// check if the lengths are valid
 	if codeAbiEnd > uint32(len(payload)) || bytecodeLength > codeAbiEnd {
+		logger.Warn().Uint32("codeAbiEnd", codeAbiEnd).Uint32("bytecodeLength", bytecodeLength).Int("payloadLen", len(payload)).Msg("Invalid bytecode lengths in payload")
 		return nil, "", ""
 	}
 	// extract the code+abi and deploy args
@@ -203,11 +207,13 @@ func extractByteCode(payload []byte) ([]byte, string, string) {
 
 func extractSourceCode(payload []byte) (string, string, error) {
 	if len(payload) <= 4 {
+		logger.Warn().Int("payloadLen", len(payload)).Msg("Payload too short for source code extraction")
 		return "", "", errors.New("payload is too short")
 	}
 	// read the code end position
 	codeEnd := binary.LittleEndian.Uint32(payload[:4])
 	if codeEnd > uint32(len(payload)) {
+		logger.Warn().Uint32("codeEnd", codeEnd).Uint32("payloadLen", uint32(len(payload))).Msg("Code end position is out of bounds")
 		return "", "", errors.New("code end position is out of bounds")
 	}
 	// extract the source code and deploy args
@@ -220,6 +226,7 @@ func extractSourceCode(payload []byte) (string, string, error) {
 func CompileSourceCode(sourceCode string) ([]byte, string, error) {
 	bytecodeABI, err := lua_compiler.CompileCode(sourceCode)
 	if err != nil {
+		logger.Error().Err(err).Msg("Failed to compile source code")
 		return nil, "", err
 	}
 	// read the bytecode length
@@ -265,6 +272,7 @@ func argsToJson(argsList []interface{}) (string) {
 	}
 	args, err := json.Marshal(argsList)
 	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to marshal arguments to JSON")
 		return ""
 	}
 	return string(args)
