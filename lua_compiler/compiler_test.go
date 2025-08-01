@@ -1,6 +1,3 @@
-//go:build integration
-
-// These tests are integration tests since they require external service to test.
 package lua_compiler
 
 import (
@@ -14,20 +11,12 @@ import (
 )
 
 func TestGetData(t *testing.T) {
-	if testing.Short() {
-		t.Skip("This test depends on remote service")
-	}
-
 	data, err := GetCode("https://github.com/aergoio/ARC2NFT/raw/master/src/ARC2-Mintable.lua")
 	require.NoError(t, err)
 	fmt.Println(data)
 }
 
 func TestCompile(t *testing.T) {
-	if testing.Short() {
-		t.Skip("This test depends on remote service")
-	}
-
 	code := readLuaCode("type_arrayarg.lua")
 	byteCode, err := CompileCode(code)
 	require.NoError(t, err)
