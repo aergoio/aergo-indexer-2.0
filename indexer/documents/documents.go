@@ -59,7 +59,7 @@ type EsTx struct {
 	BlockId       string        `json:"block_id" db:"block_id"`
 	Timestamp     time.Time     `json:"ts" db:"ts"`
 	TxIdx         uint64        `json:"tx_idx" db:"tx_idx"`
-	Payload       string        `json:"payload" db:"payload"`
+	Payload       []byte        `json:"payload" db:"payload"`
 	Account       string        `json:"from" db:"from"`
 	Recipient     string        `json:"to" db:"to"`
 	Amount        string        `json:"amount" db:"amount"`             // string of BigInt
@@ -84,12 +84,15 @@ type EsContract struct {
 	Creator   string    `json:"creator" db:"creator"`
 	BlockNo   uint64    `json:"blockno" db:"blockno"`
 	Timestamp time.Time `json:"ts" db:"ts"`
-	Payload   string    `json:"payload" db:"payload"`
+
+	ABI        string    `json:"abi" db:"abi"`
+	ByteCode   []byte    `json:"byte_code" db:"byte_code"`
+	SourceCode string    `json:"source_code" db:"source_code"`
+	DeployArgs string    `json:"deploy_args" db:"deploy_args"`
 
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	CodeUrl        string `json:"code_url" db:"code_url"`
-	Code           string `json:"code" db:"code"`
 }
 
 type EsContractUp struct {
@@ -97,7 +100,7 @@ type EsContractUp struct {
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
 	CodeUrl        string `json:"code_url" db:"code_url"`
-	Code           string `json:"code" db:"code"`
+	SourceCode     string `json:"source_code" db:"source_code"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -327,7 +330,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"from": {
 							"type": "keyword"
@@ -403,7 +406,16 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"payload": {
+						"abi": {
+							"type": "text"
+						},
+						"byte_code": {
+							"type": "binary"
+						},
+						"source_code": {
+							"type": "text"
+						},
+						"deploy_args": {
 							"type": "text"
 						},
 						"verified_status": {
@@ -414,9 +426,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"code_url": {
 							"type": "keyword"
-						},
-						"code": {
-							"type": "text"
 						}
 					}
 				}
@@ -782,7 +791,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"from": {
 							"type": "keyword"
@@ -858,7 +867,16 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"payload": {
+						"abi": {
+							"type": "text"
+						},
+						"byte_code": {
+							"type": "binary"
+						},
+						"source_code": {
+							"type": "text"
+						},
+						"deploy_args": {
 							"type": "text"
 						},
 						"verified_status": {
@@ -869,9 +887,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"code_url": {
 							"type": "keyword"
-						},
-						"code": {
-							"type": "text"
 						}
 					}
 				}
