@@ -32,10 +32,11 @@ func (m *BaseEsType) SetID(id string) {
 // EsChainInfo is meta data of a chain information
 type EsChainInfo struct {
 	*BaseEsType
-	Public    bool   `json:"public" db:"public"`
-	Mainnet   bool   `json:"mainnet" db:"mainnet"`
-	Consensus string `json:"consensus" db:"consensus"`
-	Version   uint64 `json:"version" db:"version"`
+	Public    bool   			`json:"public" db:"public"`
+	Mainnet   bool   			`json:"mainnet" db:"mainnet"`
+	Consensus string 			`json:"consensus" db:"consensus"`
+	Version   uint64 			`json:"version" db:"version"`
+	Hardfork  map[string]uint64 `json:"hardfork" db:"hardfork"`
 }
 
 // EsBlock is a block stored in the database
@@ -103,6 +104,26 @@ type EsContractToken struct {
 	*BaseEsType
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
+}
+
+type EsInternalOperations struct {
+	*BaseEsType
+	TxId       string `json:"tx_id" db:"tx_id"`
+	Operations string `json:"operations" db:"operations"`
+}
+
+type EsContractCall struct {
+	*BaseEsType
+	BlockNo    uint64    `json:"blockno" db:"blockno"`
+	Timestamp  time.Time `json:"ts" db:"ts"`
+	TxHash     string    `json:"tx_hash" db:"tx_hash"`
+	IsInternal bool      `json:"is_internal" db:"is_internal"`
+	Caller     string    `json:"caller" db:"caller"`
+	Contract   string    `json:"contract" db:"contract"`
+	Function   string    `json:"function" db:"function"`
+	Args       string    `json:"args" db:"args"`
+	Amount     string    `json:"amount" db:"amount"`
+	Reverted   bool      `json:"reverted" db:"reverted"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -705,6 +726,64 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
+			"internal_operations": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"operations": {
+							"type": "text"
+						}
+					}
+				}
+			}`,
+			"contract_call": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"blockno": {
+							"type": "long"
+						},
+						"ts": {
+							"type": "date"
+						},
+						"tx_hash": {
+							"type": "keyword"
+						},
+						"is_internal": {
+							"type": "boolean"
+						},
+						"caller": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"function": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "text"
+						},
+						"amount": {
+							"type": "keyword"
+						},
+						"reverted": {
+							"type": "boolean"
+						}
+					}
+				}
+			}`,
 		}
 	} else {
 		EsMappings = map[string]string{
@@ -1164,6 +1243,64 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"type": {
 							"type": "keyword"
+						}
+					}
+				}
+			}`,
+			"internal_operations": `{
+				"settings": {
+					"number_of_shards": 3,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"operations": {
+							"type": "text"
+						}
+					}
+				}
+			}`,
+			"contract_call": `{
+				"settings": {
+					"number_of_shards": 3,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"blockno": {
+							"type": "long"
+						},
+						"ts": {
+							"type": "date"
+						},
+						"tx_hash": {
+							"type": "keyword"
+						},
+						"is_internal": {
+							"type": "boolean"
+						},
+						"caller": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"function": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "text"
+						},
+						"amount": {
+							"type": "keyword"
+						},
+						"reverted": {
+							"type": "boolean"
 						}
 					}
 				}

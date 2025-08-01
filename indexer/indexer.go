@@ -188,6 +188,14 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
 	ns.CreateIndexIfNotExists("whitelist")
+	ns.CreateIndexIfNotExists("contract_call")
+	ns.CreateIndexIfNotExists("internal_operations")
+
+	// Register the native AERGO token
+	err = ns.RegisterNativeToken()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to register native token, will try again later")
+	}
 
 	return nil
 }
@@ -219,9 +227,11 @@ func (ns *Indexer) ValidChainInfo() error {
 		chainInfo.BaseEsType = new(doc.BaseEsType)
 		return chainInfo
 	})
+
 	if err != nil {
 		ns.log.Info().Err(err).Msg("Could not query chain info, add new one.")
 	}
+
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
 			BaseEsType: &doc.BaseEsType{
@@ -231,6 +241,7 @@ func (ns *Indexer) ValidChainInfo() error {
 			Public:    chainInfoFromNode.Id.Public,
 			Consensus: chainInfoFromNode.Id.Consensus,
 			Version:   uint64(chainInfoFromNode.Id.Version),
+			Hardfork:  chainInfoFromNode.Hardfork,
 		}
 		err = ns.db.Insert(&chainInfo, ns.indexNamePrefix+"chain_info")
 		if err != nil {
@@ -247,6 +258,10 @@ func (ns *Indexer) ValidChainInfo() error {
 		}
 	}
 	return nil
+}
+
+func String(u uint64) {
+	panic("unimplemented")
 }
 
 // UpdateAliasForType updates aliases
@@ -317,4 +332,20 @@ func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 		return 0, errors.New("best block not found")
 	}
 	return block.(*doc.EsBlock).BlockNo, nil
+}
+
+// RegisterNativeToken registers the native AERGO token in the database
+func (ns *Indexer) RegisterNativeToken() error {
+	// Create native token document with zero supply
+	// The actual supply would need to be queried from the blockchain if needed
+	supply, supplyFloat := "0", float32(0.0)
+	tokenDoc := doc.ConvNativeToken(supply, supplyFloat)
+
+	// Check if the token already exists before adding
+	exists := ns.db.Exists(ns.indexNamePrefix+"token", tokenDoc.Id)
+	if !exists {
+		ns.log.Info().Msg("Registering native AERGO token")
+		ns.addToken(tokenDoc)
+	}
+	return nil
 }

@@ -3,12 +3,14 @@ package indexer
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/mr-tron/base58"
 )
 
 // IndexTxs indexes a list of transactions in bulk
@@ -24,8 +26,8 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 			break
 		}
 
-		blockHeight := info.Height
-		binary.LittleEndian.PutUint64(blockQuery, uint64(blockHeight))
+		blockHeight := uint64(info.Height)
+		binary.LittleEndian.PutUint64(blockQuery, blockHeight)
 
 		for {
 			block, err = MinerGRPC.GetBlock(blockQuery)
@@ -36,15 +38,42 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 				break
 			}
 		}
-		// Get Block doc
-		blockDoc := doc.ConvBlock(block, ns.cache.getPeerId(block.Header.PubKey))
-		for i, tx := range block.Body.Txs {
-			txIdx := uint64(i)
-			ns.MinerTx(txIdx, info, blockDoc, tx, MinerGRPC)
+
+		// Get Internal Operations
+		var txsInternalOps []InternalOperations
+		if len(block.Body.Txs) > 0 {
+			// request the list of internal operations for this block
+			jsonInternalOps, err := MinerGRPC.GetInternalOperations(blockHeight)
+			if err != nil {
+				ns.log.Warn().Uint64("blockHeight", blockHeight).Err(err).Msg("Failed to get internal operations")
+			}
+			if len(jsonInternalOps) > 0 {
+				// decode the JSON array into objects
+				err := json.Unmarshal(jsonInternalOps, &txsInternalOps)
+				if err != nil {
+					ns.log.Error().Err(err).Uint64("blockHeight", blockHeight).Msg("Failed to unmarshal internal operations tree")
+				}
+			}
 		}
 
 		// Add block doc
+		blockDoc := doc.ConvBlock(block, ns.cache.getPeerId(block.Header.PubKey))
 		ns.addBlock(info.Type, blockDoc)
+
+		// Process each transaction in the block
+		for i, tx := range block.Body.Txs {
+			txIdx := uint64(i)
+			// find the internal operations for this transaction
+			var internalOps *InternalOperations
+			for _, ops := range txsInternalOps {
+				if ops.TxHash == base58.Encode(tx.GetHash()) {
+					internalOps = &ops
+					break
+				}
+			}
+			// process the transaction
+			ns.MinerTx(txIdx, info, blockDoc, tx, internalOps, MinerGRPC)
+		}
 
 		// update variables per 300 blocks
 		if info.Type == BlockType_Sync && blockHeight%300 == 0 {
@@ -53,7 +82,17 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 	}
 }
 
-func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, MinerGRPC *client.AergoClientController) {
+type CallInfo struct {
+	BlockHeight uint64
+	Timestamp time.Time
+	TxHash string
+	TxIdx uint64
+	TxDoc *doc.EsTx
+	CallIdx uint64
+	SendIdx uint64
+}
+
+func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, internalOps *InternalOperations, MinerGRPC *client.AergoClientController) {
 	// get receipt
 	receipt, err := MinerGRPC.GetReceipt(tx.GetHash())
 	if err != nil {
@@ -73,24 +112,40 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 		return
 	}
 
-	// Balance from, to
-	ns.cache.storeBalance(transaction.EncodeAndResolveAccount(tx.Body.Account, txDoc.BlockNo))
-	ns.cache.storeBalance(transaction.EncodeAndResolveAccount(tx.Body.Recipient, txDoc.BlockNo))
+	sender := transaction.EncodeAndResolveAccount(tx.Body.Account, txDoc.BlockNo)
+	recipient := transaction.EncodeAndResolveAccount(tx.Body.Recipient, txDoc.BlockNo)
 
-	// Process Token and TokenTransfer
-	switch txDoc.Category {
-	case transaction.TxCall:
-	case transaction.TxDeploy:
-	case transaction.TxPayload:
-	case transaction.TxMultiCall:
-	default:
-		return
-	}
+	// Balance from, to
+	ns.cache.storeBalance(sender)
+	ns.cache.storeBalance(recipient)
 
 	// Process Contract Deploy
 	if txDoc.Category == transaction.TxDeploy {
 		contractDoc := doc.ConvContractFromTx(txDoc, receipt.ContractAddress)
-		ns.addContract(info.Type, contractDoc)
+		if contractDoc != nil {
+			ns.addContract(info.Type, contractDoc)
+		}
+	}
+
+	// Process the internal operations for this transaction
+	if internalOps != nil {
+		callInfo := CallInfo{
+			BlockHeight: blockDoc.BlockNo,
+			Timestamp: blockDoc.Timestamp,
+			TxHash: internalOps.TxHash,
+			TxIdx: txIdx,
+			TxDoc: txDoc,
+			CallIdx: 1,
+			SendIdx: 0,
+		}
+		// register external call
+		txCall := internalOps.Call
+		txCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, sender, txCall.Contract, txCall.Function, txCall.Args, txCall.Amount, txDoc.Status == "ERROR")
+		ns.addContractCall(txCallDoc)
+		// Process internal operations
+		if len(txCall.Operations) > 0 {
+			ns.MinerTxInternalOps(&callInfo, &txCall)
+		}
 	}
 
 	// Process Events
@@ -117,6 +172,130 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	}
 
 	return
+}
+
+type InternalOperation struct {
+	Operation string   `json:"op"`
+	Amount    string   `json:"amount,omitempty"`
+	Args      []string `json:"args"`
+	Result    string   `json:"result,omitempty"`
+	Call      *InternalCall `json:"call,omitempty"`
+	Reverted  bool     `json:"reverted,omitempty"`
+}
+
+type InternalCall struct {
+	Contract  string   `json:"contract,omitempty"`
+	Function  string   `json:"function,omitempty"`
+	Args      []interface{} `json:"args,omitempty"`
+	Amount    string   `json:"amount,omitempty"`
+	Operations []InternalOperation `json:"operations,omitempty"`
+}
+
+type InternalOperations struct {
+	TxHash    string   `json:"txhash"`
+	Call      InternalCall `json:"call"`
+}
+
+func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCall) {
+	// save the entire tree of internal operations for the transaction
+	// re-encode operations to json
+	jsonOperations, err := json.Marshal(outerCall)
+	if err != nil {
+		ns.log.Error().Err(err).Str("txHash", callInfo.TxHash).Str("contract", outerCall.Contract).Msg("Failed to marshal internal operations")
+		return
+	}
+	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", outerCall.Contract).Str("operations", string(jsonOperations)).Msg("Processing internal operations")
+	// save to db
+	internalOpsDoc := doc.ConvInternalOperations(callInfo.TxHash, string(jsonOperations))
+	ns.addInternalOperations(internalOpsDoc)
+
+	// process each operation from this contract
+	for _, operation := range outerCall.Operations {
+		ns.MinerContractInternalOp(callInfo, outerCall.Contract, operation, operation.Reverted)
+	}
+}
+
+func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, operation InternalOperation, reverted bool) {
+	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).Str("operation", operation.Operation).Msg("Processing internal operation")
+
+	internalOpReverted := callInfo.TxDoc.Status == "ERROR" || reverted
+
+	// if the transaction didn't fail and the operation was not reverted...
+	if !internalOpReverted {
+		// register transfers, deploy, etc.
+		ns.MinerInternalOp(callInfo, contract, operation)
+	}
+
+	// if it has a call to another contract
+	if operation.Call != nil {
+		internalCall := operation.Call
+		// increment call index
+		callInfo.CallIdx++
+
+		// register internal call
+		internalCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount, internalOpReverted)
+		ns.addContractCall(internalCallDoc)
+
+		// process each operation from this internal call
+		for _, nestedOperation := range internalCall.Operations {
+			is_reverted := reverted || nestedOperation.Reverted
+			ns.MinerContractInternalOp(callInfo, internalCall.Contract, nestedOperation, is_reverted)
+		}
+	}
+}
+
+func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operation InternalOperation) {
+
+	// register individual internal operation - not needed
+	//internalOpDoc := doc.ConvInternalOperation(txHash, contract, operation.Operation, operation.Amount, operation.Args, operation.Result)
+	//ns.addInternalOperation(internalOpDoc)
+
+	// if it's a send operation
+	if operation.Operation == "send" ||
+	  (operation.Operation == "call" && operation.Amount != "") ||
+	  (operation.Operation == "deploy" && operation.Amount != "") {
+		// register the internal transfer of aergo tokens
+		sender := contract
+		var recipient string
+		if operation.Operation == "send" || operation.Operation == "call" {
+			recipient = operation.Args[0]
+		} else { // deploy
+			// get the address of the new contract from the result
+			recipient = operation.Result
+		}
+		amount := operation.Amount
+
+		callInfo.SendIdx++
+		aergoTransferDoc := doc.ConvAergoTransfer(callInfo.TxDoc, callInfo.SendIdx, sender, recipient, amount)
+		ns.addTokenTransfer(BlockType_Sync, aergoTransferDoc)
+
+		// check the new balance of the sender and recipient
+		ns.cache.storeBalance(sender)
+		ns.cache.storeBalance(recipient)
+	}
+
+	// if it's a stake operation
+	if operation.Operation == "stake" {
+		// TODO: register staking of aergo tokens
+	} else if operation.Operation == "unstake" {
+		// TODO: register unstaking of aergo tokens
+	}
+
+	// if it's an internal contract deployment
+	if operation.Operation == "deploy" {
+		creator := contract
+		// extract source code and deploy args
+		sourceCode := operation.Args[0]
+		deployArgs := operation.Args[1:]
+		// get the address of the new contract from the result
+		contractAddr := operation.Result
+		// TODO: register new contract
+		contractDoc := doc.ConvContractFromCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, contractAddr, creator, sourceCode, deployArgs)
+		if contractDoc != nil {
+			ns.addContract(BlockType_Sync, contractDoc)
+		}
+	}
+
 }
 
 func (ns *Indexer) MinerEvent(info BlockInfo, blockDoc *doc.EsBlock, txDoc *doc.EsTx, event *types.Event, txIdx uint64, MinerGRPC *client.AergoClientController) {

@@ -15,6 +15,8 @@ This creates the indices,
   10. `account_balance`
   11. `nft`
   12. `whitelist`
+  13. `internal_operations`
+  14. `contract_call`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -198,6 +200,30 @@ whitelist
 id              string      token address
 contract        string      contract address
 type            string      whitelist type (token,contract)
+```
+
+internal_operations
+```
+Field           Type        Comment
+id              string      unique identifier
+tx_id           string      tx hash
+operations      string      operations data
+```
+
+contract_call
+```
+Field           Type        Comment
+id              string      unique identifier
+blockno         uint64      block number
+ts              timestamp   block creation timestamp (unixnano)
+tx_hash         string      tx hash
+is_internal     bool        whether call is internal
+caller          string      caller address
+contract        string      contract address
+function        string      called function name
+args            string      function arguments
+amount          string      call amount
+reverted        bool        whether call was reverted
 ```
 
 ## Usage
