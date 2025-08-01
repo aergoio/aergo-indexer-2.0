@@ -93,7 +93,7 @@ func (ns *Cache) refreshVariables(info BlockInfo, blockDoc *doc.EsBlock, minerGR
 	mapBalance := make(map[string]string)
 	ns.addrsBalance.Range(func(k, v interface{}) bool {
 		if addr, ok := k.(string); ok {
-			if isExiststake := ns.idxer.MinerBalance(blockDoc, addr, minerGRPC); isExiststake == false {
+			if stakeExists := ns.idxer.MinerBalance(blockDoc, addr, minerGRPC); stakeExists == false {
 				mapBalance[addr] = ""
 			}
 		}

@@ -147,10 +147,17 @@ func (ns *Indexer) updateTokenVerified(tokenDoc *doc.EsTokenUpVerified) {
 	}
 }
 
-func (ns *Indexer) updateContract(contractDoc *doc.EsContractUp) {
+func (ns *Indexer) updateContractSource(contractDoc *doc.EsContractSource) {
 	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
 	if err != nil {
-		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContract").Msg("error while update")
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContractSource").Msg("error while update")
+	}
+}
+
+func (ns *Indexer) updateContractToken(contractDoc *doc.EsContractToken) {
+	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContractToken").Msg("error while update")
 	}
 }
 
