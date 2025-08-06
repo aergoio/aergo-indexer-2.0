@@ -224,10 +224,14 @@ func extractSourceCode(payload []byte) (string, string, error) {
 
 // CompileSourceCode compiles the source code and returns the bytecode and abi
 func CompileSourceCode(sourceCode string) ([]byte, string, error) {
-	bytecodeABI, err := lua_compiler.CompileCode(sourceCode)
+	bytecodeABI, err := lua_compiler.CompileCodeLocal(sourceCode)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to compile source code")
-		return nil, "", err
+		logger.Error().Err(err).Msg("Failed to compile source code locally")
+		bytecodeABI, err = lua_compiler.CompileCodeRemote(sourceCode)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to compile source code using the remote compiler service")
+			return nil, "", err
+		}
 	}
 	// read the bytecode length
 	bytecodeLength := binary.LittleEndian.Uint32(bytecodeABI[:4])
