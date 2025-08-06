@@ -14,6 +14,8 @@ RUN git clone --branch develop --recursive https://github.com/aergoio/aergo.git 
     && cd aergo \
     && make aergoluac \
     && cp bin/aergoluac ../bin/
+# run the unit tests to make sure everything is working
+RUN cp bin/aergoluac /usr/local/bin/ && make unit-test
 
 FROM alpine:3.21
 RUN apk update && apk upgrade --no-cache \
