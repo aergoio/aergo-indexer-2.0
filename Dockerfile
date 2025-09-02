@@ -7,6 +7,7 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
 ADD . .
+RUN make clean
 RUN make bin/indexer
 # build aergoluac on the same build image
 RUN apk add git cmake build-base m4
@@ -21,6 +22,8 @@ FROM alpine:3.21
 RUN apk update && apk upgrade --no-cache \
     && apk add libgcc libcrypto3 libssl3
 COPY --from=builder /aergo-indexer/bin/* /usr/local/bin/
+COPY --from=builder /usr/local/bin/aergoluac /usr/local/bin/
 ENV HOME="/root"
 ADD arglog.toml $HOME
+WORKDIR $HOME
 CMD ["indexer"]
