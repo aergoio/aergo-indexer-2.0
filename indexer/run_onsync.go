@@ -29,7 +29,8 @@ func (ns *Indexer) startStream() {
 	SyncBlock := func(block *types.Block) error {
 		newHeight := block.Header.BlockNo
 		if newHeight < ns.lastHeight { // Rewound 1 or more blocks
-			// This needs to be syncronous, otherwise it may
+			ns.log.Info().Uint64("last", ns.lastHeight).Uint64("new", newHeight).Msg("Rewind")
+			// This needs to be synchronous, otherwise it may
 			// delete the block we are just about to add
 			ns.DeleteBlocksInRange(newHeight+1, ns.lastHeight)
 			ns.lastHeight = newHeight
@@ -40,7 +41,10 @@ func (ns *Indexer) startStream() {
 		if newHeight > ns.lastHeight+1 {
 			for H := ns.lastHeight + 1; H < newHeight; H++ {
 				MChannel <- BlockInfo{BlockType_Sync, H}
-				fmt.Println(">>> New Block :", H)
+				ns.log.Trace().Uint64("height", H).Msg(">>> New Block")
+				if H%1000 == 0 {
+					ns.log.Info().Uint64("height", H).Msg("New Block (per every 1000 blocks)")
+				}
 			}
 		}
 
@@ -52,12 +56,18 @@ func (ns *Indexer) startStream() {
 			} else {
 				MChannel <- BlockInfo{BlockType_Sync, newHeight}
 				ns.lastHeight = newHeight
-				fmt.Println(">>> New Block :", newHeight)
+				ns.log.Trace().Uint64("height", newHeight).Msg(">>> New Block")
+				if newHeight%1000 == 0 {
+					ns.log.Info().Uint64("height", newHeight).Msg("New Block (per every 1000 blocks)")
+				}
 			}
 		} else {
 			MChannel <- BlockInfo{BlockType_Sync, newHeight}
 			ns.lastHeight = newHeight
-			fmt.Println(">>> New Block :", newHeight)
+			ns.log.Trace().Uint64("height", newHeight).Msg(">>> New Block")
+			if newHeight%1000 == 0 {
+				ns.log.Info().Uint64("height", newHeight).Msg("New Block (per every 1000 blocks)")
+			}
 		}
 		return nil
 	}

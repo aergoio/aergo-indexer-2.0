@@ -73,6 +73,9 @@ func main() {
 }
 
 func rootRun(cmd *cobra.Command, args []string) {
+	// Set caller info to a relative file path
+	log.SetRelativeLogPathForProject()
+
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
 

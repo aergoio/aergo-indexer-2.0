@@ -54,7 +54,7 @@ func (b *Bulk) StartBulkChannel() {
 	b.BChannel.AccTokens = make(chan ChanInfo)
 	b.SynDone = make(chan bool)
 
-	// Start bulk indexers for each indices
+	// Start bulk indexers for each index
 	go b.BulkIndexer(b.BChannel.Block, b.idxer.indexNamePrefix+"block", b.bulkSize, b.batchTime, true)
 	go b.BulkIndexer(b.BChannel.Tx, b.idxer.indexNamePrefix+"tx", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.Event, b.idxer.indexNamePrefix+"event", b.bulkSize, b.batchTime, false)
@@ -70,7 +70,7 @@ func (b *Bulk) StartBulkChannel() {
 
 	b.RChannel = make([]chan BlockInfo, b.minerNum)
 	for i := 0; i < b.minerNum; i++ {
-		b.idxer.log.Debug().Msg("grpc channel start")
+		b.idxer.log.Debug().Int("grpcNumber", b.grpcNum).Int("minerNumber", b.minerNum).Msg("Bulk receive channel start")
 		b.RChannel[i] = make(chan BlockInfo)
 		if b.grpcNum > 0 {
 			go b.idxer.Miner(b.RChannel[i], GrpcClients[i%b.grpcNum])
