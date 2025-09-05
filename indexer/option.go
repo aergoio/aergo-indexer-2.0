@@ -3,6 +3,7 @@ package indexer
 import (
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
+	"github.com/funkygao/golib/math"
 )
 
 type IndexerOptionFunc func(*Indexer) error
@@ -103,6 +104,18 @@ func SetTokenVerifyWhitelist(verifyTokenWhitelist []string) IndexerOptionFunc {
 func SetContractVerifyWhitelist(verifyContractWhitelist []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
 		indexer.contractVerifyWhitelist = verifyContractWhitelist
+		return nil
+	}
+}
+
+func SetMaxESConnection(maxESConn int) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if maxESConn > 0 {
+			indexer.maxConnections = maxESConn
+			if indexer.maxIdleConns > maxESConn {
+				indexer.maxIdleConns = math.MinInt(indexer.maxIdleConns, maxESConn)
+			}
+		}
 		return nil
 	}
 }

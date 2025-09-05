@@ -12,8 +12,15 @@ import (
 	"time"
 
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-lib/log"
 	"github.com/olivere/elastic/v7"
 )
+
+const (
+	MaxESConnection = "maxESConnection"
+)
+
+var logger = log.NewLogger("indexer.es")
 
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {

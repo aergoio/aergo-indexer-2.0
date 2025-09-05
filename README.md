@@ -252,6 +252,7 @@ Flags:
       --to uint                          stop syncing at this block number
   -t, --token string                     address for query verified token
       --token_whitelist stringArray      whitelist for update verified token
+      --max_es_conn int                  maximum elasticsearch connections. zero means no limit (default 0)
 ```
 
 Example
