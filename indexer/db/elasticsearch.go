@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
@@ -20,7 +21,11 @@ var logger = log.NewLogger("indexer.es")
 
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
-	client *elastic.Client
+	client   *elastic.Client
+	throttle bool
+	reqLimit int
+
+	mu sync.Mutex // 동시 요청 제한에 사용할 mutex 추가
 }
 
 // NewElasticClient creates a new instance of elastic.Client
@@ -32,8 +37,8 @@ func NewElasticClient(esURL string, maxConnection int) (*elastic.Client, error) 
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		// zero means no limit
-		MaxConnsPerHost: maxConnection,
+		// this does not work
+		//MaxConnsPerHost: maxConnection,
 	}
 	httpClient := &http.Client{Transport: tr}
 	client, err := elastic.NewClient(
@@ -62,7 +67,8 @@ func NewElasticsearchDbController(ctx context.Context, esURL string) (*Elasticse
 	if err != nil {
 		return nil, err
 	}
-	return &ElasticsearchDbController{client: client}, nil
+	var limitConnections = throttleCount > 0
+	return &ElasticsearchDbController{client: client, throttle: limitConnections, reqLimit: throttleCount}, nil
 }
 
 func (esdb *ElasticsearchDbController) HealthCheck(ctx context.Context) bool {
@@ -79,6 +85,11 @@ func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool 
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
+	if esdb.throttle {
+		esdb.mu.Lock()         // throttle이 true인 경우 lock
+		defer esdb.mu.Unlock() // 매 요청 후 unlock
+	}
+
 	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Upsert(document).Do(context.Background())
 	if errConflict, ok := err.(*elastic.Error); ok && errConflict.Status == 409 {
 		return nil // ignore version conflict exception
@@ -89,12 +100,22 @@ func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName st
 // Insert inserts a single document using the updata params
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
+	if esdb.throttle {
+		esdb.mu.Lock()         // throttle이 true인 경우 lock
+		defer esdb.mu.Unlock() // 매 요청 후 unlock
+	}
+
 	_, err := esdb.client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	return err
 }
 
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
+	if esdb.throttle {
+		esdb.mu.Lock()         // throttle이 true인 경우 lock
+		defer esdb.mu.Unlock() // 매 요청 후 unlock
+	}
+
 	var query elastic.Query
 	if params.IntegerRange != nil {
 		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
@@ -111,6 +132,12 @@ func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error
 
 // Count returns the number of indexed documents
 func (esdb *ElasticsearchDbController) Count(params QueryParams) (int64, error) {
+	// 읽기 요청은 일단 풀어놓음
+	//if esdb.throttle {
+	//	esdb.mu.Lock()         // throttle이 true인 경우 lock
+	//	defer esdb.mu.Unlock() // 매 요청 후 unlock
+	//}
+
 	var query elastic.Query
 	if params.IntegerRange != nil {
 		query = elastic.NewRangeQuery(params.IntegerRange.Field).From(params.IntegerRange.Min).To(params.IntegerRange.Max)
@@ -196,6 +223,11 @@ func (esdb *ElasticsearchDbController) GetExistingIndexPrefix(aliasName string, 
 
 // CreateIndex creates index according to documentType definition
 func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentType string) error {
+	if esdb.throttle {
+		esdb.mu.Lock()         // throttle이 true인 경우 lock
+		defer esdb.mu.Unlock() // 매 요청 후 unlock
+	}
+
 	createIndex, err := esdb.client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(context.Background())
 	if err != nil {
 		return err
