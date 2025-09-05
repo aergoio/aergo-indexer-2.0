@@ -37,6 +37,7 @@ type Indexer struct {
 	balanceWhitelist        []string
 	tokenVerifyWhitelist    []string
 	contractVerifyWhitelist []string
+	maxESConnection int
 
 	db         db.DbController
 	grpcClient *client.AergoClientController
@@ -72,6 +73,9 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	svc.log.Info().Str("serverAddr", svc.serverAddr).Msg("Successfully connected to the Aergo server")
 
 	// connect db
+	if svc.maxESConnection > 0 {
+		ctx = context.WithValue(ctx, "maxESConnection", svc.maxESConnection)
+	}
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Attempting to connect to the database")
 	svc.db, err = svc.WaitForDatabase(ctx)
 	if err != nil {

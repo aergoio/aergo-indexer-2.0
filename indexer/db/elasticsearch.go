@@ -12,8 +12,11 @@ import (
 	"time"
 
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
+	"github.com/aergoio/aergo-lib/log"
 	"github.com/olivere/elastic/v7"
 )
+
+var logger = log.NewLogger("indexer.es")
 
 // ElasticsearchDbController implements DbController
 type ElasticsearchDbController struct {
@@ -21,13 +24,16 @@ type ElasticsearchDbController struct {
 }
 
 // NewElasticClient creates a new instance of elastic.Client
-func NewElasticClient(esURL string) (*elastic.Client, error) {
+func NewElasticClient(esURL string, maxConnection int) (*elastic.Client, error) {
 	url := esURL
 	if !strings.HasPrefix(url, "http") {
 		url = fmt.Sprintf("http://%s", url)
 	}
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		// zero means no limit
+		MaxConnsPerHost: maxConnection,
 	}
 	httpClient := &http.Client{Transport: tr}
 	client, err := elastic.NewClient(
@@ -44,7 +50,15 @@ func NewElasticClient(esURL string) (*elastic.Client, error) {
 
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
 func NewElasticsearchDbController(ctx context.Context, esURL string) (*ElasticsearchDbController, error) {
-	client, err := NewElasticClient(esURL)
+	var throttleCount = 0
+	value := ctx.Value("maxESConnection")
+	if value != nil {
+		if v, ok := value.(int); ok {
+			throttleCount = v // 성공할 때만 값 갱신
+			logger.Info().Int("maxConnection", throttleCount).Msg("throttling Elasticsearch connections")
+		}
+	}
+	client, err := NewElasticClient(esURL, throttleCount)
 	if err != nil {
 		return nil, err
 	}

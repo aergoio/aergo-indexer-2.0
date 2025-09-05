@@ -106,3 +106,12 @@ func SetContractVerifyWhitelist(verifyContractWhitelist []string) IndexerOptionF
 		return nil
 	}
 }
+
+func SetMaxESConnection(maxESConn int) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if maxESConn > 0 {
+			indexer.maxESConnection = maxESConn
+		}
+		return nil
+	}
+}

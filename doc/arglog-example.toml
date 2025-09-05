@@ -17,3 +17,7 @@ level = "debug"
 # event is a logger of events in transaction
 #[event]
 #level = "debug"
+
+# indexer.es is a logger abount elasticsearch access
+#[indexer.es]
+#level = "debug"
