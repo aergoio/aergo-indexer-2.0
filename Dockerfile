@@ -7,6 +7,8 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
 ADD . .
+# Build the executable inside the Docker builder stage to ensure a clean and reproducible build.
+# 'make clean' removes any existing local binaries to avoid unexpected results.
 RUN make clean
 RUN make bin/indexer
 # build aergoluac on the same build image
@@ -18,6 +20,8 @@ RUN git clone --branch develop --recursive https://github.com/aergoio/aergo.git 
 # run the unit tests to make sure everything is working
 RUN cp bin/aergoluac /usr/local/bin/ && make unit-test
 
+# Final stage: create a minimal runtime image.
+# Only the compiled binaries from the builder stage are included for execution.
 FROM alpine:3.21
 RUN apk update && apk upgrade --no-cache \
     && apk add libgcc libcrypto3 libssl3
