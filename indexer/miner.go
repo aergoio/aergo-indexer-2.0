@@ -10,10 +10,14 @@ import (
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
 	"github.com/aergoio/aergo-indexer-2.0/types"
+	"github.com/aergoio/aergo-lib/log"
 	"github.com/mr-tron/base58"
 )
 
-// IndexTxs indexes a list of transactions in bulk
+var opLog = log.NewLogger("internalOp")
+var eventLog = log.NewLogger("event")
+
+// Miner indexes a list of transactions in bulk
 func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientController) {
 	var block *types.Block
 	blockQuery := make([]byte, 8)
@@ -22,7 +26,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 	for info := range RChannel {
 		// stop miner
 		if info.Type == BlockType_StopMiner {
-			ns.log.Debug().Msg("stop miner")
+			ns.log.Info().Msg("stop miner")
 			break
 		}
 
@@ -84,12 +88,12 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 
 type CallInfo struct {
 	BlockHeight uint64
-	Timestamp time.Time
-	TxHash string
-	TxIdx uint64
-	TxDoc *doc.EsTx
-	CallIdx uint64
-	SendIdx uint64
+	Timestamp   time.Time
+	TxHash      string
+	TxIdx       uint64
+	TxDoc       *doc.EsTx
+	CallIdx     uint64
+	SendIdx     uint64
 }
 
 func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, internalOps *InternalOperations, MinerGRPC *client.AergoClientController) {
@@ -131,12 +135,12 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 	if internalOps != nil {
 		callInfo := CallInfo{
 			BlockHeight: blockDoc.BlockNo,
-			Timestamp: blockDoc.Timestamp,
-			TxHash: internalOps.TxHash,
-			TxIdx: txIdx,
-			TxDoc: txDoc,
-			CallIdx: 1,
-			SendIdx: 0,
+			Timestamp:   blockDoc.Timestamp,
+			TxHash:      internalOps.TxHash,
+			TxIdx:       txIdx,
+			TxDoc:       txDoc,
+			CallIdx:     1,
+			SendIdx:     0,
 		}
 		// register external call
 		txCall := internalOps.Call
@@ -175,25 +179,25 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 }
 
 type InternalOperation struct {
-	Operation string   `json:"op"`
-	Amount    string   `json:"amount,omitempty"`
-	Args      []string `json:"args"`
-	Result    string   `json:"result,omitempty"`
+	Operation string        `json:"op"`
+	Amount    string        `json:"amount,omitempty"`
+	Args      []string      `json:"args"`
+	Result    string        `json:"result,omitempty"`
 	Call      *InternalCall `json:"call,omitempty"`
-	Reverted  bool     `json:"reverted,omitempty"`
+	Reverted  bool          `json:"reverted,omitempty"`
 }
 
 type InternalCall struct {
-	Contract  string   `json:"contract,omitempty"`
-	Function  string   `json:"function,omitempty"`
-	Args      []interface{} `json:"args,omitempty"`
-	Amount    string   `json:"amount,omitempty"`
+	Contract   string              `json:"contract,omitempty"`
+	Function   string              `json:"function,omitempty"`
+	Args       []interface{}       `json:"args,omitempty"`
+	Amount     string              `json:"amount,omitempty"`
 	Operations []InternalOperation `json:"operations,omitempty"`
 }
 
 type InternalOperations struct {
-	TxHash    string   `json:"txhash"`
-	Call      InternalCall `json:"call"`
+	TxHash string       `json:"txhash"`
+	Call   InternalCall `json:"call"`
 }
 
 func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCall) {
@@ -204,7 +208,8 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCal
 		ns.log.Error().Err(err).Str("txHash", callInfo.TxHash).Str("contract", outerCall.Contract).Msg("Failed to marshal internal operations")
 		return
 	}
-	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", outerCall.Contract).Str("operations", string(jsonOperations)).Msg("Processing internal operations")
+	opLog.Debug().Str("txHash", callInfo.TxHash).Str("contract", outerCall.Contract).
+		Str("operations", string(jsonOperations)).Msg("Processing internal operations")
 	// save to db
 	internalOpsDoc := doc.ConvInternalOperations(callInfo.TxHash, string(jsonOperations))
 	ns.addInternalOperations(internalOpsDoc)
@@ -216,7 +221,8 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCal
 }
 
 func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, operation InternalOperation, reverted bool) {
-	ns.log.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).Str("operation", operation.Operation).Msg("Processing internal operation")
+	opLog.Debug().Str("txHash", callInfo.TxHash).Str("contract", contract).
+		Str("operation", operation.Operation).Msg("Processing internal operation")
 
 	internalOpReverted := callInfo.TxDoc.Status == "ERROR" || reverted
 
@@ -385,7 +391,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.addNFT(nftDoc)
 		}
-		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event mint")
+		eventLog.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event mint")
 	case transaction.EventTransfer:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventTransfer(event)
 		if err != nil {
@@ -417,7 +423,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.addNFT(nftDoc)
 		}
-		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event transfer")
+		eventLog.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event transfer")
 	case transaction.EventBurn:
 		contractAddress, accountFrom, accountTo, amountOrId, err := transaction.UnmarshalEventBurn(event)
 		if err != nil {
@@ -449,7 +455,7 @@ func (ns *Indexer) MinerEventByName(info BlockInfo, blockDoc *doc.EsBlock, txDoc
 			nftDoc := doc.ConvNFT(tokenTransferDoc, tokenUri, imageUrl)
 			ns.addNFT(nftDoc)
 		}
-		ns.log.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event burn")
+		eventLog.Debug().Str("contract", transaction.EncodeAccount(contractAddress)).Str("type", string(tokenType)).Msg("Event burn")
 	default:
 		return
 	}
@@ -539,18 +545,18 @@ func (ns *Indexer) MinerContractVerified(tokenSymbol, contractAddr, metadata str
 		}
 
 		/*
-		// skip if codeUrl not changed
-		var code string
-		if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
-			ns.log.Debug().Str("method", "verifyContract").Str("token", tokenSymbol).Msg("codeUrl is not changed, skip")
-			return updateContractAddr
-		}
-		code, err = lua_compiler.GetCode(codeUrl)
-		if err != nil {
-			ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
-		} else if len(code) > 0 {
-			...
-		}
+			// skip if codeUrl not changed
+			var code string
+			if codeUrl != "" && contractDoc.CodeUrl == codeUrl {
+				ns.log.Debug().Str("method", "verifyContract").Str("token", tokenSymbol).Msg("codeUrl is not changed, skip")
+				return updateContractAddr
+			}
+			code, err = lua_compiler.GetCode(codeUrl)
+			if err != nil {
+				ns.log.Error().Err(err).Str("method", "verifyContract").Msg("Failed to get code")
+			} else if len(code) > 0 {
+				...
+			}
 		*/
 
 		// TODO : valid bytecode
