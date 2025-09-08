@@ -22,20 +22,24 @@ services:
         max-size: "10m"
   indexer:
     container_name: indexer
-    image: aergo/indexer2:2.8.2-dev1
+    image: aergo/indexer2:2.6.1
     ports:
       - 8000:8000
     privileged: true
     command: indexer
-      - --aergo=host.docker.internal:7845
-      - --dburl=elasticsearch:9200
+      - --aergo=localhost:7845
+      - --dburl=localhost:9200
       - --prefix=testnet
       - --mode=all
       - --from=0
       - --to=0
       - --cluster=false
       - --cccv=testnet
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
     depends_on:
       - elasticsearch
+volumes:
+  el_data:
+    driver: local
+  el_logs:
+    driver: local
