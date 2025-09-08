@@ -258,8 +258,8 @@ func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operatio
 
 	// if it's a send operation
 	if operation.Operation == "send" ||
-		(operation.Operation == "call" && operation.Amount != "") ||
-		(operation.Operation == "deploy" && operation.Amount != "") {
+	  (operation.Operation == "call" && operation.Amount != "") ||
+	  (operation.Operation == "deploy" && operation.Amount != "") {
 		// register the internal transfer of aergo tokens
 		sender := contract
 		var recipient string
