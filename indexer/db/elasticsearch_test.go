@@ -30,6 +30,23 @@ func TestElastic(t *testing.T) {
 	})
 }
 
+func TestMultipleRequest(t *testing.T) {
+	// set allow 3 concurrent request.
+	ctx := context.WithValue(context.Background(), MaxESConnection, 3)
+	controller, _ := NewElasticsearchDbController(ctx, "http://localhost:9200")
+
+	someDoc := doc.EsTx{}
+
+	// 테스트 요청
+	go func() { _ = controller.Insert(someDoc, "indexName") }()
+	go func() { _ = controller.Insert(someDoc, "indexName") }()
+	go func() { _ = controller.Update(someDoc, "indexName", "docID") }()
+	// 3개 초과 시 대기
+	go func() { _ = controller.Update(someDoc, "indexName", "docID") }()
+
+	controller.Shutdown() // 모든 작업 완료 대기
+}
+
 func mockupDocker() (mock *gnomock.Container, err error) {
 	preset := mockElastic.Preset(
 		// version 7 official preset ( github.com/orlangure/gnomock#official-presets )

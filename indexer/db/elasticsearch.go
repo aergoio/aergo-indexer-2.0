@@ -17,6 +17,10 @@ import (
 	"github.com/olivere/elastic/v7"
 )
 
+const (
+	MaxESConnection = "maxESConnection"
+)
+
 var logger = log.NewLogger("indexer.es")
 
 // ElasticsearchDbController implements DbController
@@ -25,11 +29,12 @@ type ElasticsearchDbController struct {
 	throttle bool
 	reqLimit int
 
-	mu sync.Mutex // 동시 요청 제한에 사용할 mutex 추가
+	wg          sync.WaitGroup // WaitGroup for graceful shutdown
+	requestChan chan struct{}
 }
 
 // NewElasticClient creates a new instance of elastic.Client
-func NewElasticClient(esURL string, maxConnection int) (*elastic.Client, error) {
+func NewElasticClient(esURL string) (*elastic.Client, error) {
 	url := esURL
 	if !strings.HasPrefix(url, "http") {
 		url = fmt.Sprintf("http://%s", url)
@@ -55,20 +60,53 @@ func NewElasticClient(esURL string, maxConnection int) (*elastic.Client, error) 
 
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
 func NewElasticsearchDbController(ctx context.Context, esURL string) (*ElasticsearchDbController, error) {
-	var throttleCount = 0
-	value := ctx.Value("maxESConnection")
+	var maxConnection = 0
+	value := ctx.Value(MaxESConnection)
 	if value != nil {
 		if v, ok := value.(int); ok {
-			throttleCount = v // 성공할 때만 값 갱신
-			logger.Info().Int("maxConnection", throttleCount).Msg("throttling Elasticsearch connections")
+			maxConnection = v
+			logger.Info().Int(MaxESConnection, maxConnection).Msg("throttling Elasticsearch connections")
+		} else {
+			logger.Warn().Msg("Invalid value for MaxESConnection")
 		}
 	}
-	client, err := NewElasticClient(esURL, throttleCount)
+	client, err := NewElasticClient(esURL)
 	if err != nil {
 		return nil, err
 	}
-	var limitConnections = throttleCount > 0
-	return &ElasticsearchDbController{client: client, throttle: limitConnections, reqLimit: throttleCount}, nil
+
+	var limitConnections = maxConnection > 0
+	controller := &ElasticsearchDbController{
+		client:      client,
+		throttle:    limitConnections,
+		reqLimit:    maxConnection,
+		requestChan: nil,
+	}
+	if limitConnections {
+		// create buffered channel
+		controller.requestChan = make(chan struct{}, maxConnection)
+	}
+	return controller, nil
+}
+
+// Shutdown wait for all requests completed
+func (esdb *ElasticsearchDbController) Shutdown() {
+	logger.Debug().Msg("Start shutdown Elasticsearch controller, waiting for pending requests")
+	esdb.wg.Wait()
+	logger.Debug().Msg("All pending Elasticsearch request were finished")
+	logger.Info().Msg("Shutdown Elasticsearch controller")
+}
+
+// this function must be called only if the throttling is enabled
+func (esdb *ElasticsearchDbController) throttleRequest() {
+	esdb.requestChan <- struct{}{}
+	esdb.wg.Add(1)
+}
+
+// this function must be called only if the throttling is enabled
+func (esdb *ElasticsearchDbController) releaseRequest() {
+	<-esdb.requestChan
+	esdb.wg.Done()
 }
 
 func (esdb *ElasticsearchDbController) HealthCheck(ctx context.Context) bool {
@@ -86,9 +124,10 @@ func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool 
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
 	if esdb.throttle {
-		esdb.mu.Lock()         // throttle이 true인 경우 lock
-		defer esdb.mu.Unlock() // 매 요청 후 unlock
+		esdb.throttleRequest()
+		defer esdb.releaseRequest()
 	}
+	logger.Trace().Str("indexName", indexName).Str("id", id).Msg("Update")
 
 	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Upsert(document).Do(context.Background())
 	if errConflict, ok := err.(*elastic.Error); ok && errConflict.Status == 409 {
@@ -101,9 +140,10 @@ func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName st
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
 	if esdb.throttle {
-		esdb.mu.Lock()         // throttle이 true인 경우 lock
-		defer esdb.mu.Unlock() // 매 요청 후 unlock
+		esdb.throttleRequest()
+		defer esdb.releaseRequest()
 	}
+	logger.Trace().Str("indexName", indexName).Msg("Insert")
 
 	_, err := esdb.client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	return err
@@ -112,9 +152,10 @@ func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName st
 // Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
 	if esdb.throttle {
-		esdb.mu.Lock()         // throttle이 true인 경우 lock
-		defer esdb.mu.Unlock() // 매 요청 후 unlock
+		esdb.throttleRequest()
+		defer esdb.releaseRequest()
 	}
+	logger.Trace().Str("indexName", params.IndexName).Msg("Delete")
 
 	var query elastic.Query
 	if params.IntegerRange != nil {
@@ -224,8 +265,8 @@ func (esdb *ElasticsearchDbController) GetExistingIndexPrefix(aliasName string, 
 // CreateIndex creates index according to documentType definition
 func (esdb *ElasticsearchDbController) CreateIndex(indexName string, documentType string) error {
 	if esdb.throttle {
-		esdb.mu.Lock()         // throttle이 true인 경우 lock
-		defer esdb.mu.Unlock() // 매 요청 후 unlock
+		esdb.throttleRequest()
+		defer esdb.releaseRequest()
 	}
 
 	createIndex, err := esdb.client.CreateIndex(indexName).BodyString(doc.EsMappings[documentType]).Do(context.Background())
