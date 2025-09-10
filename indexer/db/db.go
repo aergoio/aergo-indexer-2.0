@@ -16,6 +16,7 @@ type DbController interface {
 	GetExistingIndexPrefix(aliasName string, documentType string) (bool, string, error)
 	CreateIndex(indexName string, documentType string) error
 	UpdateAlias(aliasName string, indexName string) error
+	Shutdown()
 }
 
 type IntegerRangeQuery struct {
