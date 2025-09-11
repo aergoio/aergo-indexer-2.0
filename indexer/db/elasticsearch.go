@@ -16,10 +16,6 @@ import (
 	"github.com/olivere/elastic/v7"
 )
 
-const (
-	MaxESConnection = "maxESConnection"
-)
-
 var logger = log.NewLogger("indexer.es")
 
 // ElasticsearchDbController implements DbController
@@ -57,8 +53,11 @@ func NewElasticClient(esURL string, maxConnections, maxIdleConns int) (*elastic.
 }
 
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
-func NewElasticsearchDbController(ctx context.Context, esURL string, maxConnections, maxIdleConns int) (*ElasticsearchDbController, error) {
+func NewElasticsearchDbController(ctx context.Context, esURL string, maxConnections, maxIdleConns int, traceWrite bool) (*ElasticsearchDbController, error) {
 	client, err := NewElasticClient(esURL, maxConnections, maxIdleConns)
+	// Determine to write tracing log of db write
+	setTraceWrite(traceWrite)
+
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +78,9 @@ func (esdb *ElasticsearchDbController) Exists(indexName string, id string) bool 
 }
 
 func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName string, id string) error {
+	if logger.IsDebugEnabled() {
+		traceESWriteTx(indexName, document, "Update")
+	}
 	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Upsert(document).Do(context.Background())
 	if errConflict, ok := err.(*elastic.Error); ok && errConflict.Status == 409 {
 		return nil // ignore version conflict exception
@@ -86,14 +88,17 @@ func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName st
 	return err
 }
 
-// Insert inserts a single document using the updata params
+// Insert inserts a single document using the update params
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
+	if logger.IsDebugEnabled() {
+		traceESWriteTx(indexName, document, "Insert")
+	}
 	_, err := esdb.client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	return err
 }
 
-// Delete removes documents specified by the query params
+// / Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
 	var query elastic.Query
 	if params.IntegerRange != nil {

@@ -39,7 +39,8 @@ var (
 	contractVerifyAddress   string
 	tokenVerifyWhitelist    []string
 	contractVerifyWhitelist []string
-	maxESConnection int
+	maxESConnection         int
+	traceESWrite            bool
 
 	logger *log.Logger
 )
@@ -65,7 +66,8 @@ func init() {
 	fs.StringSliceVarP(&balanceWhitelist, "balance_whitelist", "W", []string{}, "whitelist for update account balance")
 	fs.StringArrayVar(&tokenVerifyWhitelist, "token_whitelist", []string{}, "whitelist for update verified token")
 	fs.StringArrayVar(&contractVerifyWhitelist, "contract_whitelist", []string{}, "whitelist for update verified contract")
-	fs.IntVar(&maxESConnection, "max_es_conn", 0, "maximum elasticsearch connections. zero means no limit")
+	fs.IntVar(&maxESConnection, "max_es_conn", 0, "maximum elasticsearch connections. zero means default value.(100)")
+	fs.BoolVar(&traceESWrite, "{trace_es_write}", false, "trace elasticsearch write operations for debugging")
 }
 
 func main() {
@@ -101,6 +103,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetTokenVerifyWhitelist(tokenVerifyWhitelist),
 		indexer.SetContractVerifyWhitelist(contractVerifyWhitelist),
 		indexer.SetMaxESConnection(maxESConnection),
+		indexer.SetTraceESWrite(traceESWrite),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not start indexer")

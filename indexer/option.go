@@ -119,3 +119,12 @@ func SetMaxESConnection(maxESConn int) IndexerOptionFunc {
 		return nil
 	}
 }
+
+func SetTraceESWrite(trace bool) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		if trace {
+			indexer.traceESWrite = trace
+		}
+		return nil
+	}
+}

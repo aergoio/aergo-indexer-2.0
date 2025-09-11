@@ -34,6 +34,7 @@ type Indexer struct {
 	grpcNum                 int
 	maxConnections          int
 	maxIdleConns            int
+	traceESWrite            bool
 	tokenVerifyAddr         []byte
 	contractVerifyAddr      []byte
 	balanceWhitelist        []string
@@ -146,7 +147,8 @@ func (ns *Indexer) WaitForServer(ctx context.Context) *client.AergoClientControl
 }
 
 func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbController, error) {
-	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr, ns.maxConnections, ns.maxIdleConns)
+	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr, ns.maxConnections, ns.maxIdleConns,
+		ns.traceESWrite)
 	if err != nil {
 		return nil, err
 	}

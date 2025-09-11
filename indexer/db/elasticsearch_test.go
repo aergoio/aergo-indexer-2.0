@@ -22,7 +22,7 @@ func TestElastic(t *testing.T) {
 
 	TestDatabaseSuite(t, func() DbController {
 		ctx := context.Background()
-		dbController, err := NewElasticsearchDbController(ctx, mock.DefaultAddress(), 50, 10)
+		dbController, err := NewElasticsearchDbController(ctx, mock.DefaultAddress(), 50, 10, false)
 		require.NoError(t, err)
 		_, err = dbController.client.DeleteIndex("*").Do(ctx)
 		require.NoError(t, err)
@@ -33,7 +33,7 @@ func TestElastic(t *testing.T) {
 func TestMultipleRequest(t *testing.T) {
 	// set allow 3 concurrent request.
 	ctx := context.Background()
-	controller, _ := NewElasticsearchDbController(ctx, "http://localhost:9200", 3, 1)
+	controller, _ := NewElasticsearchDbController(ctx, "http://localhost:9200", 3, 1, false)
 
 	someDoc := doc.EsTx{}
 
@@ -43,7 +43,7 @@ func TestMultipleRequest(t *testing.T) {
 	go func() { _ = controller.Update(someDoc, "indexName", "docID") }()
 	// wait until previous request finish
 	go func() { _ = controller.Update(someDoc, "indexName", "docID") }()
-	
+
 }
 
 func mockupDocker() (mock *gnomock.Container, err error) {
