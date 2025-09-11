@@ -127,7 +127,9 @@ func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName st
 		esdb.throttleRequest()
 		defer esdb.releaseRequest()
 	}
-	logger.Trace().Str("indexName", indexName).Str("id", id).Msg("Update")
+	if logger.IsDebugEnabled() {
+		traceESWriteTx(indexName, document, "Update")
+	}
 
 	_, err := esdb.client.Update().Index(indexName).Id(id).Doc(document).Upsert(document).Do(context.Background())
 	if errConflict, ok := err.(*elastic.Error); ok && errConflict.Status == 409 {
@@ -143,13 +145,15 @@ func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName st
 		esdb.throttleRequest()
 		defer esdb.releaseRequest()
 	}
-	logger.Trace().Str("indexName", indexName).Msg("Insert")
+	if logger.IsDebugEnabled() {
+		traceESWriteTx(indexName, document, "Insert")
+	}
 
 	_, err := esdb.client.Index().Index(indexName).OpType("index").Id(document.GetID()).BodyJson(document).Do(context.Background())
 	return err
 }
 
-// Delete removes documents specified by the query params
+/// Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
 	if esdb.throttle {
 		esdb.throttleRequest()
