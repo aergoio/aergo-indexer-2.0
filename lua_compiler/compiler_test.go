@@ -2,6 +2,7 @@ package lua_compiler
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -18,6 +19,12 @@ func TestGetData(t *testing.T) {
 }
 
 func TestLocalCompile(t *testing.T) {
+	// check if aergoluac exists in PATH
+	_, err := exec.LookPath("aergoluac")
+	if err != nil {
+		t.Skip("Skip local compile test because aergoluac binary not found in PATH")
+	}
+
 	code := readLuaCode("type_arrayarg.lua")
 	byteCodeABI, err := CompileCodeLocal(code)
 	require.NoError(t, err)
