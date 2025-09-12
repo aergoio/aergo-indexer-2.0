@@ -32,6 +32,8 @@ type Indexer struct {
 	batchTime               time.Duration
 	minerNum                int
 	grpcNum                 int
+	maxConnections          int
+	maxIdleConns            int
 	tokenVerifyAddr         []byte
 	contractVerifyAddr      []byte
 	balanceWhitelist        []string
@@ -52,11 +54,13 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log:       log.NewLogger(""),
-		bulkSize:  4000,
-		batchTime: 60 * time.Second,
-		minerNum:  32,
-		grpcNum:   16,
+		log:            log.NewLogger(""),
+		bulkSize:       4000,
+		batchTime:      60 * time.Second,
+		minerNum:       32,
+		grpcNum:        16,
+		maxConnections: 100,
+		maxIdleConns:   100,
 	}
 
 	// overwrite options on it
@@ -142,7 +146,7 @@ func (ns *Indexer) WaitForServer(ctx context.Context) *client.AergoClientControl
 }
 
 func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbController, error) {
-	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr)
+	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr, ns.maxConnections, ns.maxIdleConns)
 	if err != nil {
 		return nil, err
 	}
