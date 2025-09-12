@@ -17,4 +17,4 @@ level = "debug"
 
 # indexer.es is a logger abount elasticsearch access
 [indexer.es]
-level = "trace"
+level = "debug"

@@ -45,7 +45,7 @@ func (ns *Indexer) Miner(RChannel chan BlockInfo, MinerGRPC *client.AergoClientC
 
 		// Get Internal Operations
 		var txsInternalOps []InternalOperations
-		if len(block.Body.Txs) > 0 {
+		if !ns.skipInternalOps && len(block.Body.Txs) > 0 {
 			// request the list of internal operations for this block
 			jsonInternalOps, err := MinerGRPC.GetInternalOperations(blockHeight)
 			if err != nil {
@@ -258,8 +258,8 @@ func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operatio
 
 	// if it's a send operation
 	if operation.Operation == "send" ||
-	  (operation.Operation == "call" && operation.Amount != "") ||
-	  (operation.Operation == "deploy" && operation.Amount != "") {
+		(operation.Operation == "call" && operation.Amount != "") ||
+		(operation.Operation == "deploy" && operation.Amount != "") {
 		// register the internal transfer of aergo tokens
 		sender := contract
 		var recipient string

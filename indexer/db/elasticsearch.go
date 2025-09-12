@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	TraceWrite      = "traceWrite"
 	MaxESConnection = "maxESConnection"
 )
 
@@ -70,6 +71,17 @@ func NewElasticsearchDbController(ctx context.Context, esURL string) (*Elasticse
 			logger.Warn().Msg("Invalid value for MaxESConnection")
 		}
 	}
+	// Determine to write tracing log of db write
+	value = ctx.Value(TraceWrite)
+	if value != nil {
+		if v, ok := value.(bool); ok {
+			logger.Info().Bool(TraceWrite, v).Msg("Tracing Elasticsearch write")
+			setTraceWrite(v)
+		} else {
+			logger.Warn().Msg("Invalid value for traceWrite")
+		}
+	}
+
 	client, err := NewElasticClient(esURL)
 	if err != nil {
 		return nil, err
@@ -138,7 +150,7 @@ func (esdb *ElasticsearchDbController) Update(document doc.DocType, indexName st
 	return err
 }
 
-// Insert inserts a single document using the updata params
+// Insert inserts a single document using the update params
 // It returns the number of inserted documents (1) or an error
 func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName string) error {
 	if esdb.throttle {
@@ -153,7 +165,7 @@ func (esdb *ElasticsearchDbController) Insert(document doc.DocType, indexName st
 	return err
 }
 
-/// Delete removes documents specified by the query params
+// / Delete removes documents specified by the query params
 func (esdb *ElasticsearchDbController) Delete(params QueryParams) (uint64, error) {
 	if esdb.throttle {
 		esdb.throttleRequest()

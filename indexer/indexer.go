@@ -38,6 +38,8 @@ type Indexer struct {
 	tokenVerifyWhitelist    []string
 	contractVerifyWhitelist []string
 	maxESConnection         int
+	traceESWrite            bool
+	skipInternalOps         bool
 
 	db         db.DbController
 	grpcClient *client.AergoClientController
@@ -76,6 +78,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	if svc.maxESConnection > 0 {
 		ctx = context.WithValue(ctx, db.MaxESConnection, svc.maxESConnection)
 	}
+	ctx = context.WithValue(ctx, db.TraceWrite, svc.traceESWrite)
+
 	svc.log.Info().Str("dbURL", svc.dbAddr).Msg("Attempting to connect to the database")
 	svc.db, err = svc.WaitForDatabase(ctx)
 	if err != nil {
