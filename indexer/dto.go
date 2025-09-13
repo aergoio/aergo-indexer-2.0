@@ -51,17 +51,25 @@ func (ns *Indexer) addContract(blockType BlockType, contractDoc *doc.EsContract)
 	}
 }
 
-func (ns *Indexer) addInternalOperations(internalOpsDoc *doc.EsInternalOperations) {
-	err := ns.db.Insert(internalOpsDoc, ns.indexNamePrefix+"internal_operations")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", internalOpsDoc.Id).Str("method", "insertInternalOperations").Msg("error while insert")
+func (ns *Indexer) addInternalOperations(blockType BlockType, internalOpsDoc *doc.EsInternalOperations) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.InternalOps <- ChanInfo{ChanType_Add, internalOpsDoc}
+	} else {
+		err := ns.db.Insert(internalOpsDoc, ns.indexNamePrefix+"internal_operations")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", internalOpsDoc.Id).Str("method", "insertInternalOperations").Msg("error while insert")
+		}
 	}
 }
 
-func (ns *Indexer) addContractCall(contractCallDoc *doc.EsContractCall) {
-	err := ns.db.Insert(contractCallDoc, ns.indexNamePrefix+"contract_call")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", contractCallDoc.Id).Str("method", "insertContractCall").Msg("error while insert")
+func (ns *Indexer) addContractCall(blockType BlockType, contractCallDoc *doc.EsContractCall) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.ContractCall <- ChanInfo{ChanType_Add, contractCallDoc}
+	} else {
+		err := ns.db.Insert(contractCallDoc, ns.indexNamePrefix+"contract_call")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", contractCallDoc.Id).Str("method", "insertContractCall").Msg("error while insert")
+		}
 	}
 }
 

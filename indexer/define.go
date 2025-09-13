@@ -36,6 +36,8 @@ type ChanInfoType struct {
 	Contract      chan ChanInfo
 	TokenTransfer chan ChanInfo
 	AccTokens     chan ChanInfo
+	InternalOps   chan ChanInfo
+	ContractCall  chan ChanInfo
 }
 
 type VerifiedStatus string
