@@ -94,6 +94,7 @@ type CallInfo struct {
 	TxDoc       *doc.EsTx
 	CallIdx     uint64
 	SendIdx     uint64
+	BlockType   BlockType
 }
 
 func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, tx *types.Tx, internalOps *InternalOperations, MinerGRPC *client.AergoClientController) {
@@ -141,11 +142,12 @@ func (ns *Indexer) MinerTx(txIdx uint64, info BlockInfo, blockDoc *doc.EsBlock, 
 			TxDoc:       txDoc,
 			CallIdx:     1,
 			SendIdx:     0,
+			BlockType:   info.Type,
 		}
 		// register external call
 		txCall := internalOps.Call
 		txCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, sender, txCall.Contract, txCall.Function, txCall.Args, txCall.Amount, txDoc.Status == "ERROR")
-		ns.addContractCall(txCallDoc)
+		ns.addContractCall(info.Type, txCallDoc)
 		// Process internal operations
 		if len(txCall.Operations) > 0 {
 			ns.MinerTxInternalOps(&callInfo, &txCall)
@@ -212,7 +214,7 @@ func (ns *Indexer) MinerTxInternalOps(callInfo *CallInfo, outerCall *InternalCal
 		Str("operations", string(jsonOperations)).Msg("Processing internal operations")
 	// save to db
 	internalOpsDoc := doc.ConvInternalOperations(callInfo.TxHash, string(jsonOperations))
-	ns.addInternalOperations(internalOpsDoc)
+	ns.addInternalOperations(callInfo.BlockType, internalOpsDoc)
 
 	// process each operation from this contract
 	for _, operation := range outerCall.Operations {
@@ -240,7 +242,7 @@ func (ns *Indexer) MinerContractInternalOp(callInfo *CallInfo, contract string, 
 
 		// register internal call
 		internalCallDoc := doc.ConvContractCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, callInfo.TxIdx, callInfo.CallIdx, contract, internalCall.Contract, internalCall.Function, internalCall.Args, internalCall.Amount, internalOpReverted)
-		ns.addContractCall(internalCallDoc)
+		ns.addContractCall(callInfo.BlockType, internalCallDoc)
 
 		// process each operation from this internal call
 		for _, nestedOperation := range internalCall.Operations {

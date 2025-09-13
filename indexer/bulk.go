@@ -52,6 +52,8 @@ func (b *Bulk) StartBulkChannel() {
 	b.BChannel.Contract = make(chan ChanInfo)
 	b.BChannel.TokenTransfer = make(chan ChanInfo)
 	b.BChannel.AccTokens = make(chan ChanInfo)
+	b.BChannel.InternalOps = make(chan ChanInfo)
+	b.BChannel.ContractCall = make(chan ChanInfo)
 	b.SynDone = make(chan bool)
 
 	// Start bulk indexers for each index
@@ -61,6 +63,8 @@ func (b *Bulk) StartBulkChannel() {
 	go b.BulkIndexer(b.BChannel.Contract, b.idxer.indexNamePrefix+"contract", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.TokenTransfer, b.idxer.indexNamePrefix+"token_transfer", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.AccTokens, b.idxer.indexNamePrefix+"account_tokens", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.InternalOps, b.idxer.indexNamePrefix+"internal_operations", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.ContractCall, b.idxer.indexNamePrefix+"contract_call", b.bulkSize, b.batchTime, false)
 
 	// Start multiple miners
 	GrpcClients := make([]*client.AergoClientController, b.grpcNum)
@@ -100,6 +104,8 @@ func (b *Bulk) StopBulkChannel() {
 	b.BChannel.Contract <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.TokenTransfer <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.AccTokens <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.InternalOps <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.ContractCall <- ChanInfo{ChanType_StopBulk, nil}
 
 	// Close bulk channels
 	close(b.BChannel.Block)
@@ -108,6 +114,8 @@ func (b *Bulk) StopBulkChannel() {
 	close(b.BChannel.Contract)
 	close(b.BChannel.TokenTransfer)
 	close(b.BChannel.AccTokens)
+	close(b.BChannel.InternalOps)
+	close(b.BChannel.ContractCall)
 	close(b.SynDone)
 
 	b.idxer.log.Info().Msg("Stop Bulk Indexer")
@@ -153,8 +161,10 @@ func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize 
 			b.BChannel.Contract <- ChanInfo{ChanType_Commit, nil}
 			b.BChannel.TokenTransfer <- ChanInfo{ChanType_Commit, nil}
 			b.BChannel.AccTokens <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.InternalOps <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.ContractCall <- ChanInfo{ChanType_Commit, nil}
 
-			for i := 0; i < 5; i++ {
+			for i := 0; i < 7; i++ {
 				<-b.SynDone
 			}
 		}
