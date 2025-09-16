@@ -3,7 +3,6 @@ package indexer
 import (
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/aergoio/aergo-lib/log"
-	"github.com/funkygao/golib/math"
 )
 
 type IndexerOptionFunc func(*Indexer) error
@@ -113,7 +112,7 @@ func SetMaxESConnection(maxESConn int) IndexerOptionFunc {
 		if maxESConn > 0 {
 			indexer.maxConnections = maxESConn
 			if indexer.maxIdleConns > maxESConn {
-				indexer.maxIdleConns = math.MinInt(indexer.maxIdleConns, maxESConn)
+				indexer.maxIdleConns = minInt(indexer.maxIdleConns, maxESConn)
 			}
 		}
 		return nil
@@ -127,4 +126,11 @@ func SetTraceESWrite(trace bool) IndexerOptionFunc {
 		}
 		return nil
 	}
+}
+
+func minInt(v1 int, v2 int) int {
+	if v1 < v2 {
+		return v1
+	}
+	return v2
 }
