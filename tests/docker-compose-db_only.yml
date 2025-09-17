@@ -1,0 +1,46 @@
+version: '3.2'
+services:
+    db:
+        container_name: es
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24
+        environment:
+            discovery.type: single-node
+            xpack.security.enabled: false
+            bootstrap.memory_lock: true
+            ES_JAVA_OPTS: -Xms1024m -Xmx1024m
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - type: bind
+              source: ./data/eldata/data # custom
+              target: /usr/share/elasticsearch/data
+            - type: bind
+              source: ./data/eldata/logs # custom
+              target: /usr/share/elasticsearch/logs
+        ports:
+            - 9200:9200
+            - 9300:9300
+        privileged: true
+        logging:
+            driver: 'json-file'
+            options:
+                max-file: '7'
+                max-size: '1000m'
+    # Uncomment if you want to enable kibana
+    # kibana:
+    #     image: docker.elastic.co/kibana/kibana:7.17.24
+    #     container_name: kibana
+    #     ports:
+    #         - 5601:5601
+    #     environment:
+    #         ELASTICSEARCH_URL: http://es:9200
+    #         ELASTICSEARCH_HOSTS: http://es:9200
+    #     logging:
+    #         driver: 'json-file'
+    #         options:
+    #             max-file: '7'
+    #             max-size: '1000m'
+    #     depends_on:
+    #         - db
