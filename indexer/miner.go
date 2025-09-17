@@ -275,7 +275,7 @@ func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operatio
 
 		callInfo.SendIdx++
 		aergoTransferDoc := doc.ConvAergoTransfer(callInfo.TxDoc, callInfo.SendIdx, sender, recipient, amount)
-		ns.addTokenTransfer(BlockType_Sync, aergoTransferDoc)
+		ns.addTokenTransfer(callInfo.BlockType, aergoTransferDoc)
 
 		// check the new balance of the sender and recipient
 		ns.cache.storeBalance(sender)
@@ -300,7 +300,7 @@ func (ns *Indexer) MinerInternalOp(callInfo *CallInfo, contract string, operatio
 		// TODO: register new contract
 		contractDoc := doc.ConvContractFromCall(callInfo.BlockHeight, callInfo.Timestamp, callInfo.TxHash, contractAddr, creator, sourceCode, deployArgs)
 		if contractDoc != nil {
-			ns.addContract(BlockType_Sync, contractDoc)
+			ns.addContract(callInfo.BlockType, contractDoc)
 		}
 	}
 
