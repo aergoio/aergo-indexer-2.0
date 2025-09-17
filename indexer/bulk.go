@@ -126,8 +126,7 @@ func (b *Bulk) StopBulkChannel() {
 func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize int32, batchTime time.Duration, isBlock bool) {
 	bulk := b.idxer.db.InsertBulk(indexName)
 	total := int32(0)
-	begin := time.Now()
-	lastActivity := time.Now()
+	lastCommit := time.Now()
 
 	// Block Channel : Persistent timeout ticker for commits
 	var ticker *time.Ticker
@@ -182,13 +181,12 @@ func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize 
 		}
 
 		// Log the commit statistics
-		dur := time.Since(begin).Seconds()
+		dur := time.Since(lastCommit).Seconds()
 		pps := int64(float64(total) / dur)
 		b.idxer.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps)
 
 		// Reset the variables for the next commit
-		begin = time.Now()
-		lastActivity = time.Now()
+		lastCommit = time.Now()
 		total = 0
 	}
 
@@ -218,14 +216,12 @@ func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize 
 			}
 			total++
 
-			lastActivity = time.Now()
-
 			// Only Create Indexing
 			bulk.Add(I.Doc)
 
 		case <-tickerC:
 			// Timeout-based commit for block indexer
-			if total > 0 && time.Since(lastActivity) >= batchTime {
+			if total > 0 && time.Since(lastCommit) >= batchTime {
 				b.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
 			}
 		}
