@@ -55,7 +55,7 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 	// set default options
 	svc := &Indexer{
 		log:            log.NewLogger(""),
-		bulkSize:       4000,
+		bulkSize:       1000,
 		batchTime:      60 * time.Second,
 		minerNum:       32,
 		grpcNum:        16,

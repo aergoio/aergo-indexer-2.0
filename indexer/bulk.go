@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
 )
 
+var currentBulkJob atomic.Uint32
+
 type Bulk struct {
+	jobId uint32
 	idxer *Indexer
 
 	BChannel ChanInfoType
@@ -24,6 +28,7 @@ type Bulk struct {
 
 func NewBulk(idxer *Indexer) *Bulk {
 	return &Bulk{
+		jobId:     currentBulkJob.Add(1),
 		idxer:     idxer,
 		bulkSize:  idxer.bulkSize,
 		batchTime: idxer.batchTime,
@@ -46,6 +51,7 @@ func (b *Bulk) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64)
 }
 
 func (b *Bulk) StartBulkChannel() {
+	b.idxer.log.Debug().Uint32("bulkJobId", b.jobId).Msg("Starting bulk channel")
 	// Open buffered channels for each indices to prevent commit starvation
 	b.BChannel.Block = make(chan ChanInfo, 8192)
 	b.BChannel.Tx = make(chan ChanInfo, 8192)
@@ -87,7 +93,7 @@ func (b *Bulk) StartBulkChannel() {
 }
 
 func (b *Bulk) StopBulkChannel() {
-	b.idxer.log.Debug().Msg("grpc channel stop")
+	b.idxer.log.Debug().Uint32("bulkJobId", b.jobId).Msg("Stopping bulk grpc channel")
 
 	for i := 0; i < b.minerNum; i++ {
 		b.RChannel[i] <- BlockInfo{BlockType_StopMiner, 0}
@@ -109,6 +115,7 @@ func (b *Bulk) StopBulkChannel() {
 	b.BChannel.InternalOps <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.ContractCall <- ChanInfo{ChanType_StopBulk, nil}
 
+	b.idxer.log.Debug().Uint32("bulkJobId", b.jobId).Msg("Closing bulk channels")
 	// Close bulk channels
 	close(b.BChannel.Block)
 	close(b.BChannel.Tx)
