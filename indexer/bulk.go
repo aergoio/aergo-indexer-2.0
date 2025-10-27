@@ -180,14 +180,14 @@ func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize 
 		}
 
 		if err != nil {
-			b.idxer.log.Error().Err(err).Str("indexName", indexName)
+			b.idxer.log.Error().Err(err).Str("indexName", indexName).Msg("Error while committing bulk")
 			b.StopBulkChannel()
 		}
 
 		// Log the commit statistics
 		dur := time.Since(lastCommit).Seconds()
 		pps := int64(float64(total) / dur)
-		b.idxer.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps)
+		b.idxer.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps).Msg("Finished bulk")
 
 		// Reset the variables for the next commit
 		lastCommit = time.Now()
