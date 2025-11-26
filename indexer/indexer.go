@@ -54,7 +54,8 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log:            log.NewLogger(""),
+		log: log.NewLogger(""),
+		// the actual bulk size is determined in main.go
 		bulkSize:       4000,
 		batchTime:      60 * time.Second,
 		minerNum:       32,

@@ -46,6 +46,7 @@ func (b *Bulk) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64)
 }
 
 func (b *Bulk) StartBulkChannel() {
+	b.idxer.log.Debug().Msg("Starting bulk channel")
 	// Open buffered channels for each indices to prevent commit starvation
 	b.BChannel.Block = make(chan ChanInfo, 8192)
 	b.BChannel.Tx = make(chan ChanInfo, 8192)
@@ -87,7 +88,7 @@ func (b *Bulk) StartBulkChannel() {
 }
 
 func (b *Bulk) StopBulkChannel() {
-	b.idxer.log.Debug().Msg("grpc channel stop")
+	b.idxer.log.Debug().Msg("Stopping bulk grpc channel")
 
 	for i := 0; i < b.minerNum; i++ {
 		b.RChannel[i] <- BlockInfo{BlockType_StopMiner, 0}
@@ -109,6 +110,7 @@ func (b *Bulk) StopBulkChannel() {
 	b.BChannel.InternalOps <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.ContractCall <- ChanInfo{ChanType_StopBulk, nil}
 
+	b.idxer.log.Debug().Msg("Closing bulk channels")
 	// Close bulk channels
 	close(b.BChannel.Block)
 	close(b.BChannel.Tx)

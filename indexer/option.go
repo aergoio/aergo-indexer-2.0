@@ -106,3 +106,16 @@ func SetContractVerifyWhitelist(verifyContractWhitelist []string) IndexerOptionF
 		return nil
 	}
 }
+
+func SetBulkSize(bulkSize uint32) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		// prevent overflow
+		if bulkSize < 1000000 {
+			indexer.log.Debug().Uint32("bulkSize", bulkSize).Msg("Set Bulk Size")
+			indexer.bulkSize = int32(bulkSize)
+		} else {
+			indexer.log.Warn().Uint32("bulkSize", bulkSize).Msg("Ignore Bulk Size because of too large")
+		}
+		return nil
+	}
+}
