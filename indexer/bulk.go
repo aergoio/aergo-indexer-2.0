@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
@@ -13,7 +14,7 @@ type Bulk struct {
 
 	BChannel ChanInfoType
 	RChannel []chan BlockInfo
-	SynDone  chan bool
+	commitSync *sync.WaitGroup
 
 	bulkSize  int32
 	batchTime time.Duration
@@ -35,7 +36,7 @@ func (b *Bulk) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64)
 	b.idxer.log.Info().Msg(fmt.Sprintf("Indexing %d [%d..%d]", (1 + toBlockHeight - fromBlockHeight), fromBlockHeight, toBlockHeight))
 
 	for blockHeight := toBlockHeight; blockHeight > fromBlockHeight; blockHeight-- {
-		if blockHeight%100000 == 0 {
+		if blockHeight%10000 == 0 {
 			b.idxer.log.Info().Uint64("Height", blockHeight).Msg("Current Reindex")
 		}
 		b.RChannel[blockHeight%uint64(b.minerNum)] <- BlockInfo{BlockType_Bulk, blockHeight}
@@ -45,18 +46,28 @@ func (b *Bulk) InsertBlocksInRange(fromBlockHeight uint64, toBlockHeight uint64)
 }
 
 func (b *Bulk) StartBulkChannel() {
-	// Open channels for each indices
-	b.BChannel.Block = make(chan ChanInfo)
-	b.BChannel.Tx = make(chan ChanInfo)
-	b.BChannel.TokenTransfer = make(chan ChanInfo)
-	b.BChannel.AccTokens = make(chan ChanInfo)
-	b.SynDone = make(chan bool)
+	b.idxer.log.Debug().Msg("Starting bulk channel")
+	// Open buffered channels for each indices to prevent commit starvation
+	b.BChannel.Block = make(chan ChanInfo, 8192)
+	b.BChannel.Tx = make(chan ChanInfo, 8192)
+	b.BChannel.Event = make(chan ChanInfo, 8192)
+	b.BChannel.Contract = make(chan ChanInfo, 8192)
+	b.BChannel.TokenTransfer = make(chan ChanInfo, 8192)
+	b.BChannel.AccTokens = make(chan ChanInfo, 8192)
+	b.BChannel.InternalOps = make(chan ChanInfo, 8192)
+	b.BChannel.ContractCall = make(chan ChanInfo, 8192)
+	// Initialize WaitGroup for commit synchronization
+	b.commitSync = &sync.WaitGroup{}
 
-	// Start bulk indexers for each indices
+	// Start bulk indexers for each index
 	go b.BulkIndexer(b.BChannel.Block, b.idxer.indexNamePrefix+"block", b.bulkSize, b.batchTime, true)
 	go b.BulkIndexer(b.BChannel.Tx, b.idxer.indexNamePrefix+"tx", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.Event, b.idxer.indexNamePrefix+"event", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.Contract, b.idxer.indexNamePrefix+"contract", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.TokenTransfer, b.idxer.indexNamePrefix+"token_transfer", b.bulkSize, b.batchTime, false)
 	go b.BulkIndexer(b.BChannel.AccTokens, b.idxer.indexNamePrefix+"account_tokens", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.InternalOps, b.idxer.indexNamePrefix+"internal_operations", b.bulkSize, b.batchTime, false)
+	go b.BulkIndexer(b.BChannel.ContractCall, b.idxer.indexNamePrefix+"contract_call", b.bulkSize, b.batchTime, false)
 
 	// Start multiple miners
 	GrpcClients := make([]*client.AergoClientController, b.grpcNum)
@@ -66,8 +77,8 @@ func (b *Bulk) StartBulkChannel() {
 
 	b.RChannel = make([]chan BlockInfo, b.minerNum)
 	for i := 0; i < b.minerNum; i++ {
-		b.idxer.log.Debug().Msg("grpc channel start")
-		b.RChannel[i] = make(chan BlockInfo)
+		// Buffer RChannel to prevent miner blocking
+		b.RChannel[i] = make(chan BlockInfo, 1024)
 		if b.grpcNum > 0 {
 			go b.idxer.Miner(b.RChannel[i], GrpcClients[i%b.grpcNum])
 		} else {
@@ -77,7 +88,7 @@ func (b *Bulk) StartBulkChannel() {
 }
 
 func (b *Bulk) StopBulkChannel() {
-	b.idxer.log.Debug().Msg("grpc channel stop")
+	b.idxer.log.Debug().Msg("Stopping bulk grpc channel")
 
 	for i := 0; i < b.minerNum; i++ {
 		b.RChannel[i] <- BlockInfo{BlockType_StopMiner, 0}
@@ -92,15 +103,23 @@ func (b *Bulk) StopBulkChannel() {
 	// Send stop messages to each bulk channels
 	b.BChannel.Block <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.Tx <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.Event <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.Contract <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.TokenTransfer <- ChanInfo{ChanType_StopBulk, nil}
 	b.BChannel.AccTokens <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.InternalOps <- ChanInfo{ChanType_StopBulk, nil}
+	b.BChannel.ContractCall <- ChanInfo{ChanType_StopBulk, nil}
 
+	b.idxer.log.Debug().Msg("Closing bulk channels")
 	// Close bulk channels
 	close(b.BChannel.Block)
 	close(b.BChannel.Tx)
+	close(b.BChannel.Event)
+	close(b.BChannel.Contract)
 	close(b.BChannel.TokenTransfer)
 	close(b.BChannel.AccTokens)
-	close(b.SynDone)
+	close(b.BChannel.InternalOps)
+	close(b.BChannel.ContractCall)
 
 	b.idxer.log.Info().Msg("Stop Bulk Indexer")
 }
@@ -108,87 +127,117 @@ func (b *Bulk) StopBulkChannel() {
 func (b *Bulk) BulkIndexer(docChannel chan ChanInfo, indexName string, bulkSize int32, batchTime time.Duration, isBlock bool) {
 	bulk := b.idxer.db.InsertBulk(indexName)
 	total := int32(0)
-	begin := time.Now()
+	lastCommit := time.Now()
 
-	return_flag := false
-
-	// Block Channel : Time-out Sync
+	// Block Channel : Persistent timeout ticker for commits
+	var ticker *time.Ticker
+	var tickerC <-chan time.Time
 	if isBlock {
-		go func() {
-			for {
-				if return_flag {
-					return
-				} else {
-					time.Sleep(batchTime)
-					if total > 0 && time.Now().Sub(begin) > batchTime {
-						b.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
-					}
-				}
-			}
-		}()
+		ticker = time.NewTicker(batchTime)
+		tickerC = ticker.C
+		defer ticker.Stop()
 	}
 
-	// Do commit
+	// Commit the documents to the database
 	commitBulk := func(sync bool) {
+		b.idxer.log.Debug().Str("indexName", indexName).Bool("sync", sync).Bool("isBlock", isBlock).Int32("total", total).Msg("commitBulk called")
+		// If there are no documents to commit
 		if total == 0 {
+			// Signal the main channel
 			if sync && !isBlock {
-				b.SynDone <- true
+				b.commitSync.Done()
 			}
-			return_flag = true
+			// Return if there are no documents to commit
 			return
 		}
 
-		// Block Channel : wait other channels
+		// If committing blocks
 		if isBlock {
+			b.idxer.log.Debug().Str("indexName", indexName).Msg("Block indexer starting commit coordination")
+			// Add the number of channels to the wait group
+			b.commitSync.Add(7)
+
+			// Signal other channels to commit
 			b.BChannel.Tx <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.Event <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.Contract <- ChanInfo{ChanType_Commit, nil}
 			b.BChannel.TokenTransfer <- ChanInfo{ChanType_Commit, nil}
 			b.BChannel.AccTokens <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.InternalOps <- ChanInfo{ChanType_Commit, nil}
+			b.BChannel.ContractCall <- ChanInfo{ChanType_Commit, nil}
+			b.idxer.log.Debug().Msg("Finished sending commit signals, waiting for commitSync")
 
-			for i := 0; i < 3; i++ {
-				<-b.SynDone
-			}
+			// Wait for all other channels to finish their commits
+			b.commitSync.Wait()
+			b.idxer.log.Debug().Str("indexName", indexName).Msg("All channels finished committing")
 		}
 
+		// Commit the documents to the database
 		err := bulk.Commit()
 
+		// Signal the main channel that the commit was done
 		if sync && !isBlock {
-			b.SynDone <- true
+			b.idxer.log.Debug().Str("indexName", indexName).Msg("Calling commitSync.Done() after successful commit")
+			b.commitSync.Done()
 		}
 
 		if err != nil {
-			b.idxer.log.Error().Err(err).Str("indexName", indexName)
+			b.idxer.log.Error().Err(err).Str("indexName", indexName).Msg("Error while committing bulk")
 			b.StopBulkChannel()
 		}
 
-		dur := time.Since(begin).Seconds()
+		// Log the commit statistics
+		dur := time.Since(lastCommit).Seconds()
 		pps := int64(float64(total) / dur)
+		b.idxer.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps).Msg("Finished bulk")
 
-		b.idxer.log.Info().Str("Commit", indexName).Int32("total", total).Int64("perSecond", pps)
-
-		begin = time.Now()
+		// Reset the variables for the next commit
+		lastCommit = time.Now()
 		total = 0
-		return_flag = true
 	}
 
-	for I := range docChannel {
-		// stop
-		if I.Type == ChanType_StopBulk {
-			break
-		}
+	// Unified processing loop for both block and non-block indexers.
+	// For non-block indexers, tickerC is nil, so the ticker case never fires.
+	for {
+		select {
+		case I, ok := <-docChannel:
+			if !ok {
+				b.idxer.log.Debug().Str("indexName", indexName).Msg("Channel closed, exiting")
+				return
+			}
 
-		// commit
-		if I.Type == ChanType_Commit {
-			commitBulk(true)
-			continue
-		}
+			// stop
+			if I.Type == ChanType_StopBulk {
+				b.idxer.log.Debug().Str("indexName", indexName).Msg("Received StopBulk, exiting")
+				return
+			}
 
-		// commit
-		if total >= bulkSize {
-			commitBulk(false)
-		}
-		total++
+			// commit
+			if I.Type == ChanType_Commit {
+				b.idxer.log.Debug().Str("indexName", indexName).Msg("Received commit signal")
+				commitBulk(true)
+				continue
+			}
 
-		// Only Create Indexing
-		bulk.Add(I.Doc)
+			// commit if bulk size reached
+			if total >= bulkSize {
+				b.idxer.log.Debug().Str("indexName", indexName).Int32("total", total).Msg("Bulk size reached, committing")
+				commitBulk(false)
+			}
+			total++
+			if total%1000 == 0 {
+				b.idxer.log.Debug().Str("indexName", indexName).Int32("total", total).Msg("Processed documents")
+			}
+
+			// Only Create Indexing
+			bulk.Add(I.Doc)
+
+		case <-tickerC:
+			// Timeout-based commit for block indexer
+			if total > 0 && time.Since(lastCommit) >= batchTime {
+				b.idxer.log.Debug().Str("indexName", indexName).Int32("total", total).Dur("timeSinceLastCommit", time.Since(lastCommit)).Msg("Timeout reached, triggering commit")
+				b.BChannel.Block <- ChanInfo{ChanType_Commit, nil}
+			}
+		}
 	}
 }

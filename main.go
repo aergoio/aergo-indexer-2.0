@@ -23,19 +23,23 @@ var (
 	runMode    string
 	checkMode  bool
 	onsyncMode bool
+	fix        bool
 
-	host                  string
-	port                  int32
-	dbURL                 string
-	prefix                string
-	aergoAddress          string
-	cluster               bool
-	from                  uint64
-	to                    uint64
-	cccvNftServerType     string
-	whiteListAddresses    []string
-	tokenVerifyAddress    string
-	contractVerifyAddress string
+	host                    string
+	port                    int32
+	dbURL                   string
+	prefix                  string
+	aergoAddress            string
+	cluster                 bool
+	from                    uint64
+	to                      uint64
+	cccvNftServerType       string
+	balanceWhitelist        []string
+	tokenVerifyAddress      string
+	contractVerifyAddress   string
+	tokenVerifyWhitelist    []string
+	contractVerifyWhitelist []string
+	bulkSize                uint32
 
 	logger *log.Logger
 )
@@ -48,17 +52,20 @@ func init() {
 	fs.StringVarP(&dbURL, "dburl", "E", "localhost:9200", "Database URL")
 	fs.StringVarP(&prefix, "prefix", "P", "testnet", "index name prefix")
 	fs.BoolVarP(&cluster, "cluster", "C", false, "elasticsearch cluster type")
-
+	fs.BoolVar(&fix, "fix", false, "fix mode to overwrite data")
 	fs.BoolVar(&checkMode, "check", true, "check indices of range of heights")
 	fs.BoolVar(&onsyncMode, "onsync", true, "onsync data in indices")
 	fs.StringVarP(&runMode, "mode", "M", "", "indexer running mode(all,check,onsync) Alternative to setting check, onsync separately")
-
 	fs.Uint64Var(&from, "from", 0, "start syncing from this block number")
 	fs.Uint64Var(&to, "to", 0, "stop syncing at this block number")
+
 	fs.StringVar(&cccvNftServerType, "cccv", "", "indexing cccv nft by network type.(mainnet,testnet)")
-	fs.StringSliceVarP(&whiteListAddresses, "whitelist", "W", []string{}, "address for update account balance")
 	fs.StringVarP(&tokenVerifyAddress, "token", "t", "", "address for query verified token")
 	fs.StringVarP(&contractVerifyAddress, "contract", "c", "", "address for query contract code")
+	fs.StringSliceVarP(&balanceWhitelist, "balance_whitelist", "W", []string{}, "whitelist for update account balance")
+	fs.StringArrayVar(&tokenVerifyWhitelist, "token_whitelist", []string{}, "whitelist for update verified token")
+	fs.StringArrayVar(&contractVerifyWhitelist, "contract_whitelist", []string{}, "whitelist for update verified contract")
+	fs.Uint32Var(&bulkSize, "bulk_size", 4000, "size limit of bulk commit")
 }
 
 func main() {
@@ -68,8 +75,14 @@ func main() {
 }
 
 func rootRun(cmd *cobra.Command, args []string) {
+	// Set caller info to a relative file path
+	log.SetRelativeLogPathForProject()
+
 	logger = log.NewLogger("indexer")
 	logger.Info().Msg("Starting indexer for SCAN 2.0 ...")
+
+	// Set the logger for the documents package
+	doc.SetLogger(logger)
 
 	doc.InitEsMappings(cluster)
 
@@ -80,10 +93,14 @@ func rootRun(cmd *cobra.Command, args []string) {
 		indexer.SetPrefix(prefix),
 		indexer.SetNetworkTypeForCccv(cccvNftServerType),
 		indexer.SetRunMode(getRunMode()),
+		indexer.SetFix(fix),
 		indexer.SetLogger(logger),
-		indexer.SetWhiteListAddresses(whiteListAddresses),
+		indexer.SetWhiteListAddresses(balanceWhitelist),
 		indexer.SetTokenVerifyAddress(tokenVerifyAddress),
 		indexer.SetContractVerifyAddress(contractVerifyAddress),
+		indexer.SetTokenVerifyWhitelist(tokenVerifyWhitelist),
+		indexer.SetContractVerifyWhitelist(contractVerifyWhitelist),
+		indexer.SetBulkSize(bulkSize),
 	)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not start indexer")

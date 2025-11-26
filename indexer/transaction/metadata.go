@@ -2,14 +2,13 @@ package transaction
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
-func UnmarshalMetadataVerifyToken(metadata string) (contractAddr, owner, comment, email, regDate, homepageUrl, imageUrl string, err error) {
+func UnmarshalMetadataVerifyToken(metadata string) (contractAddr, owner, comment, email, regDate, homepageUrl, imageUrl string) {
 	var args map[string]interface{}
-	err = json.Unmarshal([]byte(metadata), &args)
+	err := json.Unmarshal([]byte(metadata), &args)
 	if err != nil {
-		return "", "", "", "", "", "", "", fmt.Errorf("err : [%v], metadata : [%s]", err, metadata)
+		return "", "", "", "", "", "", ""
 	}
 
 	if field := args["contract"]; field != nil {
@@ -36,11 +35,11 @@ func UnmarshalMetadataVerifyToken(metadata string) (contractAddr, owner, comment
 	return
 }
 
-func UnmarshalMetadataVerifyContract(metadata string) (contractAddr, codeUrl, owner string, err error) {
+func UnmarshalMetadataVerifyContract(metadata string) (contractAddr, owner, codeUrl string) {
 	var args map[string]interface{}
-	err = json.Unmarshal([]byte(metadata), &args)
+	err := json.Unmarshal([]byte(metadata), &args)
 	if err != nil {
-		return "", "", "", fmt.Errorf("%v | %s", err, metadata)
+		return "", "", ""
 	}
 
 	if field := args["contract"]; field != nil {
@@ -52,5 +51,5 @@ func UnmarshalMetadataVerifyContract(metadata string) (contractAddr, codeUrl, ow
 	if field := args["code"]; field != nil {
 		codeUrl, _ = field.(string)
 	}
-	return
+	return contractAddr, owner, codeUrl
 }

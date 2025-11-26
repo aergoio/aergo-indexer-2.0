@@ -1,6 +1,8 @@
 package indexer
 
 import (
+	"io"
+
 	"github.com/aergoio/aergo-indexer-2.0/indexer/db"
 	doc "github.com/aergoio/aergo-indexer-2.0/indexer/documents"
 )
@@ -26,17 +28,48 @@ func (ns *Indexer) addTx(blockType BlockType, txDoc *doc.EsTx) {
 		}
 	}
 }
-func (ns *Indexer) addEvent(eventDoc *doc.EsEvent) {
-	err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", eventDoc.Id).Str("method", "insertEvent").Msg("error while insert")
+
+func (ns *Indexer) addEvent(blockType BlockType, eventDoc *doc.EsEvent) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.Event <- ChanInfo{ChanType_Add, eventDoc}
+	} else {
+		err := ns.db.Insert(eventDoc, ns.indexNamePrefix+"event")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", eventDoc.Id).Str("method", "insertEvent").Msg("error while insert")
+		}
 	}
 }
 
-func (ns *Indexer) addContract(contractDoc *doc.EsContract) {
-	err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
-	if err != nil {
-		ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
+func (ns *Indexer) addContract(blockType BlockType, contractDoc *doc.EsContract) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.Contract <- ChanInfo{ChanType_Add, contractDoc}
+	} else {
+		err := ns.db.Insert(contractDoc, ns.indexNamePrefix+"contract")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", contractDoc.Id).Str("method", "insertContract").Msg("error while insert")
+		}
+	}
+}
+
+func (ns *Indexer) addInternalOperations(blockType BlockType, internalOpsDoc *doc.EsInternalOperations) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.InternalOps <- ChanInfo{ChanType_Add, internalOpsDoc}
+	} else {
+		err := ns.db.Insert(internalOpsDoc, ns.indexNamePrefix+"internal_operations")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", internalOpsDoc.Id).Str("method", "insertInternalOperations").Msg("error while insert")
+		}
+	}
+}
+
+func (ns *Indexer) addContractCall(blockType BlockType, contractCallDoc *doc.EsContractCall) {
+	if blockType == BlockType_Bulk {
+		ns.bulk.BChannel.ContractCall <- ChanInfo{ChanType_Add, contractCallDoc}
+	} else {
+		err := ns.db.Insert(contractCallDoc, ns.indexNamePrefix+"contract_call")
+		if err != nil {
+			ns.log.Error().Err(err).Str("Id", contractCallDoc.Id).Str("method", "insertContractCall").Msg("error while insert")
+		}
 	}
 }
 
@@ -68,26 +101,15 @@ func (ns *Indexer) addAccountTokens(blockType BlockType, accountTokensDoc *doc.E
 }
 
 func (ns *Indexer) addAccountBalance(balanceDoc *doc.EsAccountBalance) {
-	document, err := ns.db.SelectOne(db.QueryParams{
-		IndexName: ns.indexNamePrefix + "account_balance",
-		StringMatch: &db.StringMatchQuery{
-			Field: "id",
-			Value: balanceDoc.Id,
-		},
-	}, func() doc.DocType {
-		balance := new(doc.EsAccountBalance)
-		balance.BaseEsType = new(doc.BaseEsType)
-		return balance
-	})
+	document, err := ns.getAccountBalance(balanceDoc.Id)
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", balanceDoc.Id).Str("method", "insertAccountBalance").Msg("error while select")
 	}
 
 	if document != nil { // 기존에 존재하는 주소라면 잔고에 상관없이 update
-		accountBalance := document.(*doc.EsAccountBalance)
-		if balanceDoc.BlockNo < accountBalance.BlockNo { // blockNo, timeStamp 는 최신으로 저장
-			balanceDoc.BlockNo = accountBalance.BlockNo
-			balanceDoc.Timestamp = accountBalance.Timestamp
+		if balanceDoc.BlockNo < document.BlockNo { // blockNo, timeStamp 는 최신으로 저장
+			balanceDoc.BlockNo = document.BlockNo
+			balanceDoc.Timestamp = document.Timestamp
 		}
 		err = ns.db.Update(balanceDoc, ns.indexNamePrefix+"account_balance", balanceDoc.Id)
 	} else if balanceDoc.BalanceFloat > 0 { // 처음 발견된 주소라면 잔고 > 0 일 때만 insert
@@ -96,17 +118,12 @@ func (ns *Indexer) addAccountBalance(balanceDoc *doc.EsAccountBalance) {
 	if err != nil {
 		ns.log.Error().Err(err).Str("Id", balanceDoc.Id).Str("method", "insertAccountBalance").Msg("error while insert or update")
 	}
-
-	// stake 주소는 whitelist 에 추가
-	if balanceDoc.StakingFloat > 0 {
-		ns.cache.storeWhiteList(balanceDoc.Id)
-	}
 }
 
 func (ns *Indexer) addTokenTransfer(blockType BlockType, tokenTransferDoc *doc.EsTokenTransfer) {
 	if blockType == BlockType_Bulk {
 		ns.bulk.BChannel.TokenTransfer <- ChanInfo{ChanType_Add, tokenTransferDoc}
-	} else {
+	} else if tokenTransferDoc.AmountFloat >= 0 {
 		err := ns.db.Insert(tokenTransferDoc, ns.indexNamePrefix+"token_transfer")
 		if err != nil {
 			ns.log.Error().Err(err).Str("Id", tokenTransferDoc.Id).Str("method", "insertTokenTransfer").Msg("error while insert")
@@ -131,6 +148,13 @@ func (ns *Indexer) addNFT(nftDoc *doc.EsNFT) {
 	}
 }
 
+func (ns *Indexer) addWhitelist(whitelistDoc *doc.EsWhitelist) {
+	err := ns.db.Insert(whitelistDoc, ns.indexNamePrefix+"whitelist")
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", whitelistDoc.Id).Str("method", "insertWhitelist").Msg("error while insert")
+	}
+}
+
 func (ns *Indexer) updateToken(tokenDoc *doc.EsTokenUpSupply) {
 	err := ns.db.Update(tokenDoc, ns.indexNamePrefix+"token", tokenDoc.Id)
 	if err != nil {
@@ -145,10 +169,17 @@ func (ns *Indexer) updateTokenVerified(tokenDoc *doc.EsTokenUpVerified) {
 	}
 }
 
-func (ns *Indexer) updateContract(contractDoc *doc.EsContractUp) {
+func (ns *Indexer) updateContractSource(contractDoc *doc.EsContractSource) {
 	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
 	if err != nil {
-		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContract").Msg("error while update")
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContractSource").Msg("error while update")
+	}
+}
+
+func (ns *Indexer) updateContractToken(contractDoc *doc.EsContractToken) {
+	err := ns.db.Update(contractDoc, ns.indexNamePrefix+"contract", contractDoc.Id)
+	if err != nil {
+		ns.log.Error().Str("Id", contractDoc.Id).Err(err).Str("method", "updateContractToken").Msg("error while update")
 	}
 }
 
@@ -173,12 +204,12 @@ func (ns *Indexer) getContract(id string) (contractDoc *doc.EsContract, err erro
 	return document.(*doc.EsContract), nil
 }
 
-func (ns *Indexer) getToken(id string) (tokenDoc *doc.EsToken, err error) {
+func (ns *Indexer) getToken(contractAddr string) (tokenDoc *doc.EsToken, err error) {
 	document, err := ns.db.SelectOne(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "token",
 		StringMatch: &db.StringMatchQuery{
 			Field: "_id",
-			Value: id,
+			Value: contractAddr,
 		},
 	}, func() doc.DocType {
 		token := new(doc.EsToken)
@@ -186,7 +217,7 @@ func (ns *Indexer) getToken(id string) (tokenDoc *doc.EsToken, err error) {
 		return token
 	})
 	if err != nil {
-		ns.log.Error().Err(err).Str("Id", id).Str("method", "getToken").Msg("error while select")
+		ns.log.Error().Err(err).Str("contract", contractAddr).Str("method", "getToken").Msg("error while select")
 		return nil, err
 	} else if document == nil {
 		return nil, nil
@@ -216,6 +247,28 @@ func (ns *Indexer) getNFT(id string) (nftDoc *doc.EsNFT, err error) {
 	return document.(*doc.EsNFT), nil
 }
 
+func (ns *Indexer) getAccountBalance(id string) (contractDoc *doc.EsAccountBalance, err error) {
+	document, err := ns.db.SelectOne(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_balance",
+		StringMatch: &db.StringMatchQuery{
+			Field: "_id",
+			Value: id,
+		},
+	}, func() doc.DocType {
+		balance := new(doc.EsAccountBalance)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	if err != nil {
+		ns.log.Error().Err(err).Str("Id", id).Str("method", "getAccountBalance").Msg("error while select")
+	}
+	if document == nil {
+		return nil, nil
+	}
+
+	return document.(*doc.EsAccountBalance), nil
+}
+
 func (ns *Indexer) cntTokenTransfer(id string) (ttCnt uint64, err error) {
 	cnt, err := ns.db.Count(db.QueryParams{
 		IndexName: ns.indexNamePrefix + "token_transfer",
@@ -229,4 +282,148 @@ func (ns *Indexer) cntTokenTransfer(id string) (ttCnt uint64, err error) {
 		return 0, err
 	}
 	return uint64(cnt), nil
+}
+
+func (ns *Indexer) ScrollToken(fn func(*doc.EsToken)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "token",
+		SortField: "blockno",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		token := new(doc.EsToken)
+		token.BaseEsType = new(doc.BaseEsType)
+		return token
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if token, ok := document.(*doc.EsToken); ok {
+			fn(token)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollContract(fn func(*doc.EsContract)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "contract",
+		SortField: "blockno",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		contract := new(doc.EsContract)
+		contract.BaseEsType = new(doc.BaseEsType)
+		return contract
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if contract, ok := document.(*doc.EsContract); ok {
+			fn(contract)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollTokenTransfer(fn func(*doc.EsTokenTransfer)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "token_transfer",
+		SortField: "blockno",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		tokenTransfer := new(doc.EsTokenTransfer)
+		tokenTransfer.BaseEsType = new(doc.BaseEsType)
+		return tokenTransfer
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if tokenTransfer, ok := document.(*doc.EsTokenTransfer); ok {
+			fn(tokenTransfer)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollAccountTokens(fn func(*doc.EsAccountTokens)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_tokens",
+		SortField: "ts",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		accountTokens := new(doc.EsAccountTokens)
+		accountTokens.BaseEsType = new(doc.BaseEsType)
+		return accountTokens
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if accountTokens, ok := document.(*doc.EsAccountTokens); ok {
+			fn(accountTokens)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollBalance(fn func(*doc.EsAccountBalance)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "account_balance",
+		SortField: "staking_float",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		balance := new(doc.EsAccountBalance)
+		balance.BaseEsType = new(doc.BaseEsType)
+		return balance
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if balance, ok := document.(*doc.EsAccountBalance); ok {
+			fn(balance)
+		}
+	}
+	return nil
+}
+
+func (ns *Indexer) ScrollWhitelist(fn func(*doc.EsWhitelist)) error {
+	scroll := ns.db.Scroll(db.QueryParams{
+		IndexName: ns.indexNamePrefix + "whitelist",
+		SortField: "type",
+		Size:      10000,
+		From:      0,
+		SortAsc:   true,
+	}, func() doc.DocType {
+		whitelist := new(doc.EsWhitelist)
+		whitelist.BaseEsType = new(doc.BaseEsType)
+		return whitelist
+	})
+	for {
+		document, err := scroll.Next()
+		if err == io.EOF {
+			break
+		}
+		if whitelist, ok := document.(*doc.EsWhitelist); ok {
+			fn(whitelist)
+		}
+	}
+	return nil
 }

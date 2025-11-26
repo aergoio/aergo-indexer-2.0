@@ -136,7 +136,6 @@ func (t *AergoClientController) QueryBalanceOf(contractAddress []byte, account s
 func (t *AergoClientController) QueryMetadataOf(contractAddress []byte, tokenAddress string) string {
 	req, err := t.queryContract(contractAddress, "get_metadata", tokenAddress)
 	if err != nil {
-		fmt.Println(err)
 		return ""
 	}
 	return req
@@ -289,4 +288,15 @@ func (t *AergoClientController) queryContract(address []byte, name string, args 
 		return fmt.Sprint(c), nil
 	}
 	return string(result.Value), nil
+}
+
+func (t *AergoClientController) GetInternalOperations(blockNumber uint64) ([]byte, error) {
+	req := &types.BlockNumberParam{
+		BlockNo: blockNumber,
+	}
+	res, err := t.client.GetInternalOperations(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return res.Value, nil
 }

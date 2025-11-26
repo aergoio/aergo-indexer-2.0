@@ -32,14 +32,17 @@ type BlockInfo struct {
 type ChanInfoType struct {
 	Block         chan ChanInfo
 	Tx            chan ChanInfo
+	Event         chan ChanInfo
+	Contract      chan ChanInfo
 	TokenTransfer chan ChanInfo
 	AccTokens     chan ChanInfo
+	InternalOps   chan ChanInfo
+	ContractCall  chan ChanInfo
 }
 
 type VerifiedStatus string
 
 const (
-	Empty       VerifiedStatus = ""
-	NotVerified VerifiedStatus = "not_verified"
+	NotVerified VerifiedStatus = ""
 	Verified    VerifiedStatus = "verified"
 )

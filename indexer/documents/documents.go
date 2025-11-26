@@ -32,10 +32,11 @@ func (m *BaseEsType) SetID(id string) {
 // EsChainInfo is meta data of a chain information
 type EsChainInfo struct {
 	*BaseEsType
-	Public    bool   `json:"public" db:"public"`
-	Mainnet   bool   `json:"mainnet" db:"mainnet"`
-	Consensus string `json:"consensus" db:"consensus"`
-	Version   uint64 `json:"version" db:"version"`
+	Public    bool   			`json:"public" db:"public"`
+	Mainnet   bool   			`json:"mainnet" db:"mainnet"`
+	Consensus string 			`json:"consensus" db:"consensus"`
+	Version   uint64 			`json:"version" db:"version"`
+	Hardfork  map[string]uint64 `json:"hardfork" db:"hardfork"`
 }
 
 // EsBlock is a block stored in the database
@@ -59,7 +60,7 @@ type EsTx struct {
 	BlockId       string        `json:"block_id" db:"block_id"`
 	Timestamp     time.Time     `json:"ts" db:"ts"`
 	TxIdx         uint64        `json:"tx_idx" db:"tx_idx"`
-	Payload       string        `json:"payload" db:"payload"`
+	Payload       []byte        `json:"payload" db:"payload"`
 	Account       string        `json:"from" db:"from"`
 	Recipient     string        `json:"to" db:"to"`
 	Amount        string        `json:"amount" db:"amount"`             // string of BigInt
@@ -84,21 +85,45 @@ type EsContract struct {
 	Creator   string    `json:"creator" db:"creator"`
 	BlockNo   uint64    `json:"blockno" db:"blockno"`
 	Timestamp time.Time `json:"ts" db:"ts"`
-	Payload   string    `json:"payload" db:"payload"`
+
+	ABI        string    `json:"abi" db:"abi"`
+	ByteCode   []byte    `json:"byte_code" db:"byte_code"`
+	SourceCode string    `json:"source_code" db:"source_code"`
+	DeployArgs string    `json:"deploy_args" db:"deploy_args"`
 
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
-	CodeUrl        string `json:"code_url" db:"code_url"`
-	Code           string `json:"code" db:"code"`
 }
 
-type EsContractUp struct {
+type EsContractSource struct {
 	*BaseEsType
-	Payload        string `json:"payload" db:"payload"`
+	SourceCode string `json:"source_code" db:"source_code"`
+}
+
+type EsContractToken struct {
+	*BaseEsType
 	VerifiedStatus string `json:"verified_status" db:"verified_status"`
 	VerifiedToken  string `json:"verified_token" db:"verified_token"`
-	CodeUrl        string `json:"code_url" db:"code_url"`
-	Code           string `json:"code" db:"code"`
+}
+
+type EsInternalOperations struct {
+	*BaseEsType
+	TxId       string `json:"tx_id" db:"tx_id"`
+	Operations string `json:"operations" db:"operations"`
+}
+
+type EsContractCall struct {
+	*BaseEsType
+	BlockNo    uint64    `json:"blockno" db:"blockno"`
+	Timestamp  time.Time `json:"ts" db:"ts"`
+	TxHash     string    `json:"tx_hash" db:"tx_hash"`
+	IsInternal bool      `json:"is_internal" db:"is_internal"`
+	Caller     string    `json:"caller" db:"caller"`
+	Contract   string    `json:"contract" db:"contract"`
+	Function   string    `json:"function" db:"function"`
+	Args       string    `json:"args" db:"args"`
+	Amount     string    `json:"amount" db:"amount"`
+	Reverted   bool      `json:"reverted" db:"reverted"`
 }
 
 // EsEvent is a contract-event mapping stored in the database
@@ -232,6 +257,12 @@ type EsNFTUp struct {
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
+type EsWhitelist struct {
+	*BaseEsType
+	Contract string `json:"contract" db:"contract"`
+	Type     string `json:"type" db:"type"`
+}
+
 var EsMappings map[string]string
 
 func InitEsMappings(clusterMode bool) {
@@ -322,7 +353,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"from": {
 							"type": "keyword"
@@ -398,7 +429,16 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"payload": {
+						"abi": {
+							"type": "text"
+						},
+						"byte_code": {
+							"type": "binary"
+						},
+						"source_code": {
+							"type": "text"
+						},
+						"deploy_args": {
 							"type": "text"
 						},
 						"verified_status": {
@@ -409,9 +449,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"code_url": {
 							"type": "keyword"
-						},
-						"code": {
-							"type": "text"
 						}
 					}
 				}
@@ -533,59 +570,6 @@ func InitEsMappings(clusterMode bool) {
 							"type": "keyword"
 						},
 						"image_url": {
-							"type": "keyword"
-						},
-						"total_transfer": {
-							"type": "long"
-						}
-					}
-				}
-			}`,
-			"token_verified": `{
-				"settings": {
-					"number_of_shards": 5,
-					"number_of_replicas": 1,
-					"index.max_result_window": 100000
-				},
-				"mappings": {
-					"properties": {
-						"token_address": {
-							"type": "keyword"
-						},
-						"owner": {
-							"type": "keyword"
-						},
-						"comment": {
-							"type": "keyword"
-						},
-						"email": {
-							"type": "keyword"
-						},
-						"regdate": {
-							"type": "keyword"
-						},
-						"homepage_url": {
-							"type": "keyword"
-						},
-						"image_url": {
-							"type": "keyword"
-						},
-						"name": {
-							"type": "keyword"
-						},
-						"name_lower": {
-							"type": "keyword"
-						},
-						"symbol": {
-							"type": "keyword"
-						},
-						"symbol_lower": {
-							"type": "keyword"
-						},
-						"type": {
-							"type": "keyword"
-						},
-						"total_supply": {
 							"type": "keyword"
 						},
 						"total_transfer": {
@@ -726,6 +710,80 @@ func InitEsMappings(clusterMode bool) {
 					}
 				}
 			}`,
+			"whitelist": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"contract": {
+							"type": "keyword"
+						},
+						"type": {
+							"type": "keyword"
+						}
+					}
+				}
+			}`,
+			"internal_operations": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"operations": {
+							"type": "text"
+						}
+					}
+				}
+			}`,
+			"contract_call": `{
+				"settings": {
+					"number_of_shards": 30,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"blockno": {
+							"type": "long"
+						},
+						"ts": {
+							"type": "date"
+						},
+						"tx_hash": {
+							"type": "keyword"
+						},
+						"is_internal": {
+							"type": "boolean"
+						},
+						"caller": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"function": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "text"
+						},
+						"amount": {
+							"type": "keyword"
+						},
+						"reverted": {
+							"type": "boolean"
+						}
+					}
+				}
+			}`,
 		}
 	} else {
 		EsMappings = map[string]string{
@@ -814,7 +872,7 @@ func InitEsMappings(clusterMode bool) {
 							"type": "long"
 						},
 						"payload": {
-							"type": "text"
+							"type": "binary"
 						},
 						"from": {
 							"type": "keyword"
@@ -890,7 +948,16 @@ func InitEsMappings(clusterMode bool) {
 						"ts": {
 							"type": "date"
 						},
-						"payload": {
+						"abi": {
+							"type": "text"
+						},
+						"byte_code": {
+							"type": "binary"
+						},
+						"source_code": {
+							"type": "text"
+						},
+						"deploy_args": {
 							"type": "text"
 						},
 						"verified_status": {
@@ -901,9 +968,6 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"code_url": {
 							"type": "keyword"
-						},
-						"code": {
-							"type": "text"
 						}
 					}
 				}
@@ -1163,6 +1227,80 @@ func InitEsMappings(clusterMode bool) {
 						},
 						"image_url": {
 							"type": "keyword"
+						}
+					}
+				}
+			}`,
+			"whitelist": `{
+				"settings": {
+					"number_of_shards": 10,
+					"number_of_replicas": 1
+				},
+				"mappings": {
+					"properties": {
+						"contract": {
+							"type": "keyword"
+						},
+						"type": {
+							"type": "keyword"
+						}
+					}
+				}
+			}`,
+			"internal_operations": `{
+				"settings": {
+					"number_of_shards": 3,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"tx_id": {
+							"type": "keyword"
+						},
+						"operations": {
+							"type": "text"
+						}
+					}
+				}
+			}`,
+			"contract_call": `{
+				"settings": {
+					"number_of_shards": 3,
+					"number_of_replicas": 1,
+					"index.max_result_window": 100000
+				},
+				"mappings": {
+					"properties": {
+						"blockno": {
+							"type": "long"
+						},
+						"ts": {
+							"type": "date"
+						},
+						"tx_hash": {
+							"type": "keyword"
+						},
+						"is_internal": {
+							"type": "boolean"
+						},
+						"caller": {
+							"type": "keyword"
+						},
+						"contract": {
+							"type": "keyword"
+						},
+						"function": {
+							"type": "keyword"
+						},
+						"args": {
+							"type": "text"
+						},
+						"amount": {
+							"type": "keyword"
+						},
+						"reverted": {
+							"type": "boolean"
 						}
 					}
 				}

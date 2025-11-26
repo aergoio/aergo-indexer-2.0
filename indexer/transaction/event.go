@@ -227,10 +227,13 @@ func UnmarshalEventVerifyToken(event *types.Event) (tokenAddress string, err err
 	if len(args) < 2 {
 		return "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
 	}
-	tokenAddress, ok := args[1].(string)
-	if !ok {
-		return "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
+
+	var ok bool
+	// get token address
+	if tokenAddress, ok = args[1].(string); ok != true {
+		return tokenAddress, fmt.Errorf("args[1] != string | %s", event.JsonArgs)
 	}
+
 	return tokenAddress, nil
 }
 
@@ -243,10 +246,12 @@ func UnmarshalEventVerifyContract(event *types.Event) (tokenAddress string, err 
 	if len(args) < 2 {
 		return "", fmt.Errorf("len(args) < 2 | %s", event.JsonArgs)
 	}
-	tokenAddress, ok := args[1].(string)
-	if !ok {
+	var ok bool
+	// get token address
+	if tokenAddress, ok = args[1].(string); ok != true {
 		return "", fmt.Errorf("args[1] != string | %s", event.JsonArgs)
 	}
+
 	return tokenAddress, nil
 }
 

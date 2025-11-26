@@ -1,15 +1,29 @@
 package documents
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/transaction"
+	"github.com/aergoio/aergo-indexer-2.0/lua_compiler"
 	"github.com/aergoio/aergo-indexer-2.0/types"
 	"github.com/mr-tron/base58"
 	"google.golang.org/protobuf/proto"
+)
+
+var (
+	// mulAergo represents 10^18 as a big.Int
+	mulAergo, _ = new(big.Int).SetString("1000000000000000000", 10) // 1 followed by 18 zeros
+	// mulGaer represents 10^9 as a big.Int
+	mulGaer, _ = new(big.Int).SetString("1000000000", 10) // 1 followed by 9 zeros
+	// zeroBig represents 0 as a big.Int
+	zeroBig = big.NewInt(0)
 )
 
 // ConvBlock converts Block from RPC into Elasticsearch type - 1.0
@@ -65,7 +79,7 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 		BlockId:       blockDoc.Id,
 		Timestamp:     blockDoc.Timestamp,
 		TxIdx:         txIdx,
-		Payload:       string(tx.GetBody().GetPayload()),
+		Payload:       tx.GetBody().GetPayload(),
 		Account:       transaction.EncodeAndResolveAccount(tx.Body.Account, blockDoc.BlockNo),
 		Recipient:     transaction.EncodeAndResolveAccount(tx.Body.Recipient, blockDoc.BlockNo),
 		Amount:        amount.String(),
@@ -85,27 +99,187 @@ func ConvTx(txIdx uint64, tx *types.Tx, receipt *types.Receipt, blockDoc *EsBloc
 	}
 }
 
-// ConvContractCreateTx creates document for token creation
-func ConvContract(txDoc *EsTx, contractAddress []byte) *EsContract {
+// ConvContractFromTx creates document for contract creation
+func ConvContractFromTx(txDoc *EsTx, contractAddressByte []byte) *EsContract {
+	byteCode, sourceCode, abi, deployArgs := extractContractCode(txDoc.Payload)
+	if byteCode == nil && sourceCode == "" {
+		return nil
+	}
+	contractAddress := transaction.EncodeAndResolveAccount(contractAddressByte, txDoc.BlockNo)
+	return ConvContract(txDoc.BlockNo, txDoc.Timestamp, txDoc.GetID(), contractAddress, txDoc.Account, byteCode, abi, sourceCode, deployArgs)
+}
+
+func ConvContractFromCall(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator, sourceCode string, deployArgs []string) *EsContract {
+	byteCode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		return nil
+	}
+	var deployArgsStr string
+	if len(deployArgs) > 0 {
+		deployArgsStr = "[" + strings.Join(deployArgs, ",") + "]"
+	}
+	return ConvContract(blockHeight, timestamp, txHash, contractAddress, creator, byteCode, abi, sourceCode, deployArgsStr)
+}
+
+func ConvContract(blockHeight uint64, timestamp time.Time, txHash, contractAddress, creator string, byteCode []byte, abi, sourceCode, deployArgs string) *EsContract {
+	return &EsContract{
+		BaseEsType: &BaseEsType{Id: contractAddress},
+		BlockNo:    blockHeight,
+		Timestamp:  timestamp,
+		TxId:       txHash,
+		Creator:    creator,
+		ABI:        abi,
+		ByteCode:   byteCode,
+		SourceCode: sourceCode,
+		DeployArgs: deployArgs,
+	}
+}
+
+func ConvInternalContract(txDoc *EsTx, contractAddress []byte) *EsContract {
 	return &EsContract{
 		BaseEsType: &BaseEsType{Id: transaction.EncodeAndResolveAccount(contractAddress, txDoc.BlockNo)},
 		Creator:    txDoc.Account,
 		TxId:       txDoc.GetID(),
 		BlockNo:    txDoc.BlockNo,
 		Timestamp:  txDoc.Timestamp,
-		Payload:    txDoc.Payload,
 	}
 }
 
-func ConvContractUp(contractAddress string, status, payload, token, codeUrl, code string) *EsContractUp {
-	return &EsContractUp{
+func ConvContractSource(contractAddress string, sourceCode string) *EsContractSource {
+	return &EsContractSource{
 		BaseEsType:     &BaseEsType{Id: contractAddress},
-		Payload:        payload,
+		SourceCode:     sourceCode,
+	}
+}
+
+func ConvContractToken(contractAddress string, status, token string) *EsContractToken {
+	return &EsContractToken{
+		BaseEsType:     &BaseEsType{Id: contractAddress},
 		VerifiedToken:  token,
 		VerifiedStatus: status,
-		CodeUrl:        codeUrl,
-		Code:           code,
 	}
+}
+
+// returns: bytecode, sourceCode, abi, deployArgs
+func extractContractCode(payload []byte) ([]byte, string, string, string) {
+	if len(payload) <= 12 {
+		logger.Warn().Int("payloadLen", len(payload)).Msg("Payload too short for contract code extraction")
+		return nil, "", "", ""
+	}
+	// check for LuaJIT bytecode signature at position 8
+	if bytes.HasPrefix(payload[8:], []byte{0x1b, 0x4c, 0x4a}) {
+		// before hardfork 4, the deploy contains the contract bytecode, abi and deploy args
+		bytecode, abi, deployArgs := extractByteCode(payload)
+		return bytecode, "", abi, deployArgs
+	}
+	// on hardfork 4, the deploy contains the contract source code and deploy args
+	sourceCode, deployArgs, err := extractSourceCode(payload)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to extract source code from payload")
+		return nil, "", "", ""
+	}
+	bytecode, abi, err := CompileSourceCode(sourceCode)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to compile source code")
+		return nil, "", "", ""
+	}
+	return bytecode, sourceCode, abi, deployArgs
+}
+
+func extractByteCode(payload []byte) ([]byte, string, string) {
+	// read the length of the first section
+	codeAbiEnd := binary.LittleEndian.Uint32(payload[:4])
+	// read the bytecode length
+	bytecodeLength := binary.LittleEndian.Uint32(payload[4:8])
+	// check if the lengths are valid
+	if codeAbiEnd > uint32(len(payload)) || bytecodeLength > codeAbiEnd {
+		logger.Warn().Uint32("codeAbiEnd", codeAbiEnd).Uint32("bytecodeLength", bytecodeLength).Int("payloadLen", len(payload)).Msg("Invalid bytecode lengths in payload")
+		return nil, "", ""
+	}
+	// extract the code+abi and deploy args
+	codeAbi := payload[4:codeAbiEnd]
+	deployArgs := payload[codeAbiEnd:]
+	// extract the bytecode and abi
+	bytecode := codeAbi[4:4+bytecodeLength]
+	abi := codeAbi[4+bytecodeLength:]
+	return bytecode, string(abi), string(deployArgs)
+}
+
+func extractSourceCode(payload []byte) (string, string, error) {
+	if len(payload) <= 4 {
+		logger.Warn().Int("payloadLen", len(payload)).Msg("Payload too short for source code extraction")
+		return "", "", errors.New("payload is too short")
+	}
+	// read the code end position
+	codeEnd := binary.LittleEndian.Uint32(payload[:4])
+	if codeEnd > uint32(len(payload)) {
+		logger.Warn().Uint32("codeEnd", codeEnd).Uint32("payloadLen", uint32(len(payload))).Msg("Code end position is out of bounds")
+		return "", "", errors.New("code end position is out of bounds")
+	}
+	// extract the source code and deploy args
+	sourceCode := payload[4:codeEnd]
+	deployArgs := payload[codeEnd:]
+	return string(sourceCode), string(deployArgs), nil
+}
+
+// CompileSourceCode compiles the source code and returns the bytecode and abi
+func CompileSourceCode(sourceCode string) ([]byte, string, error) {
+	bytecodeABI, err := lua_compiler.CompileCodeLocal(sourceCode)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to compile source code locally")
+		bytecodeABI, err = lua_compiler.CompileCodeRemote(sourceCode)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to compile source code using the remote compiler service")
+			return nil, "", err
+		}
+	}
+	// read the bytecode length
+	bytecodeLength := binary.LittleEndian.Uint32(bytecodeABI[:4])
+	// extract the bytecode and abi
+	bytecode := bytecodeABI[4:4+bytecodeLength]
+	abi := bytecodeABI[4+bytecodeLength:]
+	return bytecode, string(abi), nil
+}
+
+// stores all the internal operations (as a json string) from a transaction
+func ConvInternalOperations(txHash string, jsonOperations string) *EsInternalOperations {
+	return &EsInternalOperations{
+		BaseEsType: &BaseEsType{Id: txHash},
+		Operations: jsonOperations,
+		TxId: txHash,
+	}
+}
+
+// stores each call (internal or external) to a contract
+func ConvContractCall(blockNo uint64, timestamp time.Time, txHash string, txIdx uint64, callIdx uint64, caller string, contract string, function string, args []interface{}, amount string, reverted bool) *EsContractCall {
+	// Create a unique ID using block number, tx index and call index
+	id := fmt.Sprintf("%020d-%05d-%04d", blockNo, txIdx, callIdx)
+
+	return &EsContractCall{
+		BaseEsType: &BaseEsType{Id: id},
+		BlockNo:    blockNo,
+		Timestamp:  timestamp,
+		TxHash:     txHash,
+		IsInternal: callIdx > 0,
+		Caller:     caller,
+		Contract:   contract,
+		Function:   function,
+		Args:       argsToJson(args),
+		Amount:     amount,
+		Reverted:   reverted,
+	}
+}
+
+func argsToJson(argsList []interface{}) (string) {
+	if argsList == nil {
+		return ""
+	}
+	args, err := json.Marshal(argsList)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to marshal arguments to JSON")
+		return ""
+	}
+	return string(args)
 }
 
 // ConvEvent converts Event from RPC into Elasticsearch type
@@ -163,6 +337,24 @@ func ConvToken(txDoc *EsTx, contractAddress []byte, tokenType transaction.TokenT
 	}
 }
 
+// ConvNativeToken creates a document for the native AERGO token
+func ConvNativeToken(supply string, supplyFloat float32) *EsToken {
+	return &EsToken{
+		BaseEsType:   &BaseEsType{Id: "AERGO"},
+		TxId:         "",
+		BlockNo:      1,
+		Creator:      "",
+		Type:         transaction.TokenNone,
+		Name:         "AERGO",
+		Name_lower:   "aergo",
+		Symbol:       "AERGO",
+		Symbol_lower: "aergo",
+		Decimals:     18,
+		Supply:       supply,
+		SupplyFloat:  supplyFloat,
+	}
+}
+
 // ConvName parses a name transaction into Elasticsearch type
 func ConvName(tx *types.Tx, blockNo uint64) *EsName {
 	var name = "error"
@@ -202,9 +394,11 @@ func ConvNFT(ttDoc *EsTokenTransfer, tokenUri string, imageUrl string) *EsNFT {
 	}
 }
 
+// ConvTokenTransfer creates document for token transfer event
 func ConvTokenTransfer(contractAddress []byte, txDoc *EsTx, idx int, from string, to string, tokenId string, amount string, amountFloat float32) *EsTokenTransfer {
 	return &EsTokenTransfer{
-		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-%d", txDoc.Id, idx)},
+		// Uses "-token-" prefix on the ID to avoid collision with internal transfer of aergo tokens
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-token-%d", txDoc.Id, idx)},
 		TxId:         txDoc.GetID(),
 		BlockNo:      txDoc.BlockNo,
 		Timestamp:    txDoc.Timestamp,
@@ -215,6 +409,31 @@ func ConvTokenTransfer(contractAddress []byte, txDoc *EsTx, idx int, from string
 		TokenId:      tokenId,
 		Amount:       amount,
 		AmountFloat:  amountFloat,
+	}
+}
+
+// ConvAergoTransfer creates document for internal transfer of aergo tokens
+func ConvAergoTransfer(txDoc *EsTx, idx uint64, from string, to string, amount string) *EsTokenTransfer {
+
+	// Parse the amount string into a big.Int
+	amountBig, err := parseAergoAmount(amount)
+	if err != nil {
+		amountBig = big.NewInt(0)
+	}
+
+	return &EsTokenTransfer{
+		// Uses "-aergo-" prefix on the ID to avoid collision with token transfers
+		BaseEsType:   &BaseEsType{Id: fmt.Sprintf("%s-aergo-%d", txDoc.Id, idx)},
+		TxId:         txDoc.GetID(),
+		BlockNo:      txDoc.BlockNo,
+		Timestamp:    txDoc.Timestamp,
+		TokenAddress: "AERGO",
+		TokenId:      "",
+		Sender:       txDoc.Account,
+		From:         from,
+		To:           to,
+		Amount:       amountBig.String(),
+		AmountFloat:  bigIntToFloat(amountBig, 18),
 	}
 }
 
@@ -230,9 +449,9 @@ func ConvAccountTokens(tokenType transaction.TokenType, tokenAddress string, tim
 	}
 }
 
-func ConvAccountBalance(blockNo uint64, address []byte, ts time.Time, balance string, balanceFloat float32, staking string, stakingFloat float32) *EsAccountBalance {
+func ConvAccountBalance(blockNo uint64, address string, ts time.Time, balance string, balanceFloat float32, staking string, stakingFloat float32) *EsAccountBalance {
 	return &EsAccountBalance{
-		BaseEsType:   &BaseEsType{Id: transaction.EncodeAndResolveAccount(address, blockNo)},
+		BaseEsType:   &BaseEsType{Id: address},
 		Timestamp:    ts,
 		BlockNo:      blockNo,
 		Balance:      balance,
@@ -249,6 +468,15 @@ func ConvChainInfo(chainInfo *types.ChainInfo) *EsChainInfo {
 		Mainnet:    chainInfo.Id.Mainnet,
 		Consensus:  chainInfo.Id.Consensus,
 		Version:    uint64(chainInfo.Id.Version),
+		Hardfork: 	chainInfo.Hardfork,
+	}
+}
+
+func ConvWhitelist(token string, contract string, whitelistType string) *EsWhitelist {
+	return &EsWhitelist{
+		BaseEsType: &BaseEsType{Id: token},
+		Contract:   contract,
+		Type:       whitelistType,
 	}
 }
 
@@ -263,4 +491,135 @@ func bigIntToFloat(a *big.Int, exp int64) float32 {
 	)
 	f, _ := z.Float32()
 	return f
+}
+
+// parseAergoAmount parses the input string and converts it into a big.Int
+// taking into account the different units ("aergo", "gaer", "aer")
+func parseAergoAmount(amountStr string) (*big.Int, error) {
+	if len(amountStr) == 0 {
+		return zeroBig, nil
+	}
+
+	// Check for amount in decimal format
+	if strings.Contains(amountStr,".") && strings.HasSuffix(strings.ToLower(amountStr),"aergo") {
+		// Extract the part before the unit
+		decimalAmount := amountStr[:len(amountStr)-5]
+		decimalAmount = strings.TrimRight(decimalAmount, " ")
+		// Parse the decimal amount
+		decimalAmount = parseDecimalAmount(decimalAmount, 18)
+		if decimalAmount == "error" {
+			return nil, errors.New("converting error for BigNum: " + amountStr)
+		}
+		amount, valid := new(big.Int).SetString(decimalAmount, 10)
+		if !valid {
+			return nil, errors.New("converting error for BigNum: " + amountStr)
+		}
+		return amount, nil
+	}
+
+	totalAmount := new(big.Int)
+	remainingStr := amountStr
+
+	// Define the units and corresponding multipliers
+	for _, data := range []struct {
+		unit       string
+		multiplier *big.Int
+	}{
+		{"aergo", mulAergo},
+		{"gaer", mulGaer},
+		{"aer", zeroBig},
+	} {
+		idx := strings.Index(strings.ToLower(remainingStr), data.unit)
+		if idx != -1 {
+			// Extract the part before the unit
+			subStr := remainingStr[:idx]
+
+			// Parse and convert the amount
+			partialAmount, err := parseAndConvert(subStr, data.unit, data.multiplier, amountStr)
+			if err != nil {
+				return nil, err
+			}
+
+			// Add to the total amount
+			totalAmount.Add(totalAmount, partialAmount)
+
+			// Adjust the remaining string to process
+			remainingStr = remainingStr[idx+len(data.unit):]
+		}
+	}
+
+	// Process the rest of the string, if there is some
+	if len(remainingStr) > 0 {
+		partialAmount, err := parseAndConvert(remainingStr, "", zeroBig, amountStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add to the total amount
+		totalAmount.Add(totalAmount, partialAmount)
+	}
+
+	return totalAmount, nil
+}
+
+// convert decimal amount into big integer string
+func parseDecimalAmount(str string, num_decimals int) string {
+	// Get the integer and decimal parts
+	idx := strings.Index(str, ".")
+	if idx == -1 {
+		return str
+	}
+	p1 := str[0:idx]
+	p2 := str[idx+1:]
+
+	// Check for another decimal point
+	if strings.Index(p2, ".") != -1 {
+		return "error"
+	}
+
+	// Compute the amount of zero digits to add
+	to_add := num_decimals - len(p2)
+	if to_add > 0 {
+		p2 = p2 + strings.Repeat("0", to_add)
+	} else if to_add < 0 {
+		// Do not truncate decimal amounts
+		return "error"
+	}
+
+	// Join the integer and decimal parts
+	str = p1 + p2
+
+	// Remove leading zeros
+	str = strings.TrimLeft(str, "0")
+	if str == "" {
+		str = "0"
+	}
+	return str
+}
+
+// parseAndConvert is a helper function to parse the substring as a big integer
+// and apply the necessary multiplier based on the unit.
+func parseAndConvert(subStr, unit string, mulUnit *big.Int, fullStr string) (*big.Int, error) {
+	subStr = strings.TrimSpace(subStr)
+
+	// Convert the string to a big integer
+	amountBig, valid := new(big.Int).SetString(subStr, 10)
+	if !valid {
+		// Emits a backwards compatible error message
+		// the same as: dataType := len(unit) > 0 ? "BigNum" : "Integer"
+		dataType := map[bool]string{true: "BigNum", false: "Integer"}[len(unit) > 0]
+		return nil, errors.New("converting error for " + dataType + ": " + strings.TrimSpace(fullStr))
+	}
+
+	// Check for negative amounts
+	if amountBig.Cmp(zeroBig) < 0 {
+		return nil, errors.New("negative amount not allowed")
+	}
+
+	// Apply multiplier based on unit
+	if mulUnit != zeroBig {
+		amountBig.Mul(amountBig, mulUnit)
+	}
+
+	return amountBig, nil
 }

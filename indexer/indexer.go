@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/aergoio/aergo-indexer-2.0/indexer/client"
@@ -16,23 +17,28 @@ import (
 // Indexer hold all state information
 type Indexer struct {
 	// config
-	log                *log.Logger
-	dbAddr             string
-	serverAddr         string
-	prefix             string
-	runMode            string
-	networkTypeForCccv string
-	indexNamePrefix    string
-	aliasNamePrefix    string
-	lastHeight         uint64
-	cccvNftAddress     []byte
-	bulkSize           int32
-	batchTime          time.Duration
-	minerNum           int
-	grpcNum            int
-	whitelistAddresses []string
-	tokenVerifyAddr    []byte
-	contractVerifyAddr []byte
+	log                     *log.Logger
+	dbAddr                  string
+	serverAddr              string
+	prefix                  string
+	runMode                 string
+	fix                     bool
+	networkTypeForCccv      string
+	indexNamePrefix         string
+	aliasNamePrefix         string
+	lastHeight              uint64
+	cccvNftAddress          []byte
+	bulkSize                int32
+	batchTime               time.Duration
+	minerNum                int
+	grpcNum                 int
+	maxConnections          int
+	maxIdleConns            int
+	tokenVerifyAddr         []byte
+	contractVerifyAddr      []byte
+	balanceWhitelist        []string
+	tokenVerifyWhitelist    []string
+	contractVerifyWhitelist []string
 
 	db         db.DbController
 	grpcClient *client.AergoClientController
@@ -48,11 +54,14 @@ func NewIndexer(options ...IndexerOptionFunc) (*Indexer, error) {
 
 	// set default options
 	svc := &Indexer{
-		log:       log.NewLogger(""),
-		bulkSize:  4000,
-		batchTime: 60 * time.Second,
-		minerNum:  32,
-		grpcNum:   16,
+		log: log.NewLogger(""),
+		// the actual bulk size is determined in main.go
+		bulkSize:       4000,
+		batchTime:      60 * time.Second,
+		minerNum:       32,
+		grpcNum:        16,
+		maxConnections: 100,
+		maxIdleConns:   100,
 	}
 
 	// overwrite options on it
@@ -90,6 +99,8 @@ func (ns *Indexer) Start(startFrom uint64, stopAt uint64) (exitOnComplete bool) 
 		ns.log.Error().Err(err).Msg("Index check failed. Chain info is not valid. please check aergo server info or reset")
 		return true
 	}
+
+	ns.checkAergoLuac()
 
 	ns.initCccvNft()
 	ns.lastHeight = uint64(ns.GetBestBlock()) - 1
@@ -136,7 +147,7 @@ func (ns *Indexer) WaitForServer(ctx context.Context) *client.AergoClientControl
 }
 
 func (ns *Indexer) WaitForDatabase(ctx context.Context) (*db.ElasticsearchDbController, error) {
-	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr)
+	dbController, err := db.NewElasticsearchDbController(ctx, ns.dbAddr, ns.maxConnections, ns.maxIdleConns)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +195,15 @@ func (ns *Indexer) InitIndex() error {
 	ns.CreateIndexIfNotExists("account_tokens")
 	ns.CreateIndexIfNotExists("nft")
 	ns.CreateIndexIfNotExists("account_balance")
+	ns.CreateIndexIfNotExists("whitelist")
+	ns.CreateIndexIfNotExists("contract_call")
+	ns.CreateIndexIfNotExists("internal_operations")
+
+	// Register the native AERGO token
+	err = ns.RegisterNativeToken()
+	if err != nil {
+		ns.log.Warn().Err(err).Msg("Failed to register native token, will try again later")
+	}
 
 	return nil
 }
@@ -215,9 +235,11 @@ func (ns *Indexer) ValidChainInfo() error {
 		chainInfo.BaseEsType = new(doc.BaseEsType)
 		return chainInfo
 	})
+
 	if err != nil {
 		ns.log.Info().Err(err).Msg("Could not query chain info, add new one.")
 	}
+
 	if document == nil { // if empty in db, put new chain info
 		chainInfo := doc.EsChainInfo{
 			BaseEsType: &doc.BaseEsType{
@@ -227,6 +249,7 @@ func (ns *Indexer) ValidChainInfo() error {
 			Public:    chainInfoFromNode.Id.Public,
 			Consensus: chainInfoFromNode.Id.Consensus,
 			Version:   uint64(chainInfoFromNode.Id.Version),
+			Hardfork:  chainInfoFromNode.Hardfork,
 		}
 		err = ns.db.Insert(&chainInfo, ns.indexNamePrefix+"chain_info")
 		if err != nil {
@@ -243,6 +266,10 @@ func (ns *Indexer) ValidChainInfo() error {
 		}
 	}
 	return nil
+}
+
+func String(u uint64) {
+	panic("unimplemented")
 }
 
 // UpdateAliasForType updates aliases
@@ -313,4 +340,27 @@ func (ns *Indexer) GetBestBlockFromDb() (uint64, error) {
 		return 0, errors.New("best block not found")
 	}
 	return block.(*doc.EsBlock).BlockNo, nil
+}
+
+// RegisterNativeToken registers the native AERGO token in the database
+func (ns *Indexer) RegisterNativeToken() error {
+	// Create native token document with zero supply
+	// The actual supply would need to be queried from the blockchain if needed
+	supply, supplyFloat := "0", float32(0.0)
+	tokenDoc := doc.ConvNativeToken(supply, supplyFloat)
+
+	// Check if the token already exists before adding
+	exists := ns.db.Exists(ns.indexNamePrefix+"token", tokenDoc.Id)
+	if !exists {
+		ns.log.Info().Msg("Registering native AERGO token")
+		ns.addToken(tokenDoc)
+	}
+	return nil
+}
+
+func (ns *Indexer) checkAergoLuac() {
+	_, err := exec.LookPath("aergoluac")
+	if err != nil {
+		ns.log.Error().Err(err).Msg("aergoluac binary not found in PATH")
+	}
 }

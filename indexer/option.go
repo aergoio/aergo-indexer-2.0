@@ -49,9 +49,16 @@ func SetRunMode(runMode string) IndexerOptionFunc {
 	}
 }
 
+func SetFix(fix bool) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.fix = fix
+		return nil
+	}
+}
+
 func SetWhiteListAddresses(whiteListAddresses []string) IndexerOptionFunc {
 	return func(indexer *Indexer) error {
-		indexer.whitelistAddresses = whiteListAddresses
+		indexer.balanceWhitelist = whiteListAddresses
 		return nil
 	}
 }
@@ -82,6 +89,33 @@ func SetContractVerifyAddress(verifyContractAddress string) IndexerOptionFunc {
 		}
 
 		indexer.contractVerifyAddr = raw
+		return nil
+	}
+}
+
+func SetTokenVerifyWhitelist(verifyTokenWhitelist []string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.tokenVerifyWhitelist = verifyTokenWhitelist
+		return nil
+	}
+}
+
+func SetContractVerifyWhitelist(verifyContractWhitelist []string) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		indexer.contractVerifyWhitelist = verifyContractWhitelist
+		return nil
+	}
+}
+
+func SetBulkSize(bulkSize uint32) IndexerOptionFunc {
+	return func(indexer *Indexer) error {
+		// prevent overflow
+		if bulkSize < 1000000 {
+			indexer.log.Debug().Uint32("bulkSize", bulkSize).Msg("Set Bulk Size")
+			indexer.bulkSize = int32(bulkSize)
+		} else {
+			indexer.log.Warn().Uint32("bulkSize", bulkSize).Msg("Ignore Bulk Size because of too large")
+		}
 		return nil
 	}
 }

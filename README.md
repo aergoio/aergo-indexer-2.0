@@ -14,6 +14,9 @@ This creates the indices,
    9. `account_tokens`
   10. `account_balance`
   11. `nft`
+  12. `whitelist`
+  13. `internal_operations`
+  14. `contract_call`
 
 Check [indexer/documents/documents.go](./indexer/documents/documents.go) for the exact mappings for all supported databases.
 
@@ -82,10 +85,12 @@ tx_id           string      tx hash
 creator         string      creators address
 blockno         uint64      block number
 ts              timestamp   last updated timestamp (unixnano)
-payload         string      compiled bytecode
+abi             string      contract abi
+byte_code       string      compiled bytecode
+source_code     string      contract source code
+deploy_args     string      constructor function arguments
 verified_status string      verified status
-verified_token  string      verified token address
-code            string      verified contract code
+verified_token  string      verified token symbol
 ```
 
 event
@@ -190,6 +195,37 @@ token_uri       string      token uri
 image_url       string      image url
 ```
 
+whitelist
+```
+id              string      token address
+contract        string      contract address
+type            string      whitelist type (token,contract)
+```
+
+internal_operations
+```
+Field           Type        Comment
+id              string      unique identifier
+tx_id           string      tx hash
+operations      string      operations data
+```
+
+contract_call
+```
+Field           Type        Comment
+id              string      unique identifier
+blockno         uint64      block number
+ts              timestamp   block creation timestamp (unixnano)
+tx_hash         string      tx hash
+is_internal     bool        whether call is internal
+caller          string      caller address
+contract        string      contract address
+function        string      called function name
+args            string      function arguments
+amount          string      call amount
+reverted        bool        whether call was reverted
+```
+
 ## Usage
 
 ```
@@ -197,22 +233,25 @@ Usage:
   indexer [flags]
 
 Flags:
-  -A, --aergo string        host and port of aergo server. Alternative to setting host and port separately
-      --cccv string         indexing cccv nft by network type.(mainnet,testnet)
-      --check               check indices of range of heights (default true)
-  -C, --cluster             elasticsearch cluster type
-  -c, --contract string     address for query contract code
-  -E, --dburl string        Database URL (default "localhost:9200")
-      --from uint           start syncing from this block number
-  -h, --help                help for indexer
-  -H, --host string         host address of aergo server (default "localhost")
-  -M, --mode string         indexer running mode(all,check,onsync) Alternative to setting check, onsync separately
-      --onsync              onsync data in indices (default true)
-  -p, --port int32          port number of aergo server (default 7845)
-  -P, --prefix string       index name prefix (default "testnet")
-      --to uint             stop syncing at this block number
-  -t, --token string        address for query verified token
-  -W, --whitelist strings   address for update account balance
+Flags:
+  -A, --aergo string                     host and port of aergo server. Alternative to setting host and port separately
+  -W, --balance_whitelist strings        whitelist for update account balance
+      --cccv string                      indexing cccv nft by network type.(mainnet,testnet)
+      --check                            check indices of range of heights (default true)
+  -C, --cluster                          elasticsearch cluster type
+  -c, --contract string                  address for query contract code
+      --contract_whitelist stringArray   whitelist for update verified contract
+  -E, --dburl string                     Database URL (default "localhost:9200")
+      --from uint                        start syncing from this block number
+  -h, --help                             help for indexer
+  -H, --host string                      host address of aergo server (default "localhost")
+  -M, --mode string                      indexer running mode(all,check,onsync) Alternative to setting check, onsync separately
+      --onsync                           onsync data in indices (default true)
+  -p, --port int32                       port number of aergo server (default 7845)
+  -P, --prefix string                    index name prefix (default "testnet")
+      --to uint                          stop syncing at this block number
+  -t, --token string                     address for query verified token
+      --token_whitelist stringArray      whitelist for update verified token
 ```
 
 Example

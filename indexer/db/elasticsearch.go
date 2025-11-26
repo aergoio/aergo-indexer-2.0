@@ -21,15 +21,22 @@ type ElasticsearchDbController struct {
 }
 
 // NewElasticClient creates a new instance of elastic.Client
-func NewElasticClient(esURL string) (*elastic.Client, error) {
+func NewElasticClient(esURL string, maxConnections, maxIdleConns int) (*elastic.Client, error) {
 	url := esURL
 	if !strings.HasPrefix(url, "http") {
 		url = fmt.Sprintf("http://%s", url)
 	}
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		MaxConnsPerHost:     maxConnections,   // Allow burst of N concurrent requests
+		MaxIdleConnsPerHost: maxIdleConns,     // Keep N connections ready for reuse
+		IdleConnTimeout:     3 * time.Minute,  // Close idle connections after 3 minutes
+		DisableKeepAlives:   false,            // Keep connections alive
 	}
-	httpClient := &http.Client{Transport: tr}
+	httpClient := &http.Client{
+		Transport: tr,
+		Timeout:   30 * time.Second,
+	}
 	client, err := elastic.NewClient(
 		elastic.SetHttpClient(httpClient),
 		elastic.SetURL(url),
@@ -43,8 +50,8 @@ func NewElasticClient(esURL string) (*elastic.Client, error) {
 }
 
 // NewElasticsearchDbController creates a new instance of ElasticsearchDbController
-func NewElasticsearchDbController(ctx context.Context, esURL string) (*ElasticsearchDbController, error) {
-	client, err := NewElasticClient(esURL)
+func NewElasticsearchDbController(ctx context.Context, esURL string, maxConnections, maxIdleConns int) (*ElasticsearchDbController, error) {
+	client, err := NewElasticClient(esURL, maxConnections, maxIdleConns)
 	if err != nil {
 		return nil, err
 	}
